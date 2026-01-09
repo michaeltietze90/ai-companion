@@ -109,12 +109,9 @@ serve(async (req) => {
 
     const pushText = (chunk?: unknown) => {
       if (typeof chunk !== 'string') return;
-      const trimmed = chunk.trim();
-      if (!trimmed) return;
-      // Prefer concatenation for streamed chunks; keep spaces sane.
-      responseMessage = responseMessage
-        ? `${responseMessage}${responseMessage.endsWith(' ') ? '' : ' '}${trimmed}`
-        : trimmed;
+      if (!chunk) return;
+      // Append exactly as streamed (no artificial spaces) to avoid splitting words.
+      responseMessage += chunk;
     };
 
     for (const line of lines) {
@@ -144,6 +141,9 @@ serve(async (req) => {
         // Skip malformed JSON
       }
     }
+
+    // Normalize whitespace after stitching chunks.
+    responseMessage = responseMessage.replace(/\s+/g, ' ').trim();
 
     return new Response(
       JSON.stringify({ 
