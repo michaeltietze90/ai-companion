@@ -5,7 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SF_API_HOST = 'https://api.salesforce.com';
+// Default to production, can be overridden for sandbox (https://test.salesforce.com)
+const getSfApiHost = () => Deno.env.get('SALESFORCE_API_HOST') || 'https://api.salesforce.com';
 
 // Token cache
 let cachedToken: { access_token: string; expires_at: number } | null = null;
@@ -70,9 +71,10 @@ serve(async (req) => {
     const accessToken = await getSalesforceToken();
     const sequenceId = Date.now();
 
-    // Use SF_API_HOST for API calls, streaming endpoint
+    // Use configurable API host for API calls
+    const sfApiHost = getSfApiHost();
     const response = await fetch(
-      `${SF_API_HOST}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`,
+      `${sfApiHost}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`,
       {
         method: 'POST',
         headers: {
