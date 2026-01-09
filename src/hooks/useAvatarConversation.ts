@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
-import { createHeyGenToken, stopStreaming } from '@/services/heygenProxy';
+import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
 
@@ -94,12 +94,28 @@ export function useAvatarConversation() {
     }
   }, [setSpeaking]);
 
-  // Speak using a deterministic audio path.
-  // HeyGen audio can be rate-limited/queued server-side; to avoid "hearing something else",
-  // we always use browser TTS for audio output and only use HeyGen for visuals.
+  // Speak using HeyGen TTS via proxy. If it fails, fall back to browser TTS.
   const speakViaProxy = useCallback(async (text: string) => {
     setLastSpokenText(text);
 
+    // First, interrupt any previously queued speech to ensure only THIS text is spoken.
+    if (tokenRef.current && heygenSessionRef.current) {
+      try {
+        await interruptSpeaking(tokenRef.current, heygenSessionRef.current);
+      } catch {
+        // ignore interrupt failures
+      }
+
+      try {
+        await speakText(tokenRef.current, heygenSessionRef.current, text);
+        return;
+      } catch (error) {
+        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
+        // Fall through to browser TTS
+      }
+    }
+
+    // Fallback to browser TTS
     try {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
