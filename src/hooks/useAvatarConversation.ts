@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
@@ -94,16 +94,32 @@ export function useAvatarConversation() {
     }
   }, [setSpeaking]);
 
-  // Speak using HeyGen TTS via proxy. If it fails, fall back to browser TTS.
+  // Speak using HeyGen (SDK first). If it fails, fall back to proxy, then browser TTS.
   const speakViaProxy = useCallback(async (text: string) => {
     setLastSpokenText(text);
 
-    // First, interrupt any previously queued speech to ensure only THIS text is spoken.
+    // Preferred: use the HeyGen SDK instance that owns the session + auth.
+    if (avatarRef.current) {
+      try {
+        await avatarRef.current.interrupt();
+      } catch {
+        // ignore
+      }
+
+      try {
+        await avatarRef.current.speak({ text, task_type: TaskType.TALK });
+        return;
+      } catch (error) {
+        console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);
+      }
+    }
+
+    // Fallback: direct API calls via our proxy.
     if (tokenRef.current && heygenSessionRef.current) {
       try {
         await interruptSpeaking(tokenRef.current, heygenSessionRef.current);
       } catch {
-        // ignore interrupt failures
+        // ignore
       }
 
       try {
@@ -111,11 +127,10 @@ export function useAvatarConversation() {
         return;
       } catch (error) {
         console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
-        // Fall through to browser TTS
       }
     }
 
-    // Fallback to browser TTS
+    // Last resort: browser TTS
     try {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
