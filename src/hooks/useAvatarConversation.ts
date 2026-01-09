@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
-import { getHeyGenToken, startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
+import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
+import { createHeyGenToken, startStreaming, speakText, stopStreaming } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
 
@@ -16,6 +17,8 @@ const DEMO_RESPONSES = [
 export function useAvatarConversation() {
   const avatarRef = useRef<StreamingAvatar | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const heygenSessionRef = useRef<string | null>(null);
   const demoIndexRef = useRef(0);
   
   const {
@@ -37,10 +40,12 @@ export function useAvatarConversation() {
     reset,
   } = useConversationStore();
 
-  // Initialize HeyGen Avatar
+  // Initialize HeyGen Avatar with proxy for streaming.start
   const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
     try {
-      const token = await getHeyGenToken();
+      // Get token via proxy
+      const token = await createHeyGenToken();
+      tokenRef.current = token;
       
       const avatar = new StreamingAvatar({ token });
       avatarRef.current = avatar;
@@ -65,11 +70,25 @@ export function useAvatarConversation() {
         setSpeaking(false);
       });
 
-      // Start avatar session
-      await avatar.createStartAvatar({
+      // Create avatar session - this returns session info
+      const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.Medium,
         avatarName: 'default',
       });
+      
+      console.log('Avatar session created:', sessionInfo);
+      
+      // Store the HeyGen session ID for speak calls
+      if (sessionInfo?.session_id) {
+        heygenSessionRef.current = sessionInfo.session_id;
+      }
+
+      // Start streaming via proxy to bypass CORS
+      if (heygenSessionRef.current && tokenRef.current) {
+        console.log('Starting streaming via proxy...');
+        await startStreaming(tokenRef.current, heygenSessionRef.current);
+        console.log('Streaming started successfully');
+      }
 
       return avatar;
     } catch (error) {
@@ -77,6 +96,24 @@ export function useAvatarConversation() {
       throw error;
     }
   }, [setSpeaking]);
+
+  // Speak using the proxy to bypass any CORS issues
+  const speakViaProxy = useCallback(async (text: string) => {
+    if (tokenRef.current && heygenSessionRef.current) {
+      try {
+        await speakText(tokenRef.current, heygenSessionRef.current, text);
+        console.log('Speak command sent via proxy');
+      } catch (error) {
+        console.error('Speak via proxy error:', error);
+        // Fallback to SDK method
+        if (avatarRef.current) {
+          await avatarRef.current.speak({ text });
+        }
+      }
+    } else if (avatarRef.current) {
+      await avatarRef.current.speak({ text });
+    }
+  }, []);
 
   // Start full conversation (HeyGen + Agentforce)
   const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null) => {
@@ -110,14 +147,12 @@ export function useAvatarConversation() {
       // Speak welcome message
       if (welcomeMessage) {
         addMessage({ role: 'assistant', content: welcomeMessage });
-        if (avatarRef.current) {
-          console.log('Speaking welcome message:', welcomeMessage);
-          try {
-            await avatarRef.current.speak({ text: welcomeMessage });
-            console.log('Welcome message speak command sent');
-          } catch (speakError) {
-            console.error('Welcome speak error:', speakError);
-          }
+        console.log('Speaking welcome message:', welcomeMessage);
+        try {
+          await speakViaProxy(welcomeMessage);
+          console.log('Welcome message speak command sent');
+        } catch (speakError) {
+          console.error('Welcome speak error:', speakError);
         }
       }
 
@@ -130,7 +165,7 @@ export function useAvatarConversation() {
     } finally {
       setConnecting(false);
     }
-  }, [demoMode, initializeAvatar, setConnecting, setConnected, setSessionId, setError, addMessage]);
+  }, [demoMode, initializeAvatar, speakViaProxy, setConnecting, setConnected, setSessionId, setError, addMessage]);
 
   // Send message to agent
   const sendMessage = useCallback(async (text: string) => {
@@ -165,17 +200,13 @@ export function useAvatarConversation() {
       if (message) {
         addMessage({ role: 'assistant', content: message });
         
-        // Make avatar speak the response
-        if (avatarRef.current) {
-          console.log('Making avatar speak:', message.substring(0, 50) + '...');
-          try {
-            await avatarRef.current.speak({ text: message });
-            console.log('Avatar speak command sent successfully');
-          } catch (speakError) {
-            console.error('Avatar speak error:', speakError);
-          }
-        } else {
-          console.warn('Avatar ref not available for speaking');
+        // Make avatar speak the response via proxy
+        console.log('Making avatar speak:', message.substring(0, 50) + '...');
+        try {
+          await speakViaProxy(message);
+          console.log('Avatar speak command sent successfully');
+        } catch (speakError) {
+          console.error('Avatar speak error:', speakError);
         }
       }
     } catch (error) {
@@ -185,13 +216,22 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, demoMode, addMessage, setThinking]);
+  }, [sessionId, demoMode, speakViaProxy, addMessage, setThinking]);
 
   // End conversation
   const endConversation = useCallback(async () => {
     try {
       if (sessionId && !demoMode) {
         await endAgentSession(sessionId);
+      }
+
+      // Stop HeyGen streaming via proxy
+      if (tokenRef.current && heygenSessionRef.current) {
+        try {
+          await stopStreaming(tokenRef.current, heygenSessionRef.current);
+        } catch (e) {
+          console.error('Stop streaming error:', e);
+        }
       }
 
       if (avatarRef.current) {
@@ -204,6 +244,8 @@ export function useAvatarConversation() {
         mediaStreamRef.current = null;
       }
 
+      tokenRef.current = null;
+      heygenSessionRef.current = null;
       reset();
       toast.info('Conversation ended');
     } catch (error) {
