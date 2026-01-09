@@ -12,9 +12,9 @@ import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 
 const Index = () => {
-  // Default muted to avoid any unexpected audio coming directly from the video stream.
-  // We control audio output via our speech pipeline (HeyGen speak or browser TTS fallback).
-  const [isMuted, setIsMuted] = useState(true);
+  // Controls whether the HeyGen video element is muted.
+  // NOTE: If this is true, you will not hear HeyGen voice audio.
+  const [isMuted, setIsMuted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
