@@ -165,7 +165,7 @@ export function useAvatarConversation() {
   // Send message to agent
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
-    
+
     addMessage({ role: 'user', content: text });
     setThinking(true, 'Thinking...');
 
@@ -175,18 +175,20 @@ export function useAvatarConversation() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         demoIndexRef.current = (demoIndexRef.current + 1) % DEMO_RESPONSES.length;
         const response = DEMO_RESPONSES[demoIndexRef.current];
-        
+
         addMessage({ role: 'assistant', content: response });
         setThinking(false);
         return;
       }
 
       if (!sessionId) {
-        throw new Error('No active session');
+        throw new Error('No active Agentforce session (sessionId missing)');
       }
 
+      console.log('[Agentforce] send message', { sessionId, text });
       const { message, progressIndicators } = await sendAgentMessage(sessionId, text);
-      
+      console.log('[Agentforce] received response', { messagePreview: message?.slice(0, 120), progressIndicators });
+
       // Update thinking indicator with progress messages
       if (progressIndicators.length > 0) {
         setThinking(true, progressIndicators[progressIndicators.length - 1]);
@@ -194,14 +196,14 @@ export function useAvatarConversation() {
 
       if (message) {
         addMessage({ role: 'assistant', content: message });
-        
+
         // Make avatar speak the response via proxy
-        console.log('Making avatar speak:', message.substring(0, 50) + '...');
+        console.log('[HeyGen] speaking Agentforce response', message.substring(0, 80) + '...');
         try {
           await speakViaProxy(message);
-          console.log('Avatar speak command sent successfully');
+          console.log('[HeyGen] speak command sent successfully');
         } catch (speakError) {
-          console.error('Avatar speak error:', speakError);
+          console.error('[HeyGen] speak error:', speakError);
         }
       }
     } catch (error) {
