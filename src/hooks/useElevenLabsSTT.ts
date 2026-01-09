@@ -3,8 +3,6 @@ import { useCallback, useRef, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
-// WebSocket-based ElevenLabs Scribe implementation
-// Avoiding the useScribe hook due to React context conflicts
 
 interface ScribeConnection {
   ws: WebSocket;
@@ -28,7 +26,7 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
         conn.processor.disconnect();
       }
       if (conn.audioContext) {
-        conn.audioContext.close();
+        conn.audioContext.close().catch(console.error);
       }
       if (conn.mediaStream) {
         conn.mediaStream.getTracks().forEach(track => track.stop());
@@ -69,9 +67,15 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
         },
       });
 
-      // Create WebSocket connection
-      const wsUrl = `wss://api.elevenlabs.io/v1/scribe/stream?model_id=scribe_v2_realtime&token=${data.token}`;
-      const ws = new WebSocket(wsUrl);
+      // Correct WebSocket URL with query parameters
+      const wsUrl = new URL('wss://api.elevenlabs.io/v1/speech-to-text/realtime');
+      wsUrl.searchParams.set('model_id', 'scribe_v2_realtime');
+      wsUrl.searchParams.set('token', data.token);
+      wsUrl.searchParams.set('audio_format', 'pcm_16000');
+      wsUrl.searchParams.set('commit_strategy', 'vad');
+      wsUrl.searchParams.set('vad_silence_threshold_secs', '1.0');
+      
+      const ws = new WebSocket(wsUrl.toString());
 
       // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
@@ -82,6 +86,7 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
         console.log('WebSocket connected to ElevenLabs Scribe');
         setIsConnected(true);
         setListening(true);
+        setIsConnecting(false);
         
         // Start processing audio
         source.connect(processor);
@@ -91,19 +96,23 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('Scribe message:', data.message_type);
           
-          if (data.type === 'partial_transcript') {
+          if (data.message_type === 'session_started') {
+            console.log('Scribe session started:', data.session_id);
+          } else if (data.message_type === 'partial_transcript') {
             setPartialTranscript(data.text || '');
-          } else if (data.type === 'committed_transcript') {
+          } else if (data.message_type === 'committed_transcript') {
             const text = data.text?.trim();
             if (text && text !== lastCommittedRef.current) {
               lastCommittedRef.current = text;
               setPartialTranscript('');
+              console.log('Committed transcript:', text);
               onTranscript(text);
             }
-          } else if (data.type === 'error') {
-            console.error('Scribe error:', data.error);
-            toast.error(`Speech recognition error: ${data.error}`);
+          } else if (data.message_type === 'error') {
+            console.error('Scribe error:', data);
+            toast.error(`Speech recognition error: ${data.error || 'Unknown error'}`);
           }
         } catch (e) {
           console.error('Failed to parse WebSocket message:', e);
@@ -114,10 +123,11 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
         console.error('WebSocket error:', error);
         toast.error('Speech recognition connection error');
         cleanup();
+        setIsConnecting(false);
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket closed');
+      ws.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
         cleanup();
       };
 
@@ -132,8 +142,19 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
             pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
           // Convert to base64
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
-          ws.send(JSON.stringify({ audio: base64 }));
+          const uint8Array = new Uint8Array(pcmData.buffer);
+          let binary = '';
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          const base64 = btoa(binary);
+          
+          // Send audio chunk in correct format
+          ws.send(JSON.stringify({ 
+            message_type: 'input_audio_chunk',
+            audio_base_64: base64,
+            sample_rate: 16000,
+          }));
         }
       };
 
@@ -148,7 +169,6 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
       console.error('Failed to start ElevenLabs STT:', error);
       toast.error('Failed to start speech recognition');
       cleanup();
-    } finally {
       setIsConnecting(false);
     }
   }, [isConnected, isConnecting, onTranscript, setListening, cleanup]);
