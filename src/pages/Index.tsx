@@ -36,6 +36,7 @@ const Index = () => {
     sessionId,
     lastVoiceTranscript,
     lastAgentforceResponse,
+    lastSpokenText,
   } = useConversationStore();
 
   // Handle voice transcript - send to agent
@@ -129,16 +130,20 @@ const Index = () => {
 
       {/* Debug strip: proves what's being sent to Agentforce and what comes back */}
       {isConnected && !demoMode && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-20 w-[min(720px,calc(100%-24px))]">
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-20 w-[min(860px,calc(100%-24px))]">
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border px-4 py-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">Last voice transcript → Agentforce</p>
                 <p className="text-sm text-foreground line-clamp-2">{lastVoiceTranscript || '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Last Agentforce reply (spoken via HeyGen)</p>
+                <p className="text-xs text-muted-foreground">Last Agentforce reply (text)</p>
                 <p className="text-sm text-foreground line-clamp-2">{lastAgentforceResponse || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Last spoken text (what we told the voice)</p>
+                <p className="text-sm text-foreground line-clamp-2">{lastSpokenText || '—'}</p>
               </div>
             </div>
           </div>

@@ -22,6 +22,7 @@ interface ConversationState {
   // Debug / observability
   lastVoiceTranscript: string;
   lastAgentforceResponse: string;
+  lastSpokenText: string;
 
   // Actions
   setSessionId: (sessionId: string | null) => void;
@@ -34,6 +35,7 @@ interface ConversationState {
   setDemoMode: (demo: boolean) => void;
   setLastVoiceTranscript: (text: string) => void;
   setLastAgentforceResponse: (text: string) => void;
+  setLastSpokenText: (text: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   reset: () => void;
@@ -53,6 +55,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   lastVoiceTranscript: '',
   lastAgentforceResponse: '',
+  lastSpokenText: '',
 
   setSessionId: (sessionId) => set({ sessionId }),
   setConnected: (isConnected) => set({ isConnected }),
@@ -65,6 +68,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
 
   setLastVoiceTranscript: (lastVoiceTranscript) => set({ lastVoiceTranscript }),
   setLastAgentforceResponse: (lastAgentforceResponse) => set({ lastAgentforceResponse }),
+  setLastSpokenText: (lastSpokenText) => set({ lastSpokenText }),
 
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, {
@@ -88,5 +92,6 @@ export const useConversationStore = create<ConversationState>((set) => ({
     error: null,
     lastVoiceTranscript: '',
     lastAgentforceResponse: '',
+    lastSpokenText: '',
   }),
 }));
