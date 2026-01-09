@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 
 const Index = () => {
   const [isMuted, setIsMuted] = useState(false);
@@ -33,7 +33,6 @@ const Index = () => {
     demoMode, 
     setDemoMode,
     error,
-    isListening,
   } = useConversationStore();
 
   // Handle voice transcript - send to agent
@@ -42,7 +41,7 @@ const Index = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { toggleListening, isSupported: speechSupported } = useSpeechRecognition(handleVoiceTranscript);
+  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useElevenLabsSTT(handleVoiceTranscript);
 
   const handleStart = () => {
     startConversation(videoRef.current);
@@ -142,6 +141,22 @@ const Index = () => {
         )}
       </AnimatePresence>
 
+      {/* Partial transcript display */}
+      <AnimatePresence>
+        {partialTranscript && (
+          <motion.div
+            className="absolute top-44 left-1/2 -translate-x-1/2 z-20 max-w-md"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700/50">
+              <span className="text-sm text-white/70 italic">{partialTranscript}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Error display */}
       <AnimatePresence>
         {error && (
@@ -215,10 +230,11 @@ const Index = () => {
                     : 'bg-slate-700 hover:bg-slate-600'
                 }`}
                 onClick={toggleListening}
-                disabled={!speechSupported || isThinking}
-                title={speechSupported ? 'Click to speak' : 'Speech recognition not supported'}
+                disabled={sttConnecting || isThinking}
               >
-                {isListening ? (
+                {sttConnecting ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : isListening ? (
                   <Mic className="w-6 h-6 text-white" />
                 ) : (
                   <MicOff className="w-6 h-6 text-white/70" />
