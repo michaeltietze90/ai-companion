@@ -96,7 +96,16 @@ export function useAvatarConversation() {
 
   // Speak using HeyGen (SDK first). If it fails, fall back to proxy, then browser TTS.
   const speakViaProxy = useCallback(async (text: string) => {
-    setLastSpokenText(text);
+    const spokenText = text
+      // Remove Markdown images/links that Agentforce sometimes includes
+      .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
+      .replace(/\[[^\]]*\]\(([^\)]*)\)/g, '$1')
+      // Collapse whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    setLastSpokenText(spokenText);
+    if (!spokenText) return;
 
     // Preferred: use the HeyGen SDK instance that owns the session + auth.
     if (avatarRef.current) {
@@ -107,7 +116,7 @@ export function useAvatarConversation() {
       }
 
       try {
-        await avatarRef.current.speak({ text, task_type: TaskType.TALK });
+        await avatarRef.current.speak({ text: spokenText, task_type: TaskType.TALK });
         return;
       } catch (error) {
         console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);
@@ -123,7 +132,7 @@ export function useAvatarConversation() {
       }
 
       try {
-        await speakText(tokenRef.current, heygenSessionRef.current, text);
+        await speakText(tokenRef.current, heygenSessionRef.current, spokenText);
         return;
       } catch (error) {
         console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
@@ -134,7 +143,7 @@ export function useAvatarConversation() {
     try {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
+      const utter = new SpeechSynthesisUtterance(spokenText);
       utter.rate = 1;
       utter.pitch = 1;
       window.speechSynthesis.speak(utter);
