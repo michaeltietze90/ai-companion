@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
+import { SettingsModal } from "@/components/Settings/SettingsModal";
 
 const Index = () => {
   // Controls whether the HeyGen video element is muted.
   // NOTE: If this is true, you will not hear HeyGen voice audio.
   const [isMuted, setIsMuted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -95,6 +97,7 @@ const Index = () => {
             variant="ghost"
             size="icon"
             className="text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            onClick={() => setShowSettings(true)}
           >
             <Settings className="w-5 h-5" />
           </Button>
@@ -383,6 +386,9 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 };
