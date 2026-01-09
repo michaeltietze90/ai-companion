@@ -18,7 +18,11 @@ interface ConversationState {
   thinkingMessage: string;
   error: string | null;
   demoMode: boolean;
-  
+
+  // Debug / observability
+  lastVoiceTranscript: string;
+  lastAgentforceResponse: string;
+
   // Actions
   setSessionId: (sessionId: string | null) => void;
   setConnected: (connected: boolean) => void;
@@ -28,6 +32,8 @@ interface ConversationState {
   setThinking: (thinking: boolean, message?: string) => void;
   setError: (error: string | null) => void;
   setDemoMode: (demo: boolean) => void;
+  setLastVoiceTranscript: (text: string) => void;
+  setLastAgentforceResponse: (text: string) => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   reset: () => void;
@@ -45,6 +51,9 @@ export const useConversationStore = create<ConversationState>((set) => ({
   error: null,
   demoMode: false,
 
+  lastVoiceTranscript: '',
+  lastAgentforceResponse: '',
+
   setSessionId: (sessionId) => set({ sessionId }),
   setConnected: (isConnected) => set({ isConnected }),
   setConnecting: (isConnecting) => set({ isConnecting }),
@@ -53,7 +62,10 @@ export const useConversationStore = create<ConversationState>((set) => ({
   setThinking: (isThinking, thinkingMessage = '') => set({ isThinking, thinkingMessage }),
   setError: (error) => set({ error }),
   setDemoMode: (demoMode) => set({ demoMode }),
-  
+
+  setLastVoiceTranscript: (lastVoiceTranscript) => set({ lastVoiceTranscript }),
+  setLastAgentforceResponse: (lastAgentforceResponse) => set({ lastAgentforceResponse }),
+
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, {
       ...message,
@@ -61,9 +73,9 @@ export const useConversationStore = create<ConversationState>((set) => ({
       timestamp: new Date(),
     }],
   })),
-  
+
   clearMessages: () => set({ messages: [] }),
-  
+
   reset: () => set({
     messages: [],
     sessionId: null,
@@ -74,5 +86,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
     isThinking: false,
     thinkingMessage: '',
     error: null,
+    lastVoiceTranscript: '',
+    lastAgentforceResponse: '',
   }),
 }));

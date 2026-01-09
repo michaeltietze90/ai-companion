@@ -34,6 +34,8 @@ const Index = () => {
     setDemoMode,
     error,
     sessionId,
+    lastVoiceTranscript,
+    lastAgentforceResponse,
   } = useConversationStore();
 
   // Handle voice transcript - send to agent
@@ -124,6 +126,24 @@ const Index = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Debug strip: proves what's being sent to Agentforce and what comes back */}
+      {isConnected && !demoMode && (
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-20 w-[min(720px,calc(100%-24px))]">
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border px-4 py-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Last voice transcript → Agentforce</p>
+                <p className="text-sm text-foreground line-clamp-2">{lastVoiceTranscript || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Last Agentforce reply (spoken via HeyGen)</p>
+                <p className="text-sm text-foreground line-clamp-2">{lastAgentforceResponse || '—'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Thinking indicator - Agentforce style */}
       <AnimatePresence>
