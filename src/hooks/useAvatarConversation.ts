@@ -63,11 +63,13 @@ export function useAvatarConversation() {
       avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
         console.log('Avatar started talking');
         setSpeaking(true);
+        setListening(false); // Stop listening while avatar speaks
       });
 
       avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
         console.log('Avatar stopped talking');
         setSpeaking(false);
+        // Resume listening is handled by the STT hook
       });
 
       // Create avatar session - this also starts streaming internally
