@@ -12,7 +12,9 @@ import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 
 const Index = () => {
-  const [isMuted, setIsMuted] = useState(false);
+  // Default muted to avoid any unexpected audio coming directly from the video stream.
+  // We control audio output via our speech pipeline (HeyGen speak or browser TTS fallback).
+  const [isMuted, setIsMuted] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);

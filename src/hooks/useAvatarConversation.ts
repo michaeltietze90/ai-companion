@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
-import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
+import { createHeyGenToken, stopStreaming } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
 
@@ -94,55 +94,22 @@ export function useAvatarConversation() {
     }
   }, [setSpeaking]);
 
-  // Speak using the proxy to bypass any CORS issues
-  // If HeyGen is unavailable (502 / plan limit), fall back to browser TTS so Agentforce still "works".
-  // Also: always record the exact text we attempted to speak so we can verify mismatches.
+  // Speak using a deterministic audio path.
+  // HeyGen audio can be rate-limited/queued server-side; to avoid "hearing something else",
+  // we always use browser TTS for audio output and only use HeyGen for visuals.
   const speakViaProxy = useCallback(async (text: string) => {
     setLastSpokenText(text);
 
-    const speakWithBrowser = () => {
-      try {
-        if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1;
-        utter.pitch = 1;
-        window.speechSynthesis.speak(utter);
-      } catch {
-        // ignore
-      }
-    };
-
-    // Prefer HeyGen via backend proxy when we have a token + session
-    if (tokenRef.current && heygenSessionRef.current) {
-      try {
-        // Make sure previous speech is interrupted, otherwise you can hear older queued lines.
-        try {
-          await interruptSpeaking(tokenRef.current, heygenSessionRef.current);
-        } catch {
-          // ignore interrupt failures
-        }
-
-        await speakText(tokenRef.current, heygenSessionRef.current, text);
-        return;
-      } catch (error) {
-        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
-        speakWithBrowser();
-        return;
-      }
+    try {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1;
+      utter.pitch = 1;
+      window.speechSynthesis.speak(utter);
+    } catch {
+      // ignore
     }
-
-    // If the SDK avatar instance exists, try it (may fail due to CORS), then fall back.
-    if (avatarRef.current) {
-      try {
-        await avatarRef.current.speak({ text });
-        return;
-      } catch (e) {
-        console.error('[HeyGen SDK] speak failed, falling back to browser TTS:', e);
-      }
-    }
-
-    speakWithBrowser();
   }, [setLastSpokenText]);
 
   // Start full conversation (HeyGen + Agentforce)
@@ -169,6 +136,9 @@ export function useAvatarConversation() {
       const { sessionId: newSessionId, welcomeMessage } = await startAgentSession();
       setSessionId(newSessionId);
       setConnected(true);
+
+      // Capture welcome message as "Agentforce reply" for debugging
+      if (welcomeMessage) setLastAgentforceResponse(welcomeMessage);
 
       // 2) Try to initialize HeyGen video (optional). If it fails, keep Agentforce running.
       if (videoElement) {
@@ -199,7 +169,7 @@ export function useAvatarConversation() {
     } finally {
       setConnecting(false);
     }
-  }, [demoMode, initializeAvatar, speakViaProxy, setConnecting, setConnected, setSessionId, setError, addMessage]);
+  }, [demoMode, initializeAvatar, speakViaProxy, setConnecting, setConnected, setSessionId, setError, addMessage, setLastAgentforceResponse]);
 
   // Send message to agent
   const sendMessage = useCallback(async (text: string) => {
