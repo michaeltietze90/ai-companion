@@ -3,6 +3,9 @@ project_id = "madfqzucrgvgpiwxlrme"
 [functions.heygen-token]
 verify_jwt = false
 
+[functions.heygen-proxy]
+verify_jwt = false
+
 [functions.agentforce-session]
 verify_jwt = false
 
