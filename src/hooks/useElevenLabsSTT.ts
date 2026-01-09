@@ -1,8 +1,8 @@
+// ElevenLabs Scribe STT - Direct WebSocket implementation
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
-
 // WebSocket-based ElevenLabs Scribe implementation
 // Avoiding the useScribe hook due to React context conflicts
 
