@@ -1,1 +1,10 @@
 project_id = "madfqzucrgvgpiwxlrme"
+
+[functions.heygen-token]
+verify_jwt = false
+
+[functions.agentforce-session]
+verify_jwt = false
+
+[functions.agentforce-message]
+verify_jwt = false
