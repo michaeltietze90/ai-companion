@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 const Index = () => {
   const [isMuted, setIsMuted] = useState(false);
@@ -20,12 +21,10 @@ const Index = () => {
     isConnected,
     isConnecting,
     isSpeaking,
-    isListening,
     isThinking,
     startConversation,
     sendMessage,
     endConversation,
-    setListening,
   } = useAvatarConversation();
 
   const { 
@@ -33,8 +32,17 @@ const Index = () => {
     thinkingMessage, 
     demoMode, 
     setDemoMode,
-    error 
+    error,
+    isListening,
   } = useConversationStore();
+
+  // Handle voice transcript - send to agent
+  const handleVoiceTranscript = useCallback((transcript: string) => {
+    console.log('Voice transcript received:', transcript);
+    sendMessage(transcript);
+  }, [sendMessage]);
+
+  const { toggleListening, isSupported: speechSupported } = useSpeechRecognition(handleVoiceTranscript);
 
   const handleStart = () => {
     startConversation(videoRef.current);
@@ -46,10 +54,6 @@ const Index = () => {
       sendMessage(textInput);
       setTextInput('');
     }
-  };
-
-  const toggleMic = () => {
-    setListening(!isListening);
   };
 
   return (
@@ -210,7 +214,9 @@ const Index = () => {
                     ? 'bg-cyan-500 hover:bg-cyan-600 shadow-lg shadow-cyan-500/30'
                     : 'bg-slate-700 hover:bg-slate-600'
                 }`}
-                onClick={toggleMic}
+                onClick={toggleListening}
+                disabled={!speechSupported || isThinking}
+                title={speechSupported ? 'Click to speak' : 'Speech recognition not supported'}
               >
                 {isListening ? (
                   <Mic className="w-6 h-6 text-white" />
