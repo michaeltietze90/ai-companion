@@ -1,0 +1,78 @@
+import { create } from 'zustand';
+
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
+interface ConversationState {
+  messages: Message[];
+  sessionId: string | null;
+  isConnected: boolean;
+  isConnecting: boolean;
+  isSpeaking: boolean;
+  isListening: boolean;
+  isThinking: boolean;
+  thinkingMessage: string;
+  error: string | null;
+  demoMode: boolean;
+  
+  // Actions
+  setSessionId: (sessionId: string | null) => void;
+  setConnected: (connected: boolean) => void;
+  setConnecting: (connecting: boolean) => void;
+  setSpeaking: (speaking: boolean) => void;
+  setListening: (listening: boolean) => void;
+  setThinking: (thinking: boolean, message?: string) => void;
+  setError: (error: string | null) => void;
+  setDemoMode: (demo: boolean) => void;
+  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  clearMessages: () => void;
+  reset: () => void;
+}
+
+export const useConversationStore = create<ConversationState>((set) => ({
+  messages: [],
+  sessionId: null,
+  isConnected: false,
+  isConnecting: false,
+  isSpeaking: false,
+  isListening: false,
+  isThinking: false,
+  thinkingMessage: '',
+  error: null,
+  demoMode: false,
+
+  setSessionId: (sessionId) => set({ sessionId }),
+  setConnected: (isConnected) => set({ isConnected }),
+  setConnecting: (isConnecting) => set({ isConnecting }),
+  setSpeaking: (isSpeaking) => set({ isSpeaking }),
+  setListening: (isListening) => set({ isListening }),
+  setThinking: (isThinking, thinkingMessage = '') => set({ isThinking, thinkingMessage }),
+  setError: (error) => set({ error }),
+  setDemoMode: (demoMode) => set({ demoMode }),
+  
+  addMessage: (message) => set((state) => ({
+    messages: [...state.messages, {
+      ...message,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+    }],
+  })),
+  
+  clearMessages: () => set({ messages: [] }),
+  
+  reset: () => set({
+    messages: [],
+    sessionId: null,
+    isConnected: false,
+    isConnecting: false,
+    isSpeaking: false,
+    isListening: false,
+    isThinking: false,
+    thinkingMessage: '',
+    error: null,
+  }),
+}));
