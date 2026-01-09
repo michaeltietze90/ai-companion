@@ -94,28 +94,52 @@ export function useAvatarConversation() {
   }, [setSpeaking]);
 
   // Speak using the proxy to bypass any CORS issues
+  // If HeyGen is unavailable (502 / plan limit), fall back to browser TTS so Agentforce still "works".
   const speakViaProxy = useCallback(async (text: string) => {
+    const speakWithBrowser = () => {
+      try {
+        if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1;
+        utter.pitch = 1;
+        window.speechSynthesis.speak(utter);
+      } catch {
+        // ignore
+      }
+    };
+
+    // Prefer HeyGen via backend proxy when we have a token + session
     if (tokenRef.current && heygenSessionRef.current) {
       try {
         await speakText(tokenRef.current, heygenSessionRef.current, text);
-        console.log('Speak command sent via proxy');
+        return;
       } catch (error) {
-        console.error('Speak via proxy error:', error);
-        // Fallback to SDK method
-        if (avatarRef.current) {
-          await avatarRef.current.speak({ text });
-        }
+        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
+        speakWithBrowser();
+        return;
       }
-    } else if (avatarRef.current) {
-      await avatarRef.current.speak({ text });
     }
+
+    // If the SDK avatar instance exists, try it (may fail due to CORS), then fall back.
+    if (avatarRef.current) {
+      try {
+        await avatarRef.current.speak({ text });
+        return;
+      } catch (e) {
+        console.error('[HeyGen SDK] speak failed, falling back to browser TTS:', e);
+      }
+    }
+
+    speakWithBrowser();
   }, []);
 
   // Start full conversation (HeyGen + Agentforce)
+  // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.
   const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null) => {
     setConnecting(true);
     setError(null);
-    
+
     try {
       if (demoMode) {
         // Demo mode - no real connections
@@ -123,30 +147,33 @@ export function useAvatarConversation() {
         setConnected(true);
         setSessionId('demo-session');
         demoIndexRef.current = 0;
-        
+
         const welcomeMessage = DEMO_RESPONSES[0];
         addMessage({ role: 'assistant', content: welcomeMessage });
         toast.success('Demo mode connected!');
         return;
       }
 
-      // Initialize HeyGen if video element provided
-      if (videoElement) {
-        await initializeAvatar(videoElement);
-      }
-
-      // Start Agentforce session
+      // 1) Start Agentforce first (so "brain" is always available)
       const { sessionId: newSessionId, welcomeMessage } = await startAgentSession();
       setSessionId(newSessionId);
       setConnected(true);
 
-      // Speak welcome message
+      // 2) Try to initialize HeyGen video (optional). If it fails, keep Agentforce running.
+      if (videoElement) {
+        try {
+          await initializeAvatar(videoElement);
+        } catch (avatarError) {
+          console.error('[HeyGen] avatar init failed (continuing with Agentforce):', avatarError);
+          toast.warning('Avatar is temporarily unavailable; continuing with Agentforce.');
+        }
+      }
+
+      // 3) Speak/show welcome
       if (welcomeMessage) {
         addMessage({ role: 'assistant', content: welcomeMessage });
-        console.log('Speaking welcome message:', welcomeMessage);
         try {
           await speakViaProxy(welcomeMessage);
-          console.log('Welcome message speak command sent');
         } catch (speakError) {
           console.error('Welcome speak error:', speakError);
         }
