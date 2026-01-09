@@ -17,7 +17,7 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
   const [partialTranscript, setPartialTranscript] = useState('');
   const connectionRef = useRef<ScribeConnection | null>(null);
   const lastCommittedRef = useRef<string>('');
-  const { setListening } = useConversationStore();
+  const { setListening, setLastVoiceTranscript } = useConversationStore();
 
   const cleanup = useCallback(() => {
     const conn = connectionRef.current;
@@ -107,6 +107,7 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
             if (text && text !== lastCommittedRef.current) {
               lastCommittedRef.current = text;
               setPartialTranscript('');
+              setLastVoiceTranscript(text);
               console.log('Committed transcript:', text);
               onTranscript(text);
             }

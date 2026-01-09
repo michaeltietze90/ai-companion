@@ -36,6 +36,7 @@ export function useAvatarConversation() {
     setListening,
     setThinking,
     setError,
+    setLastAgentforceResponse,
     addMessage,
     reset,
   } = useConversationStore();
@@ -187,6 +188,7 @@ export function useAvatarConversation() {
 
       console.log('[Agentforce] send message', { sessionId, text });
       const { message, progressIndicators } = await sendAgentMessage(sessionId, text);
+      setLastAgentforceResponse(message || '');
       console.log('[Agentforce] received response', { messagePreview: message?.slice(0, 120), progressIndicators });
 
       // Update thinking indicator with progress messages
