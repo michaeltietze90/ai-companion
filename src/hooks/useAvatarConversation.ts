@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
-import { createHeyGenToken, startStreaming, speakText, stopStreaming } from '@/services/heygenProxy';
+import { createHeyGenToken, speakText, stopStreaming } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
 
@@ -70,24 +70,17 @@ export function useAvatarConversation() {
         setSpeaking(false);
       });
 
-      // Create avatar session - this returns session info
+      // Create avatar session - this also starts streaming internally
       const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.Medium,
         avatarName: 'default',
       });
       
-      console.log('Avatar session created:', sessionInfo);
+      console.log('Avatar session created and streaming started:', sessionInfo);
       
       // Store the HeyGen session ID for speak calls
       if (sessionInfo?.session_id) {
         heygenSessionRef.current = sessionInfo.session_id;
-      }
-
-      // Start streaming via proxy to bypass CORS
-      if (heygenSessionRef.current && tokenRef.current) {
-        console.log('Starting streaming via proxy...');
-        await startStreaming(tokenRef.current, heygenSessionRef.current);
-        console.log('Streaming started successfully');
       }
 
       return avatar;
