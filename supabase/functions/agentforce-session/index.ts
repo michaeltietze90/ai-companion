@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const SF_API_HOST = 'https://api.salesforce.com';
+
 // Token cache
 let cachedToken: { access_token: string; expires_at: number } | null = null;
 
@@ -23,6 +25,7 @@ async function getSalesforceToken(): Promise<string> {
     throw new Error('Salesforce credentials not configured');
   }
 
+  // Token endpoint is on the org domain
   const tokenUrl = `${orgDomain}/services/oauth2/token`;
   
   const response = await fetch(tokenUrl, {
@@ -40,7 +43,7 @@ async function getSalesforceToken(): Promise<string> {
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Salesforce token error:', response.status, errorText);
-    throw new Error(`Failed to get Salesforce token: ${response.status}`);
+    throw new Error(`Failed to get Salesforce token: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
@@ -72,8 +75,9 @@ serve(async (req) => {
     if (action === 'start') {
       const externalSessionKey = crypto.randomUUID();
       
+      // API calls go to api.salesforce.com, instanceConfig uses org domain
       const response = await fetch(
-        `https://api.salesforce.com/einstein/ai-agent/v1/agents/${agentId}/sessions`,
+        `${SF_API_HOST}/einstein/ai-agent/v1/agents/${agentId}/sessions`,
         {
           method: 'POST',
           headers: {
@@ -97,7 +101,7 @@ serve(async (req) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Agentforce session error:', response.status, errorText);
-        throw new Error(`Failed to start session: ${response.status}`);
+        throw new Error(`Failed to start session: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -126,7 +130,7 @@ serve(async (req) => {
       }
 
       const response = await fetch(
-        `https://api.salesforce.com/einstein/ai-agent/v1/sessions/${sessionId}`,
+        `${SF_API_HOST}/einstein/ai-agent/v1/sessions/${sessionId}`,
         {
           method: 'DELETE',
           headers: {
