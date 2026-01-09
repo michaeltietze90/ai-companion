@@ -27,12 +27,13 @@ const Index = () => {
     endConversation,
   } = useAvatarConversation();
 
-  const { 
-    messages, 
-    thinkingMessage, 
-    demoMode, 
+  const {
+    messages,
+    thinkingMessage,
+    demoMode,
     setDemoMode,
     error,
+    sessionId,
   } = useConversationStore();
 
   // Handle voice transcript - send to agent
@@ -118,6 +119,9 @@ const Index = () => {
           <span className="text-sm text-muted-foreground">
             {isConnecting ? 'Connecting...' : isConnected ? (demoMode ? 'Demo Mode' : 'Connected') : 'Ready'}
           </span>
+          {isConnected && !demoMode && (
+            <span className="text-xs text-muted-foreground/80">• session {String(sessionId).slice(0, 8)}</span>
+          )}
         </motion.div>
       </div>
 
