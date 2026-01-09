@@ -99,28 +99,49 @@ serve(async (req) => {
       throw new Error(`Failed to send message: ${response.status}`);
     }
 
-    // Parse SSE stream
+    // Parse SSE stream (Agentforce streams multiple message types; we try to
+    // reconstruct the final assistant text as robustly as possible).
     const text = await response.text();
     const lines = text.split('\n');
-    
+
     let responseMessage = '';
-    let progressIndicators: string[] = [];
-    
+    const progressIndicators: string[] = [];
+
+    const pushText = (chunk?: unknown) => {
+      if (typeof chunk !== 'string') return;
+      const trimmed = chunk.trim();
+      if (!trimmed) return;
+      // Prefer concatenation for streamed chunks; keep spaces sane.
+      responseMessage = responseMessage
+        ? `${responseMessage}${responseMessage.endsWith(' ') ? '' : ' '}${trimmed}`
+        : trimmed;
+    };
+
     for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          
-          if (data.message) {
-            if (data.message.type === 'ProgressIndicator') {
-              progressIndicators.push(data.message.message);
-            } else if (data.message.type === 'Inform') {
-              responseMessage = data.message.message;
-            }
-          }
-        } catch (e) {
-          // Skip malformed JSON
+      if (!line.startsWith('data: ')) continue;
+
+      const payload = line.slice(6).trim();
+      if (!payload || payload === '[DONE]') continue;
+
+      try {
+        const data = JSON.parse(payload);
+
+        // Most common shape: { message: { type, message? , text? } }
+        const msg = data?.message;
+
+        if (msg?.type === 'ProgressIndicator') {
+          if (typeof msg?.message === 'string') progressIndicators.push(msg.message);
+          continue;
         }
+
+        // Collect any assistant text we can find.
+        pushText(msg?.message);
+        pushText(msg?.text);
+        pushText(data?.delta?.text);
+        pushText(data?.delta?.content);
+        pushText(data?.content);
+      } catch {
+        // Skip malformed JSON
       }
     }
 
