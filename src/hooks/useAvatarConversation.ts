@@ -111,7 +111,13 @@ export function useAvatarConversation() {
       if (welcomeMessage) {
         addMessage({ role: 'assistant', content: welcomeMessage });
         if (avatarRef.current) {
-          await avatarRef.current.speak({ text: welcomeMessage });
+          console.log('Speaking welcome message:', welcomeMessage);
+          try {
+            await avatarRef.current.speak({ text: welcomeMessage });
+            console.log('Welcome message speak command sent');
+          } catch (speakError) {
+            console.error('Welcome speak error:', speakError);
+          }
         }
       }
 
@@ -161,7 +167,15 @@ export function useAvatarConversation() {
         
         // Make avatar speak the response
         if (avatarRef.current) {
-          await avatarRef.current.speak({ text: message });
+          console.log('Making avatar speak:', message.substring(0, 50) + '...');
+          try {
+            await avatarRef.current.speak({ text: message });
+            console.log('Avatar speak command sent successfully');
+          } catch (speakError) {
+            console.error('Avatar speak error:', speakError);
+          }
+        } else {
+          console.warn('Avatar ref not available for speaking');
         }
       }
     } catch (error) {
