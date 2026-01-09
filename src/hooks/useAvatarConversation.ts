@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
-import { createHeyGenToken, speakText, stopStreaming } from '@/services/heygenProxy';
+import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
 
@@ -37,6 +37,7 @@ export function useAvatarConversation() {
     setThinking,
     setError,
     setLastAgentforceResponse,
+    setLastSpokenText,
     addMessage,
     reset,
   } = useConversationStore();
@@ -95,7 +96,10 @@ export function useAvatarConversation() {
 
   // Speak using the proxy to bypass any CORS issues
   // If HeyGen is unavailable (502 / plan limit), fall back to browser TTS so Agentforce still "works".
+  // Also: always record the exact text we attempted to speak so we can verify mismatches.
   const speakViaProxy = useCallback(async (text: string) => {
+    setLastSpokenText(text);
+
     const speakWithBrowser = () => {
       try {
         if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -112,6 +116,13 @@ export function useAvatarConversation() {
     // Prefer HeyGen via backend proxy when we have a token + session
     if (tokenRef.current && heygenSessionRef.current) {
       try {
+        // Make sure previous speech is interrupted, otherwise you can hear older queued lines.
+        try {
+          await interruptSpeaking(tokenRef.current, heygenSessionRef.current);
+        } catch {
+          // ignore interrupt failures
+        }
+
         await speakText(tokenRef.current, heygenSessionRef.current, text);
         return;
       } catch (error) {
@@ -132,7 +143,7 @@ export function useAvatarConversation() {
     }
 
     speakWithBrowser();
-  }, []);
+  }, [setLastSpokenText]);
 
   // Start full conversation (HeyGen + Agentforce)
   // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.
