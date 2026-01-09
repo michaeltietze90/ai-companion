@@ -100,15 +100,9 @@ const Index = () => {
         <ProtoMDevice isActive={isConnected}>
           <HologramAvatar 
             isConnected={isConnected} 
-            isSpeaking={isSpeaking} 
-          />
-          {/* Hidden video element for HeyGen stream */}
-          <video
-            ref={videoRef}
-            className="hidden"
-            autoPlay
-            playsInline
-            muted={isMuted}
+            isSpeaking={isSpeaking}
+            videoRef={videoRef}
+            isMuted={isMuted}
           />
         </ProtoMDevice>
       </main>

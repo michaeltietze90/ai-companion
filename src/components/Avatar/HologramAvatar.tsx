@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
+import { RefObject } from "react";
 
 interface HologramAvatarProps {
   isConnected?: boolean;
   isSpeaking?: boolean;
   avatarUrl?: string;
+  videoRef?: RefObject<HTMLVideoElement>;
+  isMuted?: boolean;
 }
 
-const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl }: HologramAvatarProps) => {
+const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, videoRef, isMuted = false }: HologramAvatarProps) => {
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Hologram avatar container */}
@@ -63,7 +66,18 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl }: 
               ease: "linear",
             }}
           >
-            {avatarUrl ? (
+            {videoRef ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted={isMuted}
+                className="w-full h-full object-cover rounded-lg"
+                style={{
+                  filter: 'drop-shadow(0 0 20px rgba(0, 255, 255, 0.5))',
+                }}
+              />
+            ) : avatarUrl ? (
               <img 
                 src={avatarUrl} 
                 alt="Avatar" 
