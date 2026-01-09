@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const SF_API_HOST = 'https://api.salesforce.com';
+
 // Token cache
 let cachedToken: { access_token: string; expires_at: number } | null = null;
 
@@ -38,6 +40,8 @@ async function getSalesforceToken(): Promise<string> {
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Salesforce token error:', response.status, errorText);
     throw new Error(`Failed to get Salesforce token: ${response.status}`);
   }
 
@@ -66,8 +70,9 @@ serve(async (req) => {
     const accessToken = await getSalesforceToken();
     const sequenceId = Date.now();
 
+    // Use SF_API_HOST for API calls, streaming endpoint
     const response = await fetch(
-      `https://api.salesforce.com/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`,
+      `${SF_API_HOST}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`,
       {
         method: 'POST',
         headers: {
