@@ -131,12 +131,14 @@ serve(async (req) => {
           continue;
         }
 
-        // Collect any assistant text we can find.
-        pushText(msg?.message);
-        pushText(msg?.text);
-        pushText(data?.delta?.text);
-        pushText(data?.delta?.content);
-        pushText(data?.content);
+        // Collect assistant text from ONE source per event (priority order to avoid duplicates).
+        const textChunk = 
+          data?.delta?.text ?? 
+          data?.delta?.content ?? 
+          msg?.text ?? 
+          msg?.message ?? 
+          data?.content;
+        pushText(textChunk);
       } catch {
         // Skip malformed JSON
       }
