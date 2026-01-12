@@ -120,13 +120,11 @@ export function useAvatarConversation() {
   }, [setSpeaking]);
 
   // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
-  // with a timeout to prevent hanging forever
   const waitForSpeechComplete = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
-      // If not currently speaking, wait a moment for state to sync then resolve
+      // If not currently speaking, resolve immediately
       if (!isSpeakingRef.current) {
-        // Small delay to let HeyGen process the request
-        setTimeout(resolve, 300);
+        resolve();
         return;
       }
       
@@ -161,9 +159,6 @@ export function useAvatarConversation() {
       console.log('[Speech] Waiting for current speech to finish...');
       await waitForSpeechComplete();
     }
-
-    // Small delay to ensure HeyGen session is ready
-    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Preferred: use the HeyGen SDK instance
     if (avatarRef.current) {
