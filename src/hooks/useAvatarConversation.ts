@@ -113,15 +113,28 @@ export function useAvatarConversation() {
   }, [setSpeaking]);
 
   // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
+  // with a timeout to prevent hanging forever
   const waitForSpeechComplete = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
-      // If not currently speaking, resolve immediately
+      // If not currently speaking, wait a moment for state to sync then resolve
       if (!isSpeakingRef.current) {
-        resolve();
+        // Small delay to let HeyGen process the request
+        setTimeout(resolve, 300);
         return;
       }
-      // Otherwise wait for the stop event
-      speechResolveRef.current = resolve;
+      
+      // Set a timeout so we don't hang forever if event never fires
+      const timeout = setTimeout(() => {
+        console.warn('[Speech] Timeout waiting for avatar to stop talking');
+        speechResolveRef.current = null;
+        resolve();
+      }, 30000); // 30 second max per sentence
+      
+      // Store resolver to be called by AVATAR_STOP_TALKING event
+      speechResolveRef.current = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
     });
   }, []);
 
@@ -135,6 +148,15 @@ export function useAvatarConversation() {
 
     setLastSpokenText(spokenText);
     if (!spokenText) return;
+
+    // Wait for any currently speaking to finish first
+    if (isSpeakingRef.current) {
+      console.log('[Speech] Waiting for current speech to finish...');
+      await waitForSpeechComplete();
+    }
+
+    // Small delay to ensure HeyGen session is ready
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Preferred: use the HeyGen SDK instance
     if (avatarRef.current) {
@@ -161,7 +183,6 @@ export function useAvatarConversation() {
     }
 
     // NO browser TTS fallback - just skip if HeyGen is unavailable
-    // (Browser TTS sounds robotic and breaks the experience)
     console.warn('[Speech] HeyGen unavailable, skipping speech for:', spokenText.substring(0, 50));
   }, [setLastSpokenText, waitForSpeechComplete]);
 
