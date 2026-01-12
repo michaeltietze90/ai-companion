@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, User, Key, Bot, Save, Check } from 'lucide-react';
+import { X, Plus, Trash2, User, Key, Bot, Save, Check, Image, Code, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { useSettingsStore, Profile, AvatarOption } from '@/stores/settingsStore';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Some popular public HeyGen avatar IDs
 const DEFAULT_PUBLIC_AVATARS: AvatarOption[] = [
@@ -194,9 +195,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {editingProfile && (
             <Tabs defaultValue="salesforce" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-4 mb-6">
                 <TabsTrigger value="salesforce">Salesforce</TabsTrigger>
                 <TabsTrigger value="heygen">HeyGen</TabsTrigger>
+                <TabsTrigger value="rich-responses">Rich Responses</TabsTrigger>
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
 
@@ -335,6 +337,110 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       ))}
                     </div>
                   )}
+                </div>
+              </TabsContent>
+
+              {/* Rich Responses Tab */}
+              <TabsContent value="rich-responses" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Image className="w-5 h-5" />
+                    <h3 className="font-semibold">Rich Response Tags</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Configure your Agentforce agent to include these tags in responses. The avatar will speak the text while displaying visuals as overlays.
+                  </p>
+
+                  {/* Visual Tag */}
+                  <div className="p-4 rounded-lg bg-secondary/50 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-sm">Visual Tag</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Display images, GIFs, or videos as transparent overlays during speech.
+                    </p>
+                    <div className="bg-background/80 p-3 rounded-md font-mono text-xs overflow-x-auto">
+                      <code className="text-green-400">
+                        {'<visual type="image" src="URL" duration="5000" position="center" />'}
+                      </code>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                      <span className="text-muted-foreground">type</span>
+                      <span>image | gif | video</span>
+                      <span className="text-muted-foreground">src</span>
+                      <span>URL to media (PNG with transparency works)</span>
+                      <span className="text-muted-foreground">duration</span>
+                      <span>Display time: 5000 or "5s" (default: 5s)</span>
+                      <span className="text-muted-foreground">position</span>
+                      <span>center, top, bottom, left, right, topleft, topright, bottomleft, bottomright</span>
+                      <span className="text-muted-foreground">startOffset</span>
+                      <span>Delay before showing (optional)</span>
+                    </div>
+                  </div>
+
+                  {/* Break Tag */}
+                  <div className="p-4 rounded-lg bg-secondary/50 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-primary" />
+                      <span className="font-medium text-sm">Break Tag (SSML)</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Add pauses in speech for dramatic effect or timing.
+                    </p>
+                    <div className="bg-background/80 p-3 rounded-md font-mono text-xs">
+                      <code className="text-green-400">
+                        {'<break time="500ms" />'}
+                      </code>
+                    </div>
+                  </div>
+
+                  {/* Example */}
+                  <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-3">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Bot className="w-4 h-4" />
+                      <span className="font-medium text-sm">Example Response</span>
+                    </div>
+                    <div className="bg-background/80 p-3 rounded-md font-mono text-xs overflow-x-auto whitespace-pre-wrap">
+                      <code className="text-foreground">
+{`Hi! Let me show you our product.
+<visual type="image" src="https://example.com/product.png" duration="4000" position="right"/>
+This is our bestseller!
+<break time="500ms"/>
+Would you like to learn more?`}
+                      </code>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p><strong>What happens:</strong></p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-2">
+                        <li>Avatar speaks: "Hi! Let me show you our product. This is our bestseller! ... Would you like to learn more?"</li>
+                        <li>Product image appears on the right for 4 seconds</li>
+                        <li>Brief pause after "bestseller"</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Agent Instructions */}
+                  <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
+                    <span className="font-medium text-sm">Agentforce Configuration</span>
+                    <p className="text-xs text-muted-foreground">
+                      Add instructions like this to your Agentforce agent's system prompt:
+                    </p>
+                    <ScrollArea className="h-32">
+                      <div className="bg-background/80 p-3 rounded-md font-mono text-xs whitespace-pre-wrap">
+                        <code className="text-muted-foreground">
+{`When showing visual content, use this format:
+<visual type="image" src="[URL]" duration="[ms]" position="[position]"/>
+
+Positions: center, top, bottom, left, right, topleft, topright, bottomleft, bottomright
+
+For pauses: <break time="500ms"/>
+
+The visual tags will be removed from speech. Only the surrounding text is spoken.`}
+                        </code>
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </div>
               </TabsContent>
 
