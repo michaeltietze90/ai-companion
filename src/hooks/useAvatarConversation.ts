@@ -22,6 +22,10 @@ export function useAvatarConversation() {
   const heygenSessionRef = useRef<string | null>(null);
   const demoIndexRef = useRef(0);
   
+  // Speech completion tracking
+  const speechResolveRef = useRef<(() => void) | null>(null);
+  const isSpeakingRef = useRef(false);
+  
   const {
     sessionId,
     messagesStreamUrl,
@@ -69,13 +73,20 @@ export function useAvatarConversation() {
 
       avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
         console.log('Avatar started talking');
+        isSpeakingRef.current = true;
         setSpeaking(true);
         setListening(false); // Stop listening while avatar speaks
       });
 
       avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
         console.log('Avatar stopped talking');
+        isSpeakingRef.current = false;
         setSpeaking(false);
+        // Resolve any pending speech wait
+        if (speechResolveRef.current) {
+          speechResolveRef.current();
+          speechResolveRef.current = null;
+        }
         // Resume listening is handled by the STT hook
       });
 
@@ -99,14 +110,76 @@ export function useAvatarConversation() {
     }
   }, [setSpeaking]);
 
-  // Speak using HeyGen (SDK first). If it fails, fall back to proxy, then browser TTS.
-  // Accepts parsed speech text (already cleaned of visual tags)
-  const speakViaProxy = useCallback(async (text: string) => {
+  // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
+  const waitForSpeechComplete = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      // If not currently speaking, resolve immediately
+      if (!isSpeakingRef.current) {
+        resolve();
+        return;
+      }
+      // Otherwise wait for the stop event
+      speechResolveRef.current = resolve;
+    });
+  }, []);
+
+  // Speak text WITHOUT interrupting (for queued sentences)
+  const speakSentenceNoInterrupt = useCallback(async (text: string): Promise<void> => {
     const spokenText = text
-      // Remove Markdown images/links that Agentforce sometimes includes
       .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
       .replace(/\[[^\]]*\]\(([^\)]*)\)/g, '$1')
-      // Collapse whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    setLastSpokenText(spokenText);
+    if (!spokenText) return;
+
+    // Preferred: use the HeyGen SDK instance
+    if (avatarRef.current) {
+      try {
+        await avatarRef.current.speak({ text: spokenText, task_type: TaskType.REPEAT });
+        // Wait for speech to actually complete
+        await waitForSpeechComplete();
+        return;
+      } catch (error) {
+        console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);
+      }
+    }
+
+    // Fallback: direct API calls via our proxy
+    if (tokenRef.current && heygenSessionRef.current) {
+      try {
+        await speakText(tokenRef.current, heygenSessionRef.current, spokenText);
+        // Wait for speech completion
+        await waitForSpeechComplete();
+        return;
+      } catch (error) {
+        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
+      }
+    }
+
+    // Last resort: browser TTS
+    try {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      const utter = new SpeechSynthesisUtterance(spokenText);
+      utter.rate = 1;
+      utter.pitch = 1;
+      
+      await new Promise<void>((resolve) => {
+        utter.onend = () => resolve();
+        utter.onerror = () => resolve();
+        window.speechSynthesis.speak(utter);
+      });
+    } catch {
+      // ignore
+    }
+  }, [setLastSpokenText, waitForSpeechComplete]);
+
+  // Speak using HeyGen WITH interrupt (for new messages, welcome message, etc.)
+  const speakViaProxy = useCallback(async (text: string) => {
+    const spokenText = text
+      .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
+      .replace(/\[[^\]]*\]\(([^\)]*)\)/g, '$1')
       .replace(/\s+/g, ' ')
       .trim();
 
@@ -269,13 +342,14 @@ export function useAvatarConversation() {
       let fullResponse = '';
       const allVisuals: ParsedResponse['visuals'] = [];
       
-      // Speech queue - we queue sentences and speak them one at a time
+      // Speech queue - we queue sentences and speak them sequentially (waiting for each to complete)
       const speechQueue: string[] = [];
-      let isSpeakingQueue = false;
+      let isProcessingQueue = false;
+      let queueProcessingPromise: Promise<void> | null = null;
       
       const processSpeechQueue = async () => {
-        if (isSpeakingQueue || speechQueue.length === 0) return;
-        isSpeakingQueue = true;
+        if (isProcessingQueue) return;
+        isProcessingQueue = true;
         
         while (speechQueue.length > 0) {
           const sentence = speechQueue.shift();
@@ -283,18 +357,15 @@ export function useAvatarConversation() {
           
           console.log('[HeyGen] speaking sentence:', sentence.substring(0, 50) + (sentence.length > 50 ? '...' : ''));
           try {
-            await speakViaProxy(sentence);
+            // Use the no-interrupt version that waits for speech to complete
+            await speakSentenceNoInterrupt(sentence);
+            console.log('[HeyGen] sentence complete');
           } catch (speakError) {
             console.error('[HeyGen] speak error:', speakError);
           }
-          
-          // Wait for avatar to finish speaking before next sentence
-          // The avatar.speak() returns when command is sent, not when speech ends
-          // We'll wait a brief moment to allow some overlap prevention
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        isSpeakingQueue = false;
+        isProcessingQueue = false;
       };
       
       // Stream sentences from Agentforce
@@ -336,7 +407,7 @@ export function useAvatarConversation() {
       }
       
       // Wait for all queued speech to finish
-      while (speechQueue.length > 0 || isSpeakingQueue) {
+      while (speechQueue.length > 0 || isProcessingQueue) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -348,7 +419,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, messagesStreamUrl, demoMode, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
+  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
 
   // End conversation
   const endConversation = useCallback(async () => {

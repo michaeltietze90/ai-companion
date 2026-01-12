@@ -59,11 +59,12 @@ async function getSalesforceToken(): Promise<string> {
 // Sentence boundary regex - splits on . ! ? followed by space or end
 const SENTENCE_END_RE = /(?<=[.!?])\s+/;
 
-// Extract text chunk from SSE data
-function extractTextChunk(data: Record<string, unknown>): string | null {
+// Extract text chunk from SSE data - returns null if no new text
+function extractTextChunk(data: Record<string, unknown>, seenText: Set<string>): string | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
   
+  // Priority order - only pick ONE source
   const chunk = 
     delta?.text ?? 
     delta?.content ?? 
@@ -71,7 +72,16 @@ function extractTextChunk(data: Record<string, unknown>): string | null {
     msg?.message ?? 
     data?.content;
   
-  return typeof chunk === 'string' ? chunk : null;
+  if (typeof chunk !== 'string' || !chunk) return null;
+  
+  // Deduplicate - if we've seen this exact text before, skip it
+  if (seenText.has(chunk)) {
+    console.log('[Dedup] Skipping duplicate chunk:', chunk.substring(0, 50));
+    return null;
+  }
+  
+  seenText.add(chunk);
+  return chunk;
 }
 
 serve(async (req) => {
@@ -122,6 +132,7 @@ serve(async (req) => {
     if (streaming) {
       const encoder = new TextEncoder();
       let textBuffer = '';
+      const seenChunks = new Set<string>(); // Track seen text to deduplicate
       
       const readable = new ReadableStream({
         async start(controller) {
@@ -161,7 +172,7 @@ serve(async (req) => {
                   }
                   
                   // Extract and buffer text
-                  const textChunk = extractTextChunk(data);
+                  const textChunk = extractTextChunk(data, seenChunks);
                   if (textChunk) {
                     textBuffer += textChunk;
                     
@@ -217,6 +228,7 @@ serve(async (req) => {
 
     let responseMessage = '';
     const progressIndicators: string[] = [];
+    const seenChunksLegacy = new Set<string>(); // Deduplicate for legacy mode too
 
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
@@ -234,7 +246,7 @@ serve(async (req) => {
           continue;
         }
 
-        const textChunk = extractTextChunk(data);
+        const textChunk = extractTextChunk(data, seenChunksLegacy);
         if (textChunk) responseMessage += textChunk;
       } catch {
         // Skip malformed JSON
