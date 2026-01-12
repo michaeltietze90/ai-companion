@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType } from '@heygen/streaming-avatar';
-import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
+import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
@@ -263,37 +263,84 @@ export function useAvatarConversation() {
         throw new Error('No active Agentforce session (sessionId missing)');
       }
 
-      console.log('[Agentforce] send message', { sessionId, text });
-      const { message, progressIndicators } = await sendAgentMessage(sessionId, text, messagesStreamUrl);
-      setLastAgentforceResponse(message || '');
-      console.log('[Agentforce] received response', { messagePreview: message?.slice(0, 120), progressIndicators });
-
-      // Update thinking indicator with progress messages
-      if (progressIndicators.length > 0) {
-        setThinking(true, progressIndicators[progressIndicators.length - 1]);
-      }
-
-      if (message) {
-        // Parse rich response for visuals and clean speech
-        const parsed = parseRichResponse(message);
+      console.log('[Agentforce] send message (streaming)', { sessionId, text });
+      
+      // Track full response for display and debugging
+      let fullResponse = '';
+      const allVisuals: ParsedResponse['visuals'] = [];
+      
+      // Speech queue - we queue sentences and speak them one at a time
+      const speechQueue: string[] = [];
+      let isSpeakingQueue = false;
+      
+      const processSpeechQueue = async () => {
+        if (isSpeakingQueue || speechQueue.length === 0) return;
+        isSpeakingQueue = true;
         
-        addMessage({ role: 'assistant', content: parsed.displayText });
-
-        // Start any visuals immediately
-        if (parsed.hasRichContent) {
-          console.log('[Rich Response] Starting visuals:', parsed.visuals);
-          startVisuals(parsed.visuals);
+        while (speechQueue.length > 0) {
+          const sentence = speechQueue.shift();
+          if (!sentence) continue;
+          
+          console.log('[HeyGen] speaking sentence:', sentence.substring(0, 50) + (sentence.length > 50 ? '...' : ''));
+          try {
+            await speakViaProxy(sentence);
+          } catch (speakError) {
+            console.error('[HeyGen] speak error:', speakError);
+          }
+          
+          // Wait for avatar to finish speaking before next sentence
+          // The avatar.speak() returns when command is sent, not when speech ends
+          // We'll wait a brief moment to allow some overlap prevention
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
-
-        // Make avatar speak the clean speech text
-        console.log('[HeyGen] speaking Agentforce response', parsed.speechText.substring(0, 80) + '...');
-        try {
-          await speakViaProxy(parsed.speechText);
-          console.log('[HeyGen] speak command sent successfully');
-        } catch (speakError) {
-          console.error('[HeyGen] speak error:', speakError);
+        
+        isSpeakingQueue = false;
+      };
+      
+      // Stream sentences from Agentforce
+      for await (const chunk of streamAgentMessage(sessionId, text, messagesStreamUrl)) {
+        if (chunk.type === 'progress') {
+          setThinking(true, chunk.text);
+        } else if (chunk.type === 'sentence') {
+          // Accumulate full response
+          fullResponse += (fullResponse ? ' ' : '') + chunk.text;
+          
+          // Parse for visuals in this sentence
+          const parsed = parseRichResponse(chunk.text);
+          
+          // Start any visuals immediately
+          if (parsed.hasRichContent) {
+            console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
+            startVisuals(parsed.visuals);
+            allVisuals.push(...parsed.visuals);
+          }
+          
+          // Queue the clean speech text for speaking
+          if (parsed.speechText.trim()) {
+            speechQueue.push(parsed.speechText);
+            // Start processing queue (non-blocking)
+            processSpeechQueue();
+          }
+        } else if (chunk.type === 'done') {
+          console.log('[Agentforce] stream complete');
         }
       }
+      
+      // Store full response for debugging
+      setLastAgentforceResponse(fullResponse);
+      
+      // Add complete message to chat
+      if (fullResponse) {
+        const finalParsed = parseRichResponse(fullResponse);
+        addMessage({ role: 'assistant', content: finalParsed.displayText });
+      }
+      
+      // Wait for all queued speech to finish
+      while (speechQueue.length > 0 || isSpeakingQueue) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      console.log('[HeyGen] all sentences spoken');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
       toast.error(errorMessage);
@@ -301,7 +348,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, demoMode, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
+  }, [sessionId, messagesStreamUrl, demoMode, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
 
   // End conversation
   const endConversation = useCallback(async () => {
