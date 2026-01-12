@@ -120,7 +120,7 @@ export function useAvatarConversation() {
       }
 
       try {
-        await avatarRef.current.speak({ text: spokenText, task_type: TaskType.TALK });
+        await avatarRef.current.speak({ text: spokenText, task_type: TaskType.REPEAT });
         return;
       } catch (error) {
         console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);

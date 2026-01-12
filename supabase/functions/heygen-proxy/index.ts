@@ -55,7 +55,7 @@ serve(async (req) => {
         body = { 
           session_id: params.sessionId,
           text: params.text,
-          task_type: 'talk',
+          task_type: 'repeat',
         };
         break;
       case 'interrupt':
