@@ -336,82 +336,103 @@ export function useAvatarConversation() {
         throw new Error('No active Agentforce session (sessionId missing)');
       }
 
-      console.log('[Agentforce] send message (streaming)', { sessionId, text });
-      
-      // Track full response for display and debugging
-      let fullResponse = '';
-      const allVisuals: ParsedResponse['visuals'] = [];
-      
-      // Speech queue - we queue sentences and speak them sequentially (waiting for each to complete)
-      const speechQueue: string[] = [];
-      let isProcessingQueue = false;
-      let queueProcessingPromise: Promise<void> | null = null;
-      
-      const processSpeechQueue = async () => {
-        if (isProcessingQueue) return;
-        isProcessingQueue = true;
-        
-        while (speechQueue.length > 0) {
-          const sentence = speechQueue.shift();
-          if (!sentence) continue;
-          
-          console.log('[HeyGen] speaking sentence:', sentence.substring(0, 50) + (sentence.length > 50 ? '...' : ''));
-          try {
-            // Use the no-interrupt version that waits for speech to complete
-            await speakSentenceNoInterrupt(sentence);
-            console.log('[HeyGen] sentence complete');
-          } catch (speakError) {
-            console.error('[HeyGen] speak error:', speakError);
+      const runStreamingTurn = async (activeSessionId: string, activeMessagesStreamUrl: string | null) => {
+        console.log('[Agentforce] send message (streaming)', { sessionId: activeSessionId, text });
+
+        // Track full response for display and debugging
+        let fullResponse = '';
+        const allVisuals: ParsedResponse['visuals'] = [];
+
+        // Speech queue - we queue sentences and speak them sequentially (waiting for each to complete)
+        const speechQueue: string[] = [];
+        let isProcessingQueue = false;
+
+        const processSpeechQueue = async () => {
+          if (isProcessingQueue) return;
+          isProcessingQueue = true;
+
+          while (speechQueue.length > 0) {
+            const sentence = speechQueue.shift();
+            if (!sentence) continue;
+
+            console.log('[HeyGen] speaking sentence:', sentence.substring(0, 50) + (sentence.length > 50 ? '...' : ''));
+            try {
+              // Use the no-interrupt version that waits for speech to complete
+              await speakSentenceNoInterrupt(sentence);
+              console.log('[HeyGen] sentence complete');
+            } catch (speakError) {
+              console.error('[HeyGen] speak error:', speakError);
+            }
+          }
+
+          isProcessingQueue = false;
+        };
+
+        // Stream sentences from Agentforce
+        for await (const chunk of streamAgentMessage(activeSessionId, text, activeMessagesStreamUrl)) {
+          if (chunk.type === 'progress') {
+            setThinking(true, chunk.text);
+          } else if (chunk.type === 'sentence') {
+            // Accumulate full response
+            fullResponse += (fullResponse ? ' ' : '') + chunk.text;
+
+            // Parse for visuals in this sentence
+            const parsed = parseRichResponse(chunk.text);
+
+            // Start any visuals immediately
+            if (parsed.hasRichContent) {
+              console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
+              startVisuals(parsed.visuals);
+              allVisuals.push(...parsed.visuals);
+            }
+
+            // Queue the clean speech text for speaking
+            if (parsed.speechText.trim()) {
+              speechQueue.push(parsed.speechText);
+              // Start processing queue (non-blocking)
+              processSpeechQueue();
+            }
+          } else if (chunk.type === 'done') {
+            console.log('[Agentforce] stream complete');
           }
         }
-        
-        isProcessingQueue = false;
+
+        // Store full response for debugging
+        setLastAgentforceResponse(fullResponse);
+
+        // Add complete message to chat
+        if (fullResponse) {
+          const finalParsed = parseRichResponse(fullResponse);
+          addMessage({ role: 'assistant', content: finalParsed.displayText });
+        }
+
+        // Wait for all queued speech to finish
+        while (speechQueue.length > 0 || isProcessingQueue) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        console.log('[HeyGen] all sentences spoken');
       };
-      
-      // Stream sentences from Agentforce
-      for await (const chunk of streamAgentMessage(sessionId, text, messagesStreamUrl)) {
-        if (chunk.type === 'progress') {
-          setThinking(true, chunk.text);
-        } else if (chunk.type === 'sentence') {
-          // Accumulate full response
-          fullResponse += (fullResponse ? ' ' : '') + chunk.text;
-          
-          // Parse for visuals in this sentence
-          const parsed = parseRichResponse(chunk.text);
-          
-          // Start any visuals immediately
-          if (parsed.hasRichContent) {
-            console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
-            startVisuals(parsed.visuals);
-            allVisuals.push(...parsed.visuals);
-          }
-          
-          // Queue the clean speech text for speaking
-          if (parsed.speechText.trim()) {
-            speechQueue.push(parsed.speechText);
-            // Start processing queue (non-blocking)
-            processSpeechQueue();
-          }
-        } else if (chunk.type === 'done') {
-          console.log('[Agentforce] stream complete');
+
+      try {
+        await runStreamingTurn(sessionId, messagesStreamUrl);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+
+        // Recover from session expiry (Agentforce returns 404 "V6Session not found")
+        if (msg.includes('AGENTFORCE_SESSION_NOT_FOUND') || msg.includes('Failed to send message: 404')) {
+          console.warn('[Agentforce] session expired; restarting session and retrying once');
+
+          const { sessionId: newSessionId, welcomeMessage: _welcome, messagesStreamUrl: newStreamUrl } = await startAgentSession();
+          setSessionId(newSessionId);
+          setMessagesStreamUrl(newStreamUrl);
+
+          await runStreamingTurn(newSessionId, newStreamUrl);
+          return;
         }
+
+        throw err;
       }
-      
-      // Store full response for debugging
-      setLastAgentforceResponse(fullResponse);
-      
-      // Add complete message to chat
-      if (fullResponse) {
-        const finalParsed = parseRichResponse(fullResponse);
-        addMessage({ role: 'assistant', content: finalParsed.displayText });
-      }
-      
-      // Wait for all queued speech to finish
-      while (speechQueue.length > 0 || isProcessingQueue) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      console.log('[HeyGen] all sentences spoken');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
       toast.error(errorMessage);
@@ -419,7 +440,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
+  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, startAgentSession]);
 
   // End conversation
   const endConversation = useCallback(async () => {
