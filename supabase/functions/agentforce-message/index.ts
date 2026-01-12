@@ -59,11 +59,8 @@ async function getSalesforceToken(): Promise<string> {
 // Sentence boundary regex - splits on . ! ? followed by space or end
 const SENTENCE_END_RE = /(?<=[.!?])\s+/;
 
-// Track accumulated text to detect when Agentforce re-sends a "corrected" version
-let accumulatedText = '';
-
-// Extract text chunk from SSE data - returns null if no new text or if duplicate
-function extractTextChunk(data: Record<string, unknown>, seenText: Set<string>): string | null {
+// Extract text chunk from SSE data - returns the NEW portion only (deduplicates against accumulated text)
+function extractTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
   
@@ -77,31 +74,21 @@ function extractTextChunk(data: Record<string, unknown>, seenText: Set<string>):
   
   if (typeof chunk !== 'string' || !chunk) return null;
   
-  // Deduplicate - exact match
-  if (seenText.has(chunk)) {
-    console.log('[Dedup] Skipping exact duplicate chunk:', chunk.substring(0, 50));
+  // If this chunk is an extension of what we've accumulated, return only the NEW part
+  if (chunk.startsWith(accumulatedText) && chunk.length > accumulatedText.length) {
+    const newPart = chunk.slice(accumulatedText.length);
+    console.log('[Dedup] Extension detected, extracting new part:', newPart.substring(0, 50));
+    return { newText: newPart, fullChunk: chunk };
+  }
+  
+  // If what we have is an extension of this chunk, skip (we already have more)
+  if (accumulatedText.startsWith(chunk)) {
+    console.log('[Dedup] Skipping - already have this or longer:', chunk.substring(0, 50));
     return null;
   }
   
-  // Near-duplicate detection: if the new chunk is very similar to something we've seen
-  // (e.g., Agentforce sends partial then full sentence), skip it
-  for (const seen of seenText) {
-    // If new chunk starts with something we've seen (prefix match)
-    if (chunk.startsWith(seen) && chunk.length > seen.length) {
-      // This is an extension - skip, we already have the prefix
-      console.log('[Dedup] Skipping extended chunk (already have prefix):', chunk.substring(0, 50));
-      return null;
-    }
-    // If something we've seen starts with this chunk
-    if (seen.startsWith(chunk) && seen.length > chunk.length) {
-      // We already have a longer version - skip this
-      console.log('[Dedup] Skipping shorter chunk (already have longer):', chunk.substring(0, 50));
-      return null;
-    }
-  }
-  
-  seenText.add(chunk);
-  return chunk;
+  // This is genuinely new text to append
+  return { newText: chunk, fullChunk: accumulatedText + chunk };
 }
 
 serve(async (req) => {
@@ -165,7 +152,7 @@ serve(async (req) => {
     if (streaming) {
       const encoder = new TextEncoder();
       let textBuffer = '';
-      const seenChunks = new Set<string>(); // Track seen text to deduplicate
+      let accumulatedFromAPI = ''; // Track what Agentforce has sent so far
       
       const readable = new ReadableStream({
         async start(controller) {
@@ -204,10 +191,11 @@ serve(async (req) => {
                     continue;
                   }
                   
-                  // Extract and buffer text
-                  const textChunk = extractTextChunk(data, seenChunks);
-                  if (textChunk) {
-                    textBuffer += textChunk;
+                  // Extract and buffer text (deduplicating against what we've accumulated)
+                  const result = extractTextChunk(data, accumulatedFromAPI);
+                  if (result) {
+                    textBuffer += result.newText;
+                    accumulatedFromAPI = result.fullChunk;
                     
                     // Check for complete sentences
                     const parts = textBuffer.split(SENTENCE_END_RE);
@@ -260,8 +248,8 @@ serve(async (req) => {
     const lines = text.split('\n');
 
     let responseMessage = '';
+    let accumulatedFromAPILegacy = '';
     const progressIndicators: string[] = [];
-    const seenChunksLegacy = new Set<string>(); // Deduplicate for legacy mode too
 
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
@@ -279,8 +267,11 @@ serve(async (req) => {
           continue;
         }
 
-        const textChunk = extractTextChunk(data, seenChunksLegacy);
-        if (textChunk) responseMessage += textChunk;
+        const result = extractTextChunk(data, accumulatedFromAPILegacy);
+        if (result) {
+          responseMessage += result.newText;
+          accumulatedFromAPILegacy = result.fullChunk;
+        }
       } catch {
         // Skip malformed JSON
       }
