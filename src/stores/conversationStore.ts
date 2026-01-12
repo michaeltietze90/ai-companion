@@ -10,6 +10,7 @@ export interface Message {
 interface ConversationState {
   messages: Message[];
   sessionId: string | null;
+  messagesStreamUrl: string | null;
   isConnected: boolean;
   isConnecting: boolean;
   isSpeaking: boolean;
@@ -26,6 +27,7 @@ interface ConversationState {
 
   // Actions
   setSessionId: (sessionId: string | null) => void;
+  setMessagesStreamUrl: (url: string | null) => void;
   setConnected: (connected: boolean) => void;
   setConnecting: (connecting: boolean) => void;
   setSpeaking: (speaking: boolean) => void;
@@ -44,6 +46,7 @@ interface ConversationState {
 export const useConversationStore = create<ConversationState>((set) => ({
   messages: [],
   sessionId: null,
+  messagesStreamUrl: null,
   isConnected: false,
   isConnecting: false,
   isSpeaking: false,
@@ -58,6 +61,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
   lastSpokenText: '',
 
   setSessionId: (sessionId) => set({ sessionId }),
+  setMessagesStreamUrl: (messagesStreamUrl) => set({ messagesStreamUrl }),
   setConnected: (isConnected) => set({ isConnected }),
   setConnecting: (isConnecting) => set({ isConnecting }),
   setSpeaking: (isSpeaking) => set({ isSpeaking }),
@@ -83,6 +87,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
   reset: () => set({
     messages: [],
     sessionId: null,
+    messagesStreamUrl: null,
     isConnected: false,
     isConnecting: false,
     isSpeaking: false,
