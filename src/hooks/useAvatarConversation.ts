@@ -4,6 +4,7 @@ import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessag
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { parseRichResponse, type ParsedResponse } from '@/lib/richResponseParser';
 import { toast } from 'sonner';
 
@@ -52,6 +53,7 @@ export function useAvatarConversation() {
   } = useConversationStore();
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
+  const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
 
   // Initialize HeyGen Avatar with proxy for streaming.start
   const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
@@ -92,10 +94,15 @@ export function useAvatarConversation() {
         // Resume listening is handled by the STT hook
       });
 
+      // Get selected avatar from settings
+      const activeProfile = getActiveProfile();
+      const avatarName = activeProfile?.selectedAvatarId || 'default';
+      console.log('[HeyGen] Using avatar:', avatarName);
+
       // Create avatar session - this also starts streaming internally
       const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.Medium,
-        avatarName: 'default',
+        avatarName: avatarName,
       });
       
       console.log('Avatar session created and streaming started:', sessionInfo);
