@@ -144,7 +144,7 @@ export function useAvatarConversation() {
         await waitForSpeechComplete();
         return;
       } catch (error) {
-        console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);
+        console.error('[HeyGen SDK] speak failed, trying proxy:', error);
       }
     }
 
@@ -156,25 +156,13 @@ export function useAvatarConversation() {
         await waitForSpeechComplete();
         return;
       } catch (error) {
-        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
+        console.error('[HeyGen proxy] speak failed:', error);
       }
     }
 
-    // Last resort: browser TTS
-    try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-      const utter = new SpeechSynthesisUtterance(spokenText);
-      utter.rate = 1;
-      utter.pitch = 1;
-      
-      await new Promise<void>((resolve) => {
-        utter.onend = () => resolve();
-        utter.onerror = () => resolve();
-        window.speechSynthesis.speak(utter);
-      });
-    } catch {
-      // ignore
-    }
+    // NO browser TTS fallback - just skip if HeyGen is unavailable
+    // (Browser TTS sounds robotic and breaks the experience)
+    console.warn('[Speech] HeyGen unavailable, skipping speech for:', spokenText.substring(0, 50));
   }, [setLastSpokenText, waitForSpeechComplete]);
 
   // Speak using HeyGen WITH interrupt (for new messages, welcome message, etc.)
@@ -200,7 +188,7 @@ export function useAvatarConversation() {
         await avatarRef.current.speak({ text: spokenText, task_type: TaskType.REPEAT });
         return;
       } catch (error) {
-        console.error('[HeyGen SDK] speak failed, falling back to proxy:', error);
+        console.error('[HeyGen SDK] speak failed, trying proxy:', error);
       }
     }
 
@@ -216,21 +204,12 @@ export function useAvatarConversation() {
         await speakText(tokenRef.current, heygenSessionRef.current, spokenText);
         return;
       } catch (error) {
-        console.error('[HeyGen] speak failed, falling back to browser TTS:', error);
+        console.error('[HeyGen proxy] speak failed:', error);
       }
     }
 
-    // Last resort: browser TTS
-    try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(spokenText);
-      utter.rate = 1;
-      utter.pitch = 1;
-      window.speechSynthesis.speak(utter);
-    } catch {
-      // ignore
-    }
+    // NO browser TTS fallback - just skip if HeyGen is unavailable
+    console.warn('[Speech] HeyGen unavailable, skipping speech for:', spokenText.substring(0, 50));
   }, [setLastSpokenText]);
 
   // Start full conversation (HeyGen + Agentforce)
