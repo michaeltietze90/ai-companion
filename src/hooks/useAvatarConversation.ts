@@ -24,6 +24,7 @@ export function useAvatarConversation() {
   
   const {
     sessionId,
+    messagesStreamUrl,
     isConnected,
     isConnecting,
     isSpeaking,
@@ -31,6 +32,7 @@ export function useAvatarConversation() {
     isThinking,
     demoMode,
     setSessionId,
+    setMessagesStreamUrl,
     setConnected,
     setConnecting,
     setSpeaking,
@@ -184,8 +186,9 @@ export function useAvatarConversation() {
       }
 
       // 1) Start Agentforce first (so "brain" is always available)
-      const { sessionId: newSessionId, welcomeMessage } = await startAgentSession();
+      const { sessionId: newSessionId, welcomeMessage, messagesStreamUrl } = await startAgentSession();
       setSessionId(newSessionId);
+      setMessagesStreamUrl(messagesStreamUrl);
       setConnected(true);
 
       // Capture welcome message as "Agentforce reply" for debugging
@@ -261,7 +264,7 @@ export function useAvatarConversation() {
       }
 
       console.log('[Agentforce] send message', { sessionId, text });
-      const { message, progressIndicators } = await sendAgentMessage(sessionId, text);
+      const { message, progressIndicators } = await sendAgentMessage(sessionId, text, messagesStreamUrl);
       setLastAgentforceResponse(message || '');
       console.log('[Agentforce] received response', { messagePreview: message?.slice(0, 120), progressIndicators });
 

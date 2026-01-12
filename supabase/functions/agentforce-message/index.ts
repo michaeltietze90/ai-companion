@@ -62,7 +62,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, message } = await req.json();
+    const { sessionId, message, messagesStreamUrl } = await req.json();
 
     if (!sessionId || !message) {
       throw new Error('Session ID and message are required');
@@ -71,11 +71,13 @@ serve(async (req) => {
     const accessToken = await getSalesforceToken();
     const sequenceId = Date.now();
 
-    // Use configurable API host for API calls
+    // Use the stream URL returned by session creation when available (future-proof vs API version changes).
     const sfApiHost = getSfApiHost();
-    const response = await fetch(
-      `${sfApiHost}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`,
-      {
+    const streamUrl = (typeof messagesStreamUrl === 'string' && messagesStreamUrl.trim())
+      ? messagesStreamUrl
+      : `${sfApiHost}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`;
+
+    const response = await fetch(streamUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

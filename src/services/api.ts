@@ -22,7 +22,7 @@ export async function getHeyGenToken(): Promise<string> {
   return data.token;
 }
 
-export async function startAgentSession(): Promise<{ sessionId: string; welcomeMessage: string | null }> {
+export async function startAgentSession(): Promise<{ sessionId: string; welcomeMessage: string | null; messagesStreamUrl: string | null }> {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/agentforce-session`, {
     method: 'POST',
     headers,
@@ -45,11 +45,15 @@ export async function endAgentSession(sessionId: string): Promise<void> {
   });
 }
 
-export async function sendAgentMessage(sessionId: string, message: string): Promise<{ message: string; progressIndicators: string[] }> {
+export async function sendAgentMessage(
+  sessionId: string,
+  message: string,
+  messagesStreamUrl?: string | null
+): Promise<{ message: string; progressIndicators: string[] }> {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/agentforce-message`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ sessionId, message }),
+    body: JSON.stringify({ sessionId, message, messagesStreamUrl }),
   });
 
   if (!response.ok) {

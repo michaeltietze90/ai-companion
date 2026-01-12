@@ -117,10 +117,13 @@ serve(async (req) => {
         }
       }
 
+      const messagesStreamUrl = data?._links?.messagesStream?.href ?? null;
+
       return new Response(
         JSON.stringify({ 
           sessionId: data.sessionId,
           welcomeMessage,
+          messagesStreamUrl,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
