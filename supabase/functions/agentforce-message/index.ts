@@ -122,9 +122,22 @@ serve(async (req) => {
       }),
     });
 
+    // IMPORTANT: Session expiry/invalid session manifests as 404 ("V6Session not found").
+    // In that case, return a 404 to the client (NOT 500) so the frontend can re-create a session.
     if (!sfResponse.ok) {
       const errorText = await sfResponse.text();
       console.error('Agentforce message error:', sfResponse.status, errorText);
+
+      if (sfResponse.status === 404) {
+        return new Response(
+          JSON.stringify({
+            error: 'AGENTFORCE_SESSION_NOT_FOUND',
+            details: errorText,
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
       throw new Error(`Failed to send message: ${sfResponse.status}`);
     }
 
