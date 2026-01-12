@@ -59,7 +59,10 @@ async function getSalesforceToken(): Promise<string> {
 // Sentence boundary regex - splits on . ! ? followed by space or end
 const SENTENCE_END_RE = /(?<=[.!?])\s+/;
 
-// Extract text chunk from SSE data - returns null if no new text
+// Track accumulated text to detect when Agentforce re-sends a "corrected" version
+let accumulatedText = '';
+
+// Extract text chunk from SSE data - returns null if no new text or if duplicate
 function extractTextChunk(data: Record<string, unknown>, seenText: Set<string>): string | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
@@ -74,10 +77,27 @@ function extractTextChunk(data: Record<string, unknown>, seenText: Set<string>):
   
   if (typeof chunk !== 'string' || !chunk) return null;
   
-  // Deduplicate - if we've seen this exact text before, skip it
+  // Deduplicate - exact match
   if (seenText.has(chunk)) {
-    console.log('[Dedup] Skipping duplicate chunk:', chunk.substring(0, 50));
+    console.log('[Dedup] Skipping exact duplicate chunk:', chunk.substring(0, 50));
     return null;
+  }
+  
+  // Near-duplicate detection: if the new chunk is very similar to something we've seen
+  // (e.g., Agentforce sends partial then full sentence), skip it
+  for (const seen of seenText) {
+    // If new chunk starts with something we've seen (prefix match)
+    if (chunk.startsWith(seen) && chunk.length > seen.length) {
+      // This is an extension - skip, we already have the prefix
+      console.log('[Dedup] Skipping extended chunk (already have prefix):', chunk.substring(0, 50));
+      return null;
+    }
+    // If something we've seen starts with this chunk
+    if (seen.startsWith(chunk) && seen.length > chunk.length) {
+      // We already have a longer version - skip this
+      console.log('[Dedup] Skipping shorter chunk (already have longer):', chunk.substring(0, 50));
+      return null;
+    }
   }
   
   seenText.add(chunk);

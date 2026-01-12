@@ -43,6 +43,7 @@ const Index = () => {
     lastVoiceTranscript,
     lastAgentforceResponse,
     lastSpokenText,
+    streamingSentences,
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
@@ -139,24 +140,36 @@ const Index = () => {
         </motion.div>
       </div>
 
-      {/* Debug strip: proves what's being sent to Agentforce and what comes back */}
+      {/* Debug panel - vertical on the right */}
       {isConnected && !demoMode && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-20 w-[min(860px,calc(100%-24px))]">
-          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border px-4 py-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Last voice transcript → Agentforce</p>
-                <p className="text-sm text-foreground line-clamp-2">{lastVoiceTranscript || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Last Agentforce reply (text)</p>
-                <p className="text-sm text-foreground line-clamp-2">{lastAgentforceResponse || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Last spoken text (what we told the voice)</p>
-                <p className="text-sm text-foreground line-clamp-2">{lastSpokenText || '—'}</p>
-              </div>
+        <div className="absolute top-20 right-4 bottom-24 w-72 z-20 flex flex-col gap-2 overflow-hidden">
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>
+            <p className="text-sm text-foreground line-clamp-3">{lastVoiceTranscript || '—'}</p>
+          </div>
+          
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-1 overflow-hidden flex flex-col">
+            <p className="text-xs text-muted-foreground font-medium mb-2">Streaming Sentences</p>
+            <div className="flex-1 overflow-y-auto space-y-1.5">
+              {streamingSentences.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Waiting for response...</p>
+              ) : (
+                streamingSentences.map((sentence, idx) => (
+                  <div 
+                    key={idx} 
+                    className="text-xs text-foreground p-2 rounded-lg bg-primary/10 border-l-2 border-primary"
+                  >
+                    <span className="text-muted-foreground mr-1">{idx + 1}.</span>
+                    {sentence}
+                  </div>
+                ))
+              )}
             </div>
+          </div>
+          
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Last Spoken</p>
+            <p className="text-sm text-foreground line-clamp-3">{lastSpokenText || '—'}</p>
           </div>
         </div>
       )}

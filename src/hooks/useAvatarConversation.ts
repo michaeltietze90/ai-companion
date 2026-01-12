@@ -45,6 +45,8 @@ export function useAvatarConversation() {
     setError,
     setLastAgentforceResponse,
     setLastSpokenText,
+    addStreamingSentence,
+    clearStreamingSentences,
     addMessage,
     reset,
   } = useConversationStore();
@@ -312,6 +314,7 @@ export function useAvatarConversation() {
 
     addMessage({ role: 'user', content: text });
     setThinking(true, 'Thinking...');
+    clearStreamingSentences(); // Clear previous sentences for fresh display
 
     try {
       if (demoMode) {
@@ -379,6 +382,9 @@ export function useAvatarConversation() {
             // Parse for visuals in this sentence
             const parsed = parseRichResponse(chunk.text);
 
+            // Add to streaming display (with sentence boundary marker)
+            addStreamingSentence(parsed.speechText.trim() || chunk.text);
+
             // Start any visuals immediately
             if (parsed.hasRichContent) {
               console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
@@ -440,7 +446,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, startAgentSession]);
+  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences]);
 
   // End conversation
   const endConversation = useCallback(async () => {

@@ -24,6 +24,9 @@ interface ConversationState {
   lastVoiceTranscript: string;
   lastAgentforceResponse: string;
   lastSpokenText: string;
+  
+  // Live streaming sentences (for debug display)
+  streamingSentences: string[];
 
   // Actions
   setSessionId: (sessionId: string | null) => void;
@@ -38,6 +41,8 @@ interface ConversationState {
   setLastVoiceTranscript: (text: string) => void;
   setLastAgentforceResponse: (text: string) => void;
   setLastSpokenText: (text: string) => void;
+  addStreamingSentence: (sentence: string) => void;
+  clearStreamingSentences: () => void;
   addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
   clearMessages: () => void;
   reset: () => void;
@@ -59,6 +64,7 @@ export const useConversationStore = create<ConversationState>((set) => ({
   lastVoiceTranscript: '',
   lastAgentforceResponse: '',
   lastSpokenText: '',
+  streamingSentences: [],
 
   setSessionId: (sessionId) => set({ sessionId }),
   setMessagesStreamUrl: (messagesStreamUrl) => set({ messagesStreamUrl }),
@@ -73,6 +79,11 @@ export const useConversationStore = create<ConversationState>((set) => ({
   setLastVoiceTranscript: (lastVoiceTranscript) => set({ lastVoiceTranscript }),
   setLastAgentforceResponse: (lastAgentforceResponse) => set({ lastAgentforceResponse }),
   setLastSpokenText: (lastSpokenText) => set({ lastSpokenText }),
+  
+  addStreamingSentence: (sentence) => set((state) => ({
+    streamingSentences: [...state.streamingSentences, sentence],
+  })),
+  clearStreamingSentences: () => set({ streamingSentences: [] }),
 
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, {
@@ -98,5 +109,6 @@ export const useConversationStore = create<ConversationState>((set) => ({
     lastVoiceTranscript: '',
     lastAgentforceResponse: '',
     lastSpokenText: '',
+    streamingSentences: [],
   }),
 }));
