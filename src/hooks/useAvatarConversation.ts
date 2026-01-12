@@ -3,17 +3,18 @@ import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType } from '@heyg
 import { startAgentSession, endAgentSession, sendAgentMessage } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
+import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
+import { parseRichResponse, type ParsedResponse } from '@/lib/richResponseParser';
 import { toast } from 'sonner';
 
-// Demo responses for testing without credentials
+// Demo responses for testing without credentials (with visual examples)
 const DEMO_RESPONSES = [
   "Hello! I'm your AI assistant. How can I help you today?",
-  "That's a great question! Let me help you with that.",
+  'That\'s a great question! Let me show you our product. <visual type="image" src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400" duration="4000" position="right"/> This is one of our bestsellers!',
   "I understand. Based on what you've told me, I'd recommend checking out our latest offerings.",
-  "Is there anything else I can assist you with?",
+  'Here\'s our special offer <break time="500ms"/> currently available for you. <visual type="image" src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" duration="5000" position="center"/>',
   "Thank you for your interest! I'm here to help with any questions.",
 ];
-
 export function useAvatarConversation() {
   const avatarRef = useRef<StreamingAvatar | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -41,6 +42,8 @@ export function useAvatarConversation() {
     addMessage,
     reset,
   } = useConversationStore();
+
+  const { startVisuals, clearVisuals } = useVisualOverlayStore();
 
   // Initialize HeyGen Avatar with proxy for streaming.start
   const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
@@ -95,6 +98,7 @@ export function useAvatarConversation() {
   }, [setSpeaking]);
 
   // Speak using HeyGen (SDK first). If it fails, fall back to proxy, then browser TTS.
+  // Accepts parsed speech text (already cleaned of visual tags)
   const speakViaProxy = useCallback(async (text: string) => {
     const spokenText = text
       // Remove Markdown images/links that Agentforce sometimes includes
@@ -157,6 +161,7 @@ export function useAvatarConversation() {
   const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null) => {
     setConnecting(true);
     setError(null);
+    clearVisuals();
 
     try {
       if (demoMode) {
@@ -166,8 +171,14 @@ export function useAvatarConversation() {
         setSessionId('demo-session');
         demoIndexRef.current = 0;
 
-        const welcomeMessage = DEMO_RESPONSES[0];
-        addMessage({ role: 'assistant', content: welcomeMessage });
+        const welcomeRaw = DEMO_RESPONSES[0];
+        const parsed = parseRichResponse(welcomeRaw);
+        addMessage({ role: 'assistant', content: parsed.displayText });
+        
+        if (parsed.hasRichContent) {
+          startVisuals(parsed.visuals);
+        }
+        
         toast.success('Demo mode connected!');
         return;
       }
@@ -190,11 +201,19 @@ export function useAvatarConversation() {
         }
       }
 
-      // 3) Speak/show welcome
+      // 3) Parse and speak/show welcome (with rich content support)
       if (welcomeMessage) {
-        addMessage({ role: 'assistant', content: welcomeMessage });
+        const parsed = parseRichResponse(welcomeMessage);
+        addMessage({ role: 'assistant', content: parsed.displayText });
+        
+        // Start any visuals
+        if (parsed.hasRichContent) {
+          startVisuals(parsed.visuals);
+        }
+        
+        // Speak the clean speech text
         try {
-          await speakViaProxy(welcomeMessage);
+          await speakViaProxy(parsed.speechText);
         } catch (speakError) {
           console.error('Welcome speak error:', speakError);
         }
@@ -209,7 +228,7 @@ export function useAvatarConversation() {
     } finally {
       setConnecting(false);
     }
-  }, [demoMode, initializeAvatar, speakViaProxy, setConnecting, setConnected, setSessionId, setError, addMessage, setLastAgentforceResponse]);
+  }, [demoMode, initializeAvatar, speakViaProxy, clearVisuals, startVisuals, setConnecting, setConnected, setSessionId, setError, addMessage, setLastAgentforceResponse]);
 
   // Send message to agent
   const sendMessage = useCallback(async (text: string) => {
@@ -220,12 +239,19 @@ export function useAvatarConversation() {
 
     try {
       if (demoMode) {
-        // Demo mode response
+        // Demo mode response with rich content support
         await new Promise(resolve => setTimeout(resolve, 1500));
         demoIndexRef.current = (demoIndexRef.current + 1) % DEMO_RESPONSES.length;
-        const response = DEMO_RESPONSES[demoIndexRef.current];
+        const rawResponse = DEMO_RESPONSES[demoIndexRef.current];
+        const parsed = parseRichResponse(rawResponse);
 
-        addMessage({ role: 'assistant', content: response });
+        addMessage({ role: 'assistant', content: parsed.displayText });
+        
+        // Start any visuals
+        if (parsed.hasRichContent) {
+          startVisuals(parsed.visuals);
+        }
+        
         setThinking(false);
         return;
       }
@@ -245,12 +271,21 @@ export function useAvatarConversation() {
       }
 
       if (message) {
-        addMessage({ role: 'assistant', content: message });
+        // Parse rich response for visuals and clean speech
+        const parsed = parseRichResponse(message);
+        
+        addMessage({ role: 'assistant', content: parsed.displayText });
 
-        // Make avatar speak the response via proxy
-        console.log('[HeyGen] speaking Agentforce response', message.substring(0, 80) + '...');
+        // Start any visuals immediately
+        if (parsed.hasRichContent) {
+          console.log('[Rich Response] Starting visuals:', parsed.visuals);
+          startVisuals(parsed.visuals);
+        }
+
+        // Make avatar speak the clean speech text
+        console.log('[HeyGen] speaking Agentforce response', parsed.speechText.substring(0, 80) + '...');
         try {
-          await speakViaProxy(message);
+          await speakViaProxy(parsed.speechText);
           console.log('[HeyGen] speak command sent successfully');
         } catch (speakError) {
           console.error('[HeyGen] speak error:', speakError);
@@ -263,11 +298,14 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, demoMode, speakViaProxy, addMessage, setThinking]);
+  }, [sessionId, demoMode, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse]);
 
   // End conversation
   const endConversation = useCallback(async () => {
     try {
+      // Clear any active visuals
+      clearVisuals();
+      
       if (sessionId && !demoMode) {
         await endAgentSession(sessionId);
       }
@@ -298,7 +336,7 @@ export function useAvatarConversation() {
     } catch (error) {
       console.error('End conversation error:', error);
     }
-  }, [sessionId, demoMode, reset]);
+  }, [sessionId, demoMode, reset, clearVisuals]);
 
   // Cleanup on unmount
   useEffect(() => {
