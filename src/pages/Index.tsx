@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
+import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
+import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +45,8 @@ const Index = () => {
     lastSpokenText,
   } = useConversationStore();
 
+  const { activeVisuals } = useVisualOverlayStore();
+
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('Voice transcript received:', transcript);
@@ -65,6 +69,8 @@ const Index = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
+      {/* Visual Overlay Layer */}
+      <VisualOverlay visuals={activeVisuals} />
 
       {/* Header - Agentforce inspired */}
       <header className="absolute top-0 left-0 right-0 z-20 p-5 flex items-center justify-between">

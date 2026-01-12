@@ -228,6 +228,98 @@ When `demoMode` is enabled in the conversation store:
 2. **Interruption**: New speech requests interrupt any ongoing avatar audio
 3. **Text Sanitization**: Markdown/links stripped before sending to TTS
 4. **Fallback Chain**: HeyGen SDK → HeyGen Proxy → Browser TTS
+5. **Rich Response Parsing**: Visual tags and SSML processed before speech
+
+---
+
+## Rich Response System (SSML + Visual Tags)
+
+Agentforce can return responses with embedded tags that control **what gets spoken** vs **what gets displayed visually**.
+
+### Tag Reference
+
+#### Visual Tags (displayed as overlays, NOT spoken)
+
+```xml
+<visual type="image|gif|video" src="URL" duration="5000" position="center" />
+```
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `type` | No | `image`, `gif`, or `video` (default: `image`) |
+| `src` | Yes | URL to the media file (PNG with transparency works) |
+| `duration` | No | Display time in ms or `5s` format (default: `5000`) |
+| `position` | No | `center`, `top`, `bottom`, `left`, `right`, `topleft`, `topright`, `bottomleft`, `bottomright` (default: `center`) |
+| `startOffset` | No | Delay before showing in ms (default: `0`) |
+| `alt` | No | Accessibility description |
+
+#### SSML Tags (affect speech timing)
+
+```xml
+<break time="500ms"/>   <!-- Pause in speech -->
+<break time="1s"/>      <!-- Longer pause -->
+```
+
+### Example Agentforce Response
+
+```
+Hi there! Let me show you our product.
+<visual type="image" src="https://example.com/product.png" duration="4000" position="right"/>
+This is our bestseller!
+<break time="500ms"/>
+Would you like to learn more?
+```
+
+**Parsed Output:**
+- **Speech Text**: "Hi there! Let me show you our product. This is our bestseller! ... Would you like to learn more?"
+- **Visual**: Image displays for 4 seconds on the right side
+- **Break**: Converted to "..." pause in TTS
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Agentforce Response (raw with tags)                             │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ richResponseParser.ts                                           │
+│ - parseRichResponse(rawText)                                    │
+│   └─> { speechText, displayText, visuals[], hasRichContent }   │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+              ┌────────────────┴────────────────┐
+              ▼                                 ▼
+┌─────────────────────────────┐   ┌─────────────────────────────┐
+│ speechText → HeyGen TTS     │   │ visuals → VisualOverlay     │
+│ (clean, speakable text)     │   │ (full-screen transparent    │
+│                             │   │  overlay for images/videos) │
+└─────────────────────────────┘   └─────────────────────────────┘
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/richResponseParser.ts` | Parses tags, extracts speech text and visual commands |
+| `src/components/Overlay/VisualOverlay.tsx` | Renders full-screen transparent overlays |
+| `src/stores/visualOverlayStore.ts` | Manages active visual queue and state |
+
+### Configuring Agentforce
+
+In your Salesforce Agentforce agent, instruct it to return rich responses:
+
+```
+When showing visual content, use this format:
+<visual type="image" src="[URL]" duration="[ms]" position="[position]"/>
+
+Supported positions: center, top, bottom, left, right, topleft, topright, bottomleft, bottomright
+
+For pauses, use: <break time="500ms"/>
+
+Example: "Here's our product <visual type="image" src="https://..." duration="5000" position="right"/> - it's amazing!"
+```
 
 ---
 
@@ -247,6 +339,13 @@ Edit `src/pages/Index.tsx`.
 
 ### Persisting new settings
 Add fields to `Profile` interface in `src/stores/settingsStore.ts`.
+
+### Adding new visual tag types
+1. Update `VisualType` in `src/lib/richResponseParser.ts`
+2. Update `VisualOverlay.tsx` to render the new type
+
+### Customizing visual positions
+Edit `positionClasses` in `src/components/Overlay/VisualOverlay.tsx`.
 
 ---
 
