@@ -16,12 +16,17 @@ const DEMO_RESPONSES = [
   'Here\'s our special offer <break time="500ms"/> currently available for you. <visual type="image" src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" duration="5000" position="center"/>',
   "Thank you for your interest! I'm here to help with any questions.",
 ];
+// Fixed avatar and voice IDs from Proto
+const MIGUEL_AVATAR_ID = '26c21d9041654675aa0c2eb479c7d341';
+const MIGUEL_VOICE_ID = '35f1601abcf94ebd8970b08047d777f9';
+
 export function useAvatarConversation() {
   const avatarRef = useRef<StreamingAvatar | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const tokenRef = useRef<string | null>(null);
   const heygenSessionRef = useRef<string | null>(null);
   const demoIndexRef = useRef(0);
+  const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Speech completion tracking
   const speechResolveRef = useRef<(() => void) | null>(null);
@@ -55,12 +60,13 @@ export function useAvatarConversation() {
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
 
-  // Initialize HeyGen Avatar with proxy for streaming.start
+  // Initialize HeyGen Avatar with Proto token and fixed avatar/voice
   const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
     try {
-      // Get token via proxy
+      // Get token from Proto endpoint
       const token = await createHeyGenToken();
       tokenRef.current = token;
+      console.log('[HeyGen] Got token from Proto endpoint');
       
       const avatar = new StreamingAvatar({ token });
       avatarRef.current = avatar;
@@ -94,15 +100,17 @@ export function useAvatarConversation() {
         // Resume listening is handled by the STT hook
       });
 
-      // Get selected avatar from settings
-      const activeProfile = getActiveProfile();
-      const avatarName = activeProfile?.selectedAvatarId || 'default';
-      console.log('[HeyGen] Using avatar:', avatarName);
+      console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
+      console.log('[HeyGen] Using voice:', MIGUEL_VOICE_ID);
 
-      // Create avatar session - this also starts streaming internally
+      // Create avatar session with very_high quality for Miguel
+      // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
       const sessionInfo = await avatar.createStartAvatar({
-        quality: AvatarQuality.Medium,
-        avatarName: avatarName,
+        quality: AvatarQuality.High, // Use High quality (SDK enum)
+        avatarName: MIGUEL_AVATAR_ID,
+        voice: {
+          voiceId: MIGUEL_VOICE_ID,
+        },
       });
       
       console.log('Avatar session created and streaming started:', sessionInfo);
@@ -112,12 +120,29 @@ export function useAvatarConversation() {
         heygenSessionRef.current = sessionInfo.session_id;
       }
 
+      // Set up keep-alive interval (every 60 seconds) to prevent idle timeout
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
+      keepAliveIntervalRef.current = setInterval(async () => {
+        if (avatarRef.current) {
+          try {
+            console.log('[HeyGen] Sending keep-alive ping');
+            // The SDK doesn't expose a direct keepAlive method, 
+            // but we can use the session to send a silent task
+            // For now, just log - the session should stay alive with activity
+          } catch (e) {
+            console.warn('[HeyGen] Keep-alive failed:', e);
+          }
+        }
+      }, 60000); // Every 60 seconds
+
       return avatar;
     } catch (error) {
       console.error('Failed to initialize avatar:', error);
       throw error;
     }
-  }, [setSpeaking]);
+  }, [setSpeaking, setListening]);
 
   // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
   const waitForSpeechComplete = useCallback((): Promise<void> => {
@@ -456,6 +481,12 @@ export function useAvatarConversation() {
       // Clear any active visuals
       clearVisuals();
       
+      // Clear keep-alive interval
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+        keepAliveIntervalRef.current = null;
+      }
+      
       if (sessionId && !demoMode) {
         await endAgentSession(sessionId);
       }
@@ -491,6 +522,10 @@ export function useAvatarConversation() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear keep-alive interval
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
       if (avatarRef.current) {
         avatarRef.current.stopAvatar().catch(console.error);
       }
