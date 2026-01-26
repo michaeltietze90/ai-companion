@@ -8,6 +8,8 @@ export interface AvatarOption {
   isCustom?: boolean;
 }
 
+export type VoiceEmotionType = 'excited' | 'serious' | 'friendly' | 'soothing' | 'broadcaster';
+
 export interface Profile {
   id: string;
   name: string;
@@ -18,6 +20,7 @@ export interface Profile {
   salesforceApiHost: string;
   heygenApiKey: string;
   selectedAvatarId: string;
+  selectedEmotion: VoiceEmotionType;
   customAvatars: AvatarOption[];
 }
 
@@ -50,6 +53,7 @@ const defaultProfile: Profile = {
   salesforceApiHost: 'https://api.salesforce.com',
   heygenApiKey: '',
   selectedAvatarId: '',
+  selectedEmotion: 'excited',
   customAvatars: [],
 };
 

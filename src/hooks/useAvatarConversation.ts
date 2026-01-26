@@ -103,15 +103,26 @@ export function useAvatarConversation() {
       console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
       console.log('[HeyGen] Using voice:', MIGUEL_VOICE_ID);
 
+      // Get selected emotion from profile (default to EXCITED)
+      const activeProfile = getActiveProfile();
+      const emotionMap: Record<string, VoiceEmotion> = {
+        'excited': VoiceEmotion.EXCITED,
+        'serious': VoiceEmotion.SERIOUS,
+        'friendly': VoiceEmotion.FRIENDLY,
+        'soothing': VoiceEmotion.SOOTHING,
+        'broadcaster': VoiceEmotion.BROADCASTER,
+      };
+      const selectedEmotion = emotionMap[activeProfile?.selectedEmotion || 'excited'] || VoiceEmotion.EXCITED;
+      console.log('[HeyGen] Using emotion:', activeProfile?.selectedEmotion || 'excited');
+
       // Create avatar session with high quality for Miguel
       // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
-      // Using VoiceEmotion.EXCITED for an energetic, happy personality
       const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.High, // Use High quality (SDK enum)
         avatarName: MIGUEL_AVATAR_ID,
         voice: {
           voiceId: MIGUEL_VOICE_ID,
-          emotion: VoiceEmotion.EXCITED, // Energetic and happy tone
+          emotion: selectedEmotion,
         },
       });
       
