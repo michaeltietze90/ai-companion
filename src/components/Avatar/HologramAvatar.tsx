@@ -45,7 +45,7 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
                 autoPlay
                 playsInline
                 muted={isMuted}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 style={{
                   filter: 'brightness(1.05) saturate(1.1)',
                 }}

@@ -51,7 +51,7 @@ const ProtoMDevice = ({ children, isActive = true }: ProtoMDeviceProps) => {
         {/* Device body */}
         <div className="relative">
           {/* Outer frame - sleek modern design */}
-          <div className="relative w-[500px] h-[680px] rounded-[40px] bg-gradient-to-b from-[hsl(220_20%_18%)] via-[hsl(220_25%_12%)] to-[hsl(220_30%_6%)] shadow-2xl border border-[hsl(220_20%_25%)]">
+          <div className="relative w-[540px] h-[800px] rounded-[40px] bg-gradient-to-b from-[hsl(220_20%_18%)] via-[hsl(220_25%_12%)] to-[hsl(220_30%_6%)] shadow-2xl border border-[hsl(220_20%_25%)]">
             {/* Subtle metallic edge */}
             <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-white/5 via-transparent to-transparent" />
             
