@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { useConversationStore } from '@/stores/conversationStore';
@@ -103,13 +103,15 @@ export function useAvatarConversation() {
       console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
       console.log('[HeyGen] Using voice:', MIGUEL_VOICE_ID);
 
-      // Create avatar session with very_high quality for Miguel
+      // Create avatar session with high quality for Miguel
       // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
+      // Using VoiceEmotion.EXCITED for an energetic, happy personality
       const sessionInfo = await avatar.createStartAvatar({
         quality: AvatarQuality.High, // Use High quality (SDK enum)
         avatarName: MIGUEL_AVATAR_ID,
         voice: {
           voiceId: MIGUEL_VOICE_ID,
+          emotion: VoiceEmotion.EXCITED, // Energetic and happy tone
         },
       });
       
