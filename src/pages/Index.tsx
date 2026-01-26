@@ -9,10 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
+import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
 
 const Index = () => {
   // Controls whether the HeyGen video element is muted.
@@ -47,6 +55,17 @@ const Index = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
+  
+  // Settings store for emotion
+  const { getActiveProfile, updateProfile, activeProfileId } = useSettingsStore();
+  const activeProfile = getActiveProfile();
+  const currentEmotion = activeProfile?.selectedEmotion || 'excited';
+  
+  const handleEmotionChange = (emotion: VoiceEmotionType) => {
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { selectedEmotion: emotion });
+    }
+  };
 
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -88,7 +107,25 @@ const Index = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Emotion Selector */}
+          <Select
+            value={currentEmotion}
+            onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
+            disabled={isConnected}
+          >
+            <SelectTrigger className="w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="excited">🎉 Excited</SelectItem>
+              <SelectItem value="friendly">😊 Friendly</SelectItem>
+              <SelectItem value="serious">🎯 Serious</SelectItem>
+              <SelectItem value="soothing">🧘 Soothing</SelectItem>
+              <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Demo Mode Toggle */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
             <Switch
