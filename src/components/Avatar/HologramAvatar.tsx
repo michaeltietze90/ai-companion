@@ -16,17 +16,7 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
       {/* Full screen avatar container */}
       <div className="relative w-full h-full">
         {/* Video/Avatar fills entire screen */}
-        <motion.div
-          className="absolute inset-0"
-          animate={isSpeaking ? {
-            scale: [1, 1.01, 1],
-          } : {}}
-          transition={{
-            duration: 0.8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        >
+        <div className="absolute inset-0">
           {/* Hologram flicker effect */}
           <motion.div
             className="absolute inset-0"
@@ -165,7 +155,7 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
               background: 'radial-gradient(ellipse at center, transparent 50%, hsl(220 30% 5% / 0.6) 100%)',
             }}
           />
-        </motion.div>
+        </div>
       </div>
     </div>
   );
