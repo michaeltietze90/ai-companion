@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
@@ -110,25 +111,16 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main content - Full screen avatar (no device frame for max resolution) */}
-      <main className="absolute inset-0 z-10">
-        {/* Background gradient */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse 120% 80% at 50% 20%, hsl(210 100% 20%) 0%, hsl(220 40% 8%) 50%, hsl(220 50% 4%) 100%)',
-          }}
-        />
-        {/* Subtle ambient glow */}
-        <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/8 rounded-full blur-[120px]" />
-        
-        {/* Avatar fills entire viewport */}
-        <HologramAvatar 
-          isConnected={isConnected} 
-          isSpeaking={isSpeaking}
-          videoRef={videoRef}
-          isMuted={isMuted}
-        />
+      {/* Main content - Proto M Device */}
+      <main className="relative z-10 h-screen">
+        <ProtoMDevice isActive={isConnected}>
+          <HologramAvatar 
+            isConnected={isConnected} 
+            isSpeaking={isSpeaking}
+            videoRef={videoRef}
+            isMuted={isMuted}
+          />
+        </ProtoMDevice>
       </main>
 
       {/* Status indicators - Agentforce style */}
