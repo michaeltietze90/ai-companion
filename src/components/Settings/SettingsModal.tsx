@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSettingsStore, Profile, AvatarOption } from '@/stores/settingsStore';
+import { useSettingsStore, Profile, AvatarOption, VoiceEmotionType } from '@/stores/settingsStore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -90,6 +90,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       salesforceApiHost: 'https://api.salesforce.com',
       heygenApiKey: '',
       selectedAvatarId: '',
+      selectedEmotion: 'excited',
       customAvatars: [],
     };
     addProfile(newProfile);
@@ -291,6 +292,54 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Emotion Selection */}
+                <div className="space-y-3">
+                  <Label>Voice Emotion</Label>
+                  <Select
+                    value={editingProfile.selectedEmotion}
+                    onValueChange={(emotion) => updateField('selectedEmotion', emotion as VoiceEmotionType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose an emotion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excited">
+                        <span className="flex items-center gap-2">
+                          🎉 Excited
+                          <span className="text-xs text-muted-foreground">- energetic, happy</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="friendly">
+                        <span className="flex items-center gap-2">
+                          😊 Friendly
+                          <span className="text-xs text-muted-foreground">- warm, approachable</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="serious">
+                        <span className="flex items-center gap-2">
+                          🎯 Serious
+                          <span className="text-xs text-muted-foreground">- professional, focused</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="soothing">
+                        <span className="flex items-center gap-2">
+                          🧘 Soothing
+                          <span className="text-xs text-muted-foreground">- calm, relaxing</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="broadcaster">
+                        <span className="flex items-center gap-2">
+                          📺 Broadcaster
+                          <span className="text-xs text-muted-foreground">- news anchor style</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Changes take effect on next conversation start
+                  </p>
                 </div>
 
                 {/* Custom Avatars */}
