@@ -108,11 +108,16 @@ serve(async (req) => {
 
       const data = await response.json();
       
+      // Log full response to debug welcome message
+      console.log('Agentforce session response:', JSON.stringify(data, null, 2));
+      
       // Extract welcome message if present
       let welcomeMessage = null;
       if (data.messages && data.messages.length > 0) {
+        console.log('Messages array:', JSON.stringify(data.messages, null, 2));
         const informMessage = data.messages.find((m: any) => m.type === 'Inform');
         if (informMessage) {
+          console.log('Found Inform message:', JSON.stringify(informMessage, null, 2));
           welcomeMessage = informMessage.message;
         }
       }
