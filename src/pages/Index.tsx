@@ -141,6 +141,40 @@ const Index = () => {
       </div>
 
 
+      {/* Debug panel - vertical on the right */}
+      {isConnected && !demoMode && (
+        <div className="absolute top-20 right-4 bottom-24 w-72 z-20 flex flex-col gap-2 overflow-hidden">
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>
+            <p className="text-sm text-foreground line-clamp-3">{lastVoiceTranscript || '—'}</p>
+          </div>
+          
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-1 overflow-hidden flex flex-col">
+            <p className="text-xs text-muted-foreground font-medium mb-2">Streaming Sentences</p>
+            <div className="flex-1 overflow-y-auto space-y-1.5">
+              {streamingSentences.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Waiting for response...</p>
+              ) : (
+                streamingSentences.map((sentence, idx) => (
+                  <div 
+                    key={idx} 
+                    className="text-xs text-foreground p-2 rounded-lg bg-primary/10 border-l-2 border-primary"
+                  >
+                    <span className="text-muted-foreground mr-1">{idx + 1}.</span>
+                    {sentence}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
+            <p className="text-xs text-muted-foreground font-medium mb-1">Last Spoken</p>
+            <p className="text-sm text-foreground line-clamp-3">{lastSpokenText || '—'}</p>
+          </div>
+        </div>
+      )}
+
       {/* Thinking indicator - Agentforce style */}
       <AnimatePresence>
         {isThinking && (
@@ -153,22 +187,6 @@ const Index = () => {
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30">
               <Loader2 className="w-4 h-4 text-primary animate-spin" />
               <span className="text-sm text-primary">{thinkingMessage || 'Thinking...'}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Partial transcript display */}
-      <AnimatePresence>
-        {partialTranscript && (
-          <motion.div
-            className="absolute top-44 left-1/2 -translate-x-1/2 z-20 max-w-md"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <div className="px-4 py-2 rounded-xl bg-secondary/90 backdrop-blur-md border border-border">
-              <span className="text-sm text-muted-foreground italic">{partialTranscript}</span>
             </div>
           </motion.div>
         )}
