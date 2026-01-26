@@ -1,6 +1,9 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Proto endpoint for getting HeyGen access token
+const PROTO_TOKEN_URL = 'https://proto-salesforce-b927b6eea443.herokuapp.com/api/manage/getAccessToken';
+
 const headers = {
   'Content-Type': 'application/json',
   'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -21,9 +24,23 @@ async function callProxy(action: string, params: Record<string, unknown> = {}) {
   return response.json();
 }
 
+// Get HeyGen token from Proto endpoint
 export async function createHeyGenToken(): Promise<string> {
-  const data = await callProxy('create_token');
-  return data.data?.token || data.token;
+  const response = await fetch(PROTO_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get HeyGen token from Proto endpoint');
+  }
+
+  let token = await response.text();
+  // Clean the token - remove quotes and any whitespace
+  token = token.replace(/^"|"$/g, '').trim();
+  console.log('Got access token from Proto endpoint');
+  return token;
 }
 
 export async function createStreamingSession(token: string, options?: {
