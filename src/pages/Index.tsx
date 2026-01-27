@@ -73,8 +73,16 @@ const Index = () => {
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   const currentVoice = activeProfile?.heygenVoice || 'miguel';
   const currentTTSProvider = activeProfile?.ttsProvider || 'heygen';
-  const currentElevenLabsVoiceId = activeProfile?.elevenLabsVoiceId || '';
-  const customElevenLabsVoices = activeProfile?.customElevenLabsVoices || [];
+  
+  // Default ElevenLabs voices fallback (for users with old persisted settings)
+  const DEFAULT_ELEVENLABS_VOICES = [
+    { id: '91c3c9b4f73c47879b3a98d399db808d', name: 'Miguelito (Cloned)' },
+    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George' },
+  ];
+  const customElevenLabsVoices = activeProfile?.customElevenLabsVoices?.length 
+    ? activeProfile.customElevenLabsVoices 
+    : DEFAULT_ELEVENLABS_VOICES;
+  const currentElevenLabsVoiceId = activeProfile?.elevenLabsVoiceId || DEFAULT_ELEVENLABS_VOICES[0].id;
   
   const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
     if (activeProfileId) {
