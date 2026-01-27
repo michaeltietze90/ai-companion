@@ -70,7 +70,48 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[ElevenLabs API Error]", response.status, errorText);
-      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+
+      // ElevenLabs sometimes returns useful structured info in the body.
+      // If quota/permission issues happen, return a non-500 status so the platform
+      // doesn't treat this as a backend crash.
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(errorText);
+      } catch {
+        // ignore
+      }
+
+      const detailStatus: string | undefined = parsed?.detail?.status;
+      const detailMessage: string | undefined = parsed?.detail?.message;
+
+      if (detailStatus === 'quota_exceeded') {
+        return new Response(
+          JSON.stringify({
+            error: detailMessage || 'ElevenLabs quota exceeded.',
+            code: 'quota_exceeded',
+          }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (detailStatus === 'missing_permissions') {
+        return new Response(
+          JSON.stringify({
+            error: detailMessage || 'ElevenLabs API key is missing text_to_speech permission.',
+            code: 'missing_permissions',
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Default: pass through a clear error without throwing
+      return new Response(
+        JSON.stringify({
+          error: `ElevenLabs API error: ${response.status}`,
+          details: errorText,
+        }),
+        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Return audio as binary directly

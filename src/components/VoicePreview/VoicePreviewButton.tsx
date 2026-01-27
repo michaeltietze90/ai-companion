@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Volume2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { synthesizeSpeech, TTSOptions } from "@/services/elevenLabsTTS";
+import { ElevenLabsTTSError, synthesizeSpeech, TTSOptions } from "@/services/elevenLabsTTS";
 import { VoiceEmotionType } from "@/stores/settingsStore";
+import { toast } from "sonner";
 
 interface VoicePreviewButtonProps {
   emotion: VoiceEmotionType;
@@ -13,11 +14,12 @@ interface VoicePreviewButtonProps {
 }
 
 const PREVIEW_PHRASES: Record<VoiceEmotionType, string> = {
-  excited: "This is amazing! I can't wait to help you with your project today!",
-  friendly: "Hello there! It's great to meet you. How can I help?",
-  serious: "Let me analyze this situation carefully and provide you with accurate information.",
-  soothing: "Take a deep breath. Everything is going to be just fine.",
-  broadcaster: "Good evening. Tonight we bring you the latest updates from around the world.",
+  // Keep these short to avoid burning credits during previews.
+  excited: "Amazing! Let's do this!",
+  friendly: "Hi there — how can I help?",
+  serious: "Let me analyze that carefully.",
+  soothing: "Breathe — you're safe. I'm here.",
+  broadcaster: "Good evening. Here's the latest update.",
 };
 
 export function VoicePreviewButton({
@@ -74,6 +76,15 @@ export function VoicePreviewButton({
       await audio.play();
     } catch (error) {
       console.error("[Voice Preview] Error:", error);
+      if (error instanceof ElevenLabsTTSError) {
+        if (error.code === 'quota_exceeded' || String(error.message).toLowerCase().includes('quota')) {
+          toast.error('ElevenLabs quota exceeded. Add credits or use a shorter preview.');
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error('Voice preview failed.');
+      }
       setIsPlaying(false);
     }
   };

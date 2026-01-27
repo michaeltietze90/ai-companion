@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
-import { synthesizeSpeech } from '@/services/elevenLabsTTS';
+import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -35,6 +35,36 @@ export function useAvatarConversation() {
   
   // ElevenLabs audio element reference
   const elevenLabsAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Avoid spamming quota/permission toasts for every sentence
+  const lastElevenLabsToastAtRef = useRef<number>(0);
+
+  const maybeToastElevenLabsError = useCallback((err: unknown) => {
+    const now = Date.now();
+    if (now - lastElevenLabsToastAtRef.current < 8000) return;
+
+    const msg = err instanceof Error ? err.message : String(err);
+    const lower = msg.toLowerCase();
+
+    if (err instanceof ElevenLabsTTSError) {
+      if (err.code === 'quota_exceeded' || lower.includes('quota')) {
+        toast.error('ElevenLabs quota exceeded — falling back to avatar voice.');
+        lastElevenLabsToastAtRef.current = now;
+        return;
+      }
+      if (err.code === 'missing_permissions') {
+        toast.error('ElevenLabs key missing TTS permission — falling back to avatar voice.');
+        lastElevenLabsToastAtRef.current = now;
+        return;
+      }
+    }
+
+    // Generic fallback
+    if (lower.includes('elevenlabs')) {
+      toast.error('ElevenLabs TTS failed — falling back to avatar voice.');
+      lastElevenLabsToastAtRef.current = now;
+    }
+  }, []);
   
   const {
     sessionId,
@@ -372,6 +402,7 @@ export function useAvatarConversation() {
         return;
       } catch (error) {
         console.error('[ElevenLabs TTS] speak failed:', error);
+        maybeToastElevenLabsError(error);
         // Fall through to HeyGen as backup
       }
     }
@@ -402,7 +433,7 @@ export function useAvatarConversation() {
 
     // NO browser TTS fallback - just skip if unavailable
     console.warn('[Speech] TTS unavailable, skipping speech for:', spokenText.substring(0, 50));
-  }, [setLastSpokenText, waitForSpeechComplete, getActiveProfile, speakViaElevenLabs]);
+  }, [setLastSpokenText, waitForSpeechComplete, getActiveProfile, speakViaElevenLabs, maybeToastElevenLabsError]);
 
   // Speak using HeyGen WITH interrupt (for new messages, welcome message, etc.)
   const speakViaProxy = useCallback(async (text: string) => {
@@ -432,6 +463,7 @@ export function useAvatarConversation() {
         return;
       } catch (error) {
         console.error('[ElevenLabs TTS] speak failed:', error);
+        maybeToastElevenLabsError(error);
         // Fall through to HeyGen as backup
       }
     }
@@ -470,7 +502,7 @@ export function useAvatarConversation() {
 
     // NO browser TTS fallback - just skip if unavailable
     console.warn('[Speech] TTS unavailable, skipping speech for:', spokenText.substring(0, 50));
-  }, [setLastSpokenText, getActiveProfile, speakViaElevenLabs]);
+  }, [setLastSpokenText, getActiveProfile, speakViaElevenLabs, maybeToastElevenLabsError]);
 
   // Start full conversation (HeyGen + Agentforce)
   // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.
