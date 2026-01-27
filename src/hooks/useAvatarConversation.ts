@@ -19,7 +19,14 @@ const DEMO_RESPONSES = [
 ];
 // Fixed avatar and voice IDs from Proto
 const MIGUEL_AVATAR_ID = '26c21d9041654675aa0c2eb479c7d341';
-const MIGUEL_VOICE_ID = '35f1601abcf94ebd8970b08047d777f9';
+
+// Available HeyGen voices
+export const HEYGEN_VOICES = {
+  miguel: { id: '35f1601abcf94ebd8970b08047d777f9', name: 'Miguel (Original)' },
+  alternative: { id: 'bce4554224e440f8a318a365e089b48a', name: 'Alternative Voice' },
+} as const;
+
+export type HeyGenVoiceKey = keyof typeof HEYGEN_VOICES;
 
 export function useAvatarConversation() {
   const avatarRef = useRef<StreamingAvatar | null>(null);
@@ -135,19 +142,24 @@ export function useAvatarConversation() {
       });
 
       console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
-      console.log('[HeyGen] Using voice:', MIGUEL_VOICE_ID);
+      
+      // Get voice from settings
+      const activeProfile = getActiveProfile();
+      const selectedVoiceKey = activeProfile?.heygenVoice || 'miguel';
+      const selectedVoiceId = HEYGEN_VOICES[selectedVoiceKey].id;
+      console.log('[HeyGen] Using voice:', selectedVoiceKey, selectedVoiceId);
 
       // HARDCODED: Always use EXCITED emotion
       const selectedEmotion = VoiceEmotion.EXCITED;
       console.log('[HeyGen] Using emotion: EXCITED (hardcoded)');
 
-      // Create avatar session with high quality for Miguel
+      // Create avatar session with very_high quality for Miguel
       // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
       const sessionInfo = await avatar.createStartAvatar({
-        quality: AvatarQuality.High, // Use High quality (SDK enum)
+        quality: 'very_high' as AvatarQuality, // Use very_high for best resolution
         avatarName: MIGUEL_AVATAR_ID,
         voice: {
-          voiceId: MIGUEL_VOICE_ID,
+          voiceId: selectedVoiceId,
           emotion: selectedEmotion,
           model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
         },
@@ -250,12 +262,17 @@ export function useAvatarConversation() {
       const selectedEmotion = VoiceEmotion.EXCITED;
       console.log('[HeyGen] Reinitializing with EXCITED (hardcoded, ignoring:', newEmotion, ')');
       
+      // Get voice from settings
+      const activeProfile = getActiveProfile();
+      const selectedVoiceKey = activeProfile?.heygenVoice || 'miguel';
+      const selectedVoiceId = HEYGEN_VOICES[selectedVoiceKey].id;
+      
       // Create new session
       const sessionInfo = await avatar.createStartAvatar({
-        quality: AvatarQuality.High,
+        quality: 'very_high' as AvatarQuality, // Use very_high for best resolution
         avatarName: MIGUEL_AVATAR_ID,
         voice: {
-          voiceId: MIGUEL_VOICE_ID,
+          voiceId: selectedVoiceId,
           emotion: selectedEmotion,
           model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
         },

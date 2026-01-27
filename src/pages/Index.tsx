@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAvatarConversation } from "@/hooks/useAvatarConversation";
+import { useAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
@@ -68,9 +68,17 @@ const Index = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   
-  // Settings store for emotion (activeProfile already retrieved above)
+  // Settings store for emotion and voice (activeProfile already retrieved above)
   const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
+  const currentVoice = activeProfile?.heygenVoice || 'miguel';
+  
+  const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { heygenVoice: voice });
+      // Note: Voice change will apply on next avatar session start
+    }
+  }, [activeProfileId, updateProfile]);
   
   const handleEmotionChange = useCallback(async (emotion: VoiceEmotionType) => {
     if (activeProfileId) {
@@ -131,6 +139,24 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* Voice Selector */}
+          <Select
+            value={currentVoice}
+            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
+            disabled={isConnected}
+          >
+            <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
+                <SelectItem key={key} value={key}>
+                  🎙️ {voice.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           {/* Emotion Selector with Preview Button */}
           <div className="flex items-center gap-1">
             <Select

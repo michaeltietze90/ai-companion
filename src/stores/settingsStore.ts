@@ -35,6 +35,8 @@ export interface Profile {
   elevenLabsVoiceId: string;
   elevenLabsSpeed: number;
   customElevenLabsVoices: ElevenLabsVoice[];
+  // HeyGen voice selection
+  heygenVoice: 'miguel' | 'alternative';
 }
 
 interface SettingsState {
@@ -73,6 +75,8 @@ const defaultProfile: Profile = {
   elevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb', // George - warm British male voice (for testing with Miguel's lip-sync)
   elevenLabsSpeed: 1.0,
   customElevenLabsVoices: [],
+  // HeyGen voice selection
+  heygenVoice: 'miguel',
 };
 
 export const useSettingsStore = create<SettingsState>()(
