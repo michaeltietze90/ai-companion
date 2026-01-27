@@ -56,8 +56,8 @@ async function getSalesforceToken(): Promise<string> {
   return data.access_token;
 }
 
-// Sentence boundary regex - splits on . ! ? followed by space or end
-const SENTENCE_END_RE = /(?<=[.!?])\s+/;
+// Clause boundary regex - splits on . ! ? , or " - " for faster TTS streaming
+const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 
 // Extract text chunk from SSE data - returns the NEW portion only (deduplicates against accumulated text)
 function extractTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
@@ -197,8 +197,8 @@ serve(async (req) => {
                     textBuffer += result.newText;
                     accumulatedFromAPI = result.fullChunk;
                     
-                    // Check for complete sentences
-                    const parts = textBuffer.split(SENTENCE_END_RE);
+                    // Check for complete clauses (sentences, comma-separated phrases, or dash-separated)
+                    const parts = textBuffer.split(CLAUSE_END_RE);
                     
                     // Send all complete sentences (all but last part)
                     for (let i = 0; i < parts.length - 1; i++) {
