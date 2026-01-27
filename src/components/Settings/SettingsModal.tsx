@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, User, Key, Bot, Save, Check, Image, Code, Copy } from 'lucide-react';
+import { X, Plus, Trash2, User, Key, Bot, Save, Check, Image, Code, Copy, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -18,9 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSettingsStore, Profile, AvatarOption, VoiceEmotionType } from '@/stores/settingsStore';
+import { useSettingsStore, Profile, AvatarOption, VoiceEmotionType, TTSProvider, ElevenLabsVoice } from '@/stores/settingsStore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ELEVENLABS_VOICES } from '@/services/elevenLabsTTS';
 
 // Some popular public HeyGen avatar IDs
 const DEFAULT_PUBLIC_AVATARS: AvatarOption[] = [
@@ -90,8 +92,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       salesforceApiHost: 'https://api.salesforce.com',
       heygenApiKey: '',
       selectedAvatarId: '',
-      selectedEmotion: 'excited',
+      selectedEmotion: 'friendly',
       customAvatars: [],
+      ttsProvider: 'elevenlabs',
+      elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
+      elevenLabsSpeed: 1.0,
+      customElevenLabsVoices: [],
     };
     addProfile(newProfile);
     setEditingProfile(newProfile);
@@ -195,13 +201,200 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
 
           {editingProfile && (
-            <Tabs defaultValue="salesforce" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+            <Tabs defaultValue="voice" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
+                <TabsTrigger value="voice">Voice</TabsTrigger>
                 <TabsTrigger value="salesforce">Salesforce</TabsTrigger>
                 <TabsTrigger value="heygen">HeyGen</TabsTrigger>
-                <TabsTrigger value="rich-responses">Rich Responses</TabsTrigger>
+                <TabsTrigger value="rich-responses">Rich</TabsTrigger>
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
+
+              {/* Voice Tab - ElevenLabs TTS */}
+              <TabsContent value="voice" className="space-y-6">
+                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Volume2 className="w-5 h-5 text-primary" />
+                    <span className="font-medium">ElevenLabs Text-to-Speech</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    High-quality, expressive voice synthesis with emotion control using the multilingual v2 model.
+                  </p>
+                </div>
+
+                {/* Voice Selection */}
+                <div className="space-y-3">
+                  <Label>Voice</Label>
+                  <Select
+                    value={editingProfile.elevenLabsVoiceId || 'EXAVITQu4vr4xnSDxMaL'}
+                    onValueChange={(id) => updateField('elevenLabsVoiceId', id)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ELEVENLABS_VOICES.map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          <span className="flex items-center gap-2">
+                            <Volume2 className="w-4 h-4" />
+                            {voice.name}
+                            <span className="text-xs text-muted-foreground">- {voice.description}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                      {(editingProfile.customElevenLabsVoices || []).map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          <span className="flex items-center gap-2">
+                            <Volume2 className="w-4 h-4" />
+                            {voice.name}
+                            <span className="text-xs text-muted-foreground">(custom)</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Emotion Selection */}
+                <div className="space-y-3">
+                  <Label>Voice Emotion / Style</Label>
+                  <Select
+                    value={editingProfile.selectedEmotion}
+                    onValueChange={(emotion) => updateField('selectedEmotion', emotion as VoiceEmotionType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose an emotion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excited">
+                        <span className="flex items-center gap-2">
+                          🎉 Excited
+                          <span className="text-xs text-muted-foreground">- energetic, happy</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="friendly">
+                        <span className="flex items-center gap-2">
+                          😊 Friendly
+                          <span className="text-xs text-muted-foreground">- warm, approachable</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="serious">
+                        <span className="flex items-center gap-2">
+                          🎯 Serious
+                          <span className="text-xs text-muted-foreground">- professional, focused</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="soothing">
+                        <span className="flex items-center gap-2">
+                          🧘 Soothing
+                          <span className="text-xs text-muted-foreground">- calm, relaxing</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="broadcaster">
+                        <span className="flex items-center gap-2">
+                          📺 Broadcaster
+                          <span className="text-xs text-muted-foreground">- news anchor style</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Emotions affect voice stability, expressiveness, and speaking style.
+                  </p>
+                </div>
+
+                {/* Speed Control */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Speaking Speed</Label>
+                    <span className="text-sm text-muted-foreground">
+                      {(editingProfile.elevenLabsSpeed || 1.0).toFixed(1)}x
+                    </span>
+                  </div>
+                  <Slider
+                    value={[editingProfile.elevenLabsSpeed || 1.0]}
+                    onValueChange={([value]) => updateField('elevenLabsSpeed', value)}
+                    min={0.7}
+                    max={1.2}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Slower (0.7x)</span>
+                    <span>Normal (1.0x)</span>
+                    <span>Faster (1.2x)</span>
+                  </div>
+                </div>
+
+                {/* Custom Voice ID */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label>Add Custom Voice ID</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Use your own cloned or custom ElevenLabs voice by entering its Voice ID.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Voice ID (e.g., EXAVITQu4vr4xnSDxMaL)"
+                      id="custom-voice-id"
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Name"
+                      id="custom-voice-name"
+                      className="w-32"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        const idInput = document.getElementById('custom-voice-id') as HTMLInputElement;
+                        const nameInput = document.getElementById('custom-voice-name') as HTMLInputElement;
+                        if (idInput?.value.trim()) {
+                          const newVoice: ElevenLabsVoice = {
+                            id: idInput.value.trim(),
+                            name: nameInput?.value.trim() || 'Custom Voice',
+                          };
+                          updateField('customElevenLabsVoices', [
+                            ...(editingProfile.customElevenLabsVoices || []),
+                            newVoice,
+                          ]);
+                          idInput.value = '';
+                          if (nameInput) nameInput.value = '';
+                        }
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {(editingProfile.customElevenLabsVoices || []).length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {(editingProfile.customElevenLabsVoices || []).map((voice) => (
+                        <div
+                          key={voice.id}
+                          className="flex items-center justify-between p-2 rounded-lg bg-secondary/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Volume2 className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm">{voice.name}</span>
+                            <span className="text-xs text-muted-foreground">({voice.id.slice(0, 12)}...)</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                            onClick={() => {
+                              updateField('customElevenLabsVoices', 
+                                (editingProfile.customElevenLabsVoices || []).filter((v) => v.id !== voice.id)
+                              );
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
 
               {/* Salesforce Tab */}
               <TabsContent value="salesforce" className="space-y-4">

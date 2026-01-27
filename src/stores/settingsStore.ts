@@ -10,6 +10,14 @@ export interface AvatarOption {
 
 export type VoiceEmotionType = 'excited' | 'serious' | 'friendly' | 'soothing' | 'broadcaster';
 
+export type TTSProvider = 'heygen' | 'elevenlabs';
+
+export interface ElevenLabsVoice {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -22,6 +30,11 @@ export interface Profile {
   selectedAvatarId: string;
   selectedEmotion: VoiceEmotionType;
   customAvatars: AvatarOption[];
+  // TTS Provider settings
+  ttsProvider: TTSProvider;
+  elevenLabsVoiceId: string;
+  elevenLabsSpeed: number;
+  customElevenLabsVoices: ElevenLabsVoice[];
 }
 
 interface SettingsState {
@@ -53,8 +66,13 @@ const defaultProfile: Profile = {
   salesforceApiHost: 'https://api.salesforce.com',
   heygenApiKey: '',
   selectedAvatarId: '',
-  selectedEmotion: 'excited',
+  selectedEmotion: 'friendly',
   customAvatars: [],
+  // ElevenLabs TTS settings
+  ttsProvider: 'elevenlabs',
+  elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - default
+  elevenLabsSpeed: 1.0,
+  customElevenLabsVoices: [],
 };
 
 export const useSettingsStore = create<SettingsState>()(
