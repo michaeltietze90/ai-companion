@@ -21,7 +21,7 @@ import { useAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/us
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
-import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
+import { useSettingsStore, VoiceEmotionType, TTSProvider } from "@/stores/settingsStore";
 import { VoicePreviewButton } from "@/components/VoicePreview/VoicePreviewButton";
 
 const Index = () => {
@@ -72,11 +72,18 @@ const Index = () => {
   const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   const currentVoice = activeProfile?.heygenVoice || 'miguel';
+  const currentTTSProvider = activeProfile?.ttsProvider || 'heygen';
   
   const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { heygenVoice: voice });
       // Note: Voice change will apply on next avatar session start
+    }
+  }, [activeProfileId, updateProfile]);
+  
+  const handleTTSProviderChange = useCallback((provider: TTSProvider) => {
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { ttsProvider: provider });
     }
   }, [activeProfileId, updateProfile]);
   
@@ -188,6 +195,18 @@ const Index = () => {
               speed={activeProfile?.elevenLabsSpeed}
               className="h-9 w-9 bg-secondary/50 backdrop-blur-sm border border-border rounded-md"
             />
+          </div>
+
+          {/* TTS Provider Toggle */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
+            <Switch
+              id="tts-provider"
+              checked={currentTTSProvider === 'heygen'}
+              onCheckedChange={(checked) => handleTTSProviderChange(checked ? 'heygen' : 'elevenlabs')}
+            />
+            <Label htmlFor="tts-provider" className="text-muted-foreground text-sm">
+              {currentTTSProvider === 'heygen' ? '🎭 HeyGen' : '🔊 11Labs'}
+            </Label>
           </div>
 
           {/* Fullscreen Display Links */}
