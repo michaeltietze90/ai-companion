@@ -107,17 +107,9 @@ export function useAvatarConversation() {
       console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
       console.log('[HeyGen] Using voice:', MIGUEL_VOICE_ID);
 
-      // Get selected emotion from profile (default to EXCITED)
-      const activeProfile = getActiveProfile();
-      const emotionMap: Record<string, VoiceEmotion> = {
-        'excited': VoiceEmotion.EXCITED,
-        'serious': VoiceEmotion.SERIOUS,
-        'friendly': VoiceEmotion.FRIENDLY,
-        'soothing': VoiceEmotion.SOOTHING,
-        'broadcaster': VoiceEmotion.BROADCASTER,
-      };
-      const selectedEmotion = emotionMap[activeProfile?.selectedEmotion || 'excited'] || VoiceEmotion.EXCITED;
-      console.log('[HeyGen] Using emotion:', activeProfile?.selectedEmotion || 'excited');
+      // HARDCODED: Always use EXCITED emotion
+      const selectedEmotion = VoiceEmotion.EXCITED;
+      console.log('[HeyGen] Using emotion: EXCITED (hardcoded)');
 
       // Create avatar session with high quality for Miguel
       // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
@@ -223,15 +215,9 @@ export function useAvatarConversation() {
         }
       });
       
-      // Map emotion string to SDK enum
-      const emotionMap: Record<string, VoiceEmotion> = {
-        'excited': VoiceEmotion.EXCITED,
-        'serious': VoiceEmotion.SERIOUS,
-        'friendly': VoiceEmotion.FRIENDLY,
-        'soothing': VoiceEmotion.SOOTHING,
-        'broadcaster': VoiceEmotion.BROADCASTER,
-      };
-      const selectedEmotion = emotionMap[newEmotion] || VoiceEmotion.EXCITED;
+      // HARDCODED: Always use EXCITED emotion (ignoring newEmotion param)
+      const selectedEmotion = VoiceEmotion.EXCITED;
+      console.log('[HeyGen] Reinitializing with EXCITED (hardcoded, ignoring:', newEmotion, ')');
       
       // Create new session
       const sessionInfo = await avatar.createStartAvatar({
