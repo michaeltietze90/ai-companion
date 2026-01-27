@@ -70,9 +70,9 @@ const defaultProfile: Profile = {
   selectedAvatarId: '',
   selectedEmotion: 'friendly',
   customAvatars: [],
-  // TTS settings - using ElevenLabs for emotions, HeyGen for lip-sync
-  ttsProvider: 'elevenlabs',
-  elevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb', // George - warm British male voice (for testing with Miguel's lip-sync)
+  // TTS settings - HeyGen native voice (ElevenLabs quota depleted)
+  ttsProvider: 'heygen',
+  elevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb', // George - warm British male voice
   elevenLabsSpeed: 1.0,
   customElevenLabsVoices: [],
   // HeyGen voice selection
