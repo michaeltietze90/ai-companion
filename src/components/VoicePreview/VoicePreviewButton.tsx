@@ -11,6 +11,7 @@ interface VoicePreviewButtonProps {
   speed?: number;
   size?: "sm" | "default" | "lg" | "icon";
   className?: string;
+  disabled?: boolean;
 }
 
 const PREVIEW_PHRASES: Record<VoiceEmotionType, string> = {
@@ -28,11 +29,14 @@ export function VoicePreviewButton({
   speed = 1.0,
   size = "icon",
   className = "",
+  disabled = false,
 }: VoicePreviewButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   const handlePreview = async () => {
+    if (disabled) return;
+
     // Stop current playback if any
     if (currentAudio) {
       currentAudio.pause();
@@ -94,8 +98,15 @@ export function VoicePreviewButton({
       variant="ghost"
       size={size}
       onClick={handlePreview}
+      disabled={disabled}
       className={`text-muted-foreground hover:text-foreground ${className}`}
-      title={isPlaying ? "Stop preview" : `Preview ${emotion} voice`}
+      title={
+        disabled
+          ? "Voice preview uses ElevenLabs (currently disabled)"
+          : isPlaying
+            ? "Stop preview"
+            : `Preview ${emotion} voice`
+      }
     >
       {isPlaying ? (
         <Loader2 className="w-4 h-4 animate-spin" />
