@@ -159,6 +159,109 @@ export function useAvatarConversation() {
       console.error('Failed to initialize avatar:', error);
       throw error;
     }
+  }, [setSpeaking, setListening, getActiveProfile]);
+
+  // Reinitialize avatar with a new emotion (keeps Agentforce session alive)
+  const reinitializeAvatarWithEmotion = useCallback(async (
+    videoElement: HTMLVideoElement,
+    newEmotion: string
+  ): Promise<void> => {
+    console.log('[HeyGen] Reinitializing avatar with new emotion:', newEmotion);
+    
+    try {
+      // 1) Stop current avatar session
+      if (avatarRef.current) {
+        try {
+          await avatarRef.current.stopAvatar();
+        } catch (e) {
+          console.warn('[HeyGen] Error stopping avatar:', e);
+        }
+        avatarRef.current = null;
+      }
+      
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+      
+      // Clear keep-alive interval
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+        keepAliveIntervalRef.current = null;
+      }
+      
+      // 2) Get new token
+      const token = await createHeyGenToken();
+      tokenRef.current = token;
+      
+      // 3) Create new avatar with updated emotion
+      const avatar = new StreamingAvatar({ token });
+      avatarRef.current = avatar;
+      
+      // Set up event listeners
+      avatar.on(StreamingEvents.STREAM_READY, (event) => {
+        console.log('[HeyGen] Stream ready after emotion change');
+        if (event.detail && videoElement) {
+          mediaStreamRef.current = event.detail;
+          videoElement.srcObject = event.detail;
+          videoElement.play().catch(console.error);
+        }
+      });
+      
+      avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
+        isSpeakingRef.current = true;
+        setSpeaking(true);
+        setListening(false);
+      });
+      
+      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
+        isSpeakingRef.current = false;
+        setSpeaking(false);
+        if (speechResolveRef.current) {
+          speechResolveRef.current();
+          speechResolveRef.current = null;
+        }
+      });
+      
+      // Map emotion string to SDK enum
+      const emotionMap: Record<string, VoiceEmotion> = {
+        'excited': VoiceEmotion.EXCITED,
+        'serious': VoiceEmotion.SERIOUS,
+        'friendly': VoiceEmotion.FRIENDLY,
+        'soothing': VoiceEmotion.SOOTHING,
+        'broadcaster': VoiceEmotion.BROADCASTER,
+      };
+      const selectedEmotion = emotionMap[newEmotion] || VoiceEmotion.EXCITED;
+      
+      // Create new session
+      const sessionInfo = await avatar.createStartAvatar({
+        quality: AvatarQuality.High,
+        avatarName: MIGUEL_AVATAR_ID,
+        voice: {
+          voiceId: MIGUEL_VOICE_ID,
+          emotion: selectedEmotion,
+        },
+      });
+      
+      if (sessionInfo?.session_id) {
+        heygenSessionRef.current = sessionInfo.session_id;
+      }
+      
+      // Restart keep-alive
+      keepAliveIntervalRef.current = setInterval(async () => {
+        if (avatarRef.current) {
+          console.log('[HeyGen] Keep-alive ping');
+        }
+      }, 60000);
+      
+      console.log('[HeyGen] Avatar reinitialized with emotion:', newEmotion);
+      toast.success(`Emotion changed to ${newEmotion}!`);
+      
+    } catch (error) {
+      console.error('[HeyGen] Failed to reinitialize avatar:', error);
+      toast.error('Failed to change emotion. Avatar may be temporarily unavailable.');
+      throw error;
+    }
   }, [setSpeaking, setListening]);
 
   // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
@@ -668,5 +771,6 @@ export function useAvatarConversation() {
     sendMessage,
     endConversation,
     setListening,
+    reinitializeAvatarWithEmotion,
   };
 }

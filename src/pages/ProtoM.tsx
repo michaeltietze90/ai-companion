@@ -29,6 +29,7 @@ const ProtoM = () => {
   const [manualMute, setManualMute] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [isChangingEmotion, setIsChangingEmotion] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // Get TTS provider to determine auto-mute
@@ -46,6 +47,7 @@ const ProtoM = () => {
     startConversation,
     sendMessage,
     endConversation,
+    reinitializeAvatarWithEmotion,
   } = useAvatarConversation();
 
   const { demoMode, setDemoMode, thinkingMessage } = useConversationStore();
@@ -55,11 +57,23 @@ const ProtoM = () => {
   const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   
-  const handleEmotionChange = (emotion: VoiceEmotionType) => {
+  const handleEmotionChange = useCallback(async (emotion: VoiceEmotionType) => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { selectedEmotion: emotion });
+      
+      // If connected and HeyGen TTS is active, reinitialize avatar with new emotion
+      if (isConnected && videoRef.current && activeProfile?.ttsProvider !== 'elevenlabs') {
+        setIsChangingEmotion(true);
+        try {
+          await reinitializeAvatarWithEmotion(videoRef.current, emotion);
+        } catch (error) {
+          console.error('Failed to change emotion:', error);
+        } finally {
+          setIsChangingEmotion(false);
+        }
+      }
     }
-  };
+  }, [activeProfileId, updateProfile, isConnected, activeProfile?.ttsProvider, reinitializeAvatarWithEmotion]);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('Voice transcript received:', transcript);
@@ -115,10 +129,17 @@ const ProtoM = () => {
           <Select
             value={currentEmotion}
             onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
-            disabled={isConnected}
+            disabled={isChangingEmotion}
           >
-            <SelectTrigger className="w-40 h-10 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
+            <SelectTrigger className={`w-40 h-10 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+              {isChangingEmotion ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Changing...
+                </span>
+              ) : (
+                <SelectValue />
+              )}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="excited">🎉 Excited</SelectItem>
