@@ -41,6 +41,7 @@ serve(async (req) => {
     const speechSpeed = speed || 1.0;
 
     console.log(`[ElevenLabs TTS] Voice: ${selectedVoiceId}, Emotion: ${emotion || 'friendly'}, Speed: ${speechSpeed}`);
+    console.log(`[ElevenLabs TTS] Emotion settings:`, JSON.stringify(emotionSettings));
     console.log(`[ElevenLabs TTS] Text (${text.length} chars): ${text.substring(0, 100)}...`);
 
     // Use multilingual_v2 model for best emotion/expressiveness support
