@@ -68,8 +68,8 @@ const defaultProfile: Profile = {
   selectedAvatarId: '',
   selectedEmotion: 'friendly',
   customAvatars: [],
-  // ElevenLabs TTS settings
-  ttsProvider: 'elevenlabs',
+  // TTS settings - using HeyGen for native emotion support
+  ttsProvider: 'heygen',
   elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - default
   elevenLabsSpeed: 1.0,
   customElevenLabsVoices: [],
