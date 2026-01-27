@@ -1,6 +1,20 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+export class ElevenLabsTTSError extends Error {
+  status: number;
+  code?: string;
+  details?: unknown;
+
+  constructor(message: string, opts: { status: number; code?: string; details?: unknown }) {
+    super(message);
+    this.name = 'ElevenLabsTTSError';
+    this.status = opts.status;
+    this.code = opts.code;
+    this.details = opts.details;
+  }
+}
+
 export interface TTSOptions {
   voiceId?: string;
   emotion?: 'excited' | 'friendly' | 'serious' | 'soothing' | 'broadcaster';
@@ -38,8 +52,23 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `TTS request failed: ${response.status}`);
+    // The TTS function may return JSON error payloads. Prefer those over generic status.
+    const contentType = response.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json')
+      ? await response.json().catch(() => null)
+      : await response.text().catch(() => null);
+
+    const message =
+      (payload && typeof payload === 'object' && 'error' in payload && typeof (payload as any).error === 'string'
+        ? (payload as any).error
+        : null) || `TTS request failed: ${response.status}`;
+
+    const code =
+      payload && typeof payload === 'object'
+        ? ((payload as any).code as string | undefined) || ((payload as any).status as string | undefined)
+        : undefined;
+
+    throw new ElevenLabsTTSError(message, { status: response.status, code, details: payload });
   }
 
   return response.blob();
