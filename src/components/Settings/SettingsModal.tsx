@@ -98,6 +98,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
       elevenLabsSpeed: 1.0,
       customElevenLabsVoices: [],
+      heygenVoice: 'miguel',
     };
     addProfile(newProfile);
     setEditingProfile(newProfile);
