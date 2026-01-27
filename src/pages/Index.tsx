@@ -22,6 +22,7 @@ import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
+import { VoicePreviewButton } from "@/components/VoicePreview/VoicePreviewButton";
 
 const Index = () => {
   // Controls whether the HeyGen video element is muted.
@@ -130,30 +131,38 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Emotion Selector - now works during session for HeyGen TTS */}
-          <Select
-            value={currentEmotion}
-            onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
-            disabled={isChangingEmotion}
-          >
-            <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
-              {isChangingEmotion ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Changing...
-                </span>
-              ) : (
-                <SelectValue />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="excited">🎉 Excited</SelectItem>
-              <SelectItem value="friendly">😊 Friendly</SelectItem>
-              <SelectItem value="serious">🎯 Serious</SelectItem>
-              <SelectItem value="soothing">🧘 Soothing</SelectItem>
-              <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Emotion Selector with Preview Button */}
+          <div className="flex items-center gap-1">
+            <Select
+              value={currentEmotion}
+              onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
+              disabled={isChangingEmotion}
+            >
+              <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+                {isChangingEmotion ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Changing...
+                  </span>
+                ) : (
+                  <SelectValue />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excited">🎉 Excited</SelectItem>
+                <SelectItem value="friendly">😊 Friendly</SelectItem>
+                <SelectItem value="serious">🎯 Serious</SelectItem>
+                <SelectItem value="soothing">🧘 Soothing</SelectItem>
+                <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
+              </SelectContent>
+            </Select>
+            <VoicePreviewButton 
+              emotion={currentEmotion}
+              voiceId={activeProfile?.elevenLabsVoiceId}
+              speed={activeProfile?.elevenLabsSpeed}
+              className="h-9 w-9 bg-secondary/50 backdrop-blur-sm border border-border rounded-md"
+            />
+          </div>
 
           {/* Fullscreen Display Links */}
           <div className="flex items-center gap-1">
