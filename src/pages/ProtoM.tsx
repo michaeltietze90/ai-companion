@@ -18,6 +18,7 @@ import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
+import { VoicePreviewButton } from "@/components/VoicePreview/VoicePreviewButton";
 import { Link } from "react-router-dom";
 
 /**
@@ -126,29 +127,37 @@ const ProtoM = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <Select
-            value={currentEmotion}
-            onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
-            disabled={isChangingEmotion}
-          >
-            <SelectTrigger className={`w-40 h-10 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
-              {isChangingEmotion ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Changing...
-                </span>
-              ) : (
-                <SelectValue />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="excited">🎉 Excited</SelectItem>
-              <SelectItem value="friendly">😊 Friendly</SelectItem>
-              <SelectItem value="serious">🎯 Serious</SelectItem>
-              <SelectItem value="soothing">🧘 Soothing</SelectItem>
-              <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1">
+            <Select
+              value={currentEmotion}
+              onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
+              disabled={isChangingEmotion}
+            >
+              <SelectTrigger className={`w-40 h-10 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+                {isChangingEmotion ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Changing...
+                  </span>
+                ) : (
+                  <SelectValue />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excited">🎉 Excited</SelectItem>
+                <SelectItem value="friendly">😊 Friendly</SelectItem>
+                <SelectItem value="serious">🎯 Serious</SelectItem>
+                <SelectItem value="soothing">🧘 Soothing</SelectItem>
+                <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
+              </SelectContent>
+            </Select>
+            <VoicePreviewButton 
+              emotion={currentEmotion}
+              voiceId={activeProfile?.elevenLabsVoiceId}
+              speed={activeProfile?.elevenLabsSpeed}
+              className="h-10 w-10 bg-secondary/50 backdrop-blur-sm border border-border rounded-md"
+            />
+          </div>
           
           <Button
             variant="ghost"
