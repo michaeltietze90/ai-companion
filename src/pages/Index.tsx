@@ -25,12 +25,19 @@ import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
 
 const Index = () => {
   // Controls whether the HeyGen video element is muted.
-  // NOTE: If this is true, you will not hear HeyGen voice audio.
-  const [isMuted, setIsMuted] = useState(false);
+  // When using ElevenLabs TTS, video is auto-muted so we hear ElevenLabs audio instead.
+  const [manualMute, setManualMute] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Get TTS provider to determine auto-mute
+  const activeProfile = useSettingsStore((state) => state.getActiveProfile());
+  const isElevenLabsTTS = activeProfile?.ttsProvider === 'elevenlabs';
+  
+  // Video is muted if: manual mute OR using ElevenLabs (so we hear 11Labs audio, not HeyGen)
+  const isMuted = manualMute || isElevenLabsTTS;
 
   const {
     isConnected,
@@ -57,9 +64,8 @@ const Index = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   
-  // Settings store for emotion
-  const { getActiveProfile, updateProfile, activeProfileId } = useSettingsStore();
-  const activeProfile = getActiveProfile();
+  // Settings store for emotion (activeProfile already retrieved above)
+  const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   
   const handleEmotionChange = (emotion: VoiceEmotionType) => {
@@ -339,7 +345,7 @@ const Index = () => {
                 size="lg"
                 variant="ghost"
                 className="w-12 h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => setManualMute(!manualMute)}
               >
                 {isMuted ? (
                   <VolumeX className="w-5 h-5 text-muted-foreground" />

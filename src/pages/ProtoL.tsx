@@ -26,10 +26,17 @@ import { Link } from "react-router-dom";
  * Designed for Proto L holographic displays
  */
 const ProtoL = () => {
-  const [isMuted, setIsMuted] = useState(false);
+  const [manualMute, setManualMute] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Get TTS provider to determine auto-mute
+  const activeProfile = useSettingsStore((state) => state.getActiveProfile());
+  const isElevenLabsTTS = activeProfile?.ttsProvider === 'elevenlabs';
+  
+  // Video is muted if: manual mute OR using ElevenLabs
+  const isMuted = manualMute || isElevenLabsTTS;
 
   const {
     isConnected,
@@ -44,8 +51,8 @@ const ProtoL = () => {
   const { demoMode, setDemoMode, thinkingMessage } = useConversationStore();
   const { activeVisuals } = useVisualOverlayStore();
   
-  const { getActiveProfile, updateProfile, activeProfileId } = useSettingsStore();
-  const activeProfile = getActiveProfile();
+  // activeProfile already retrieved above
+  const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   
   const handleEmotionChange = (emotion: VoiceEmotionType) => {
@@ -244,7 +251,7 @@ const ProtoL = () => {
                 size="lg"
                 variant="ghost"
                 className="w-24 h-24 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => setManualMute(!manualMute)}
               >
                 {isMuted ? (
                   <VolumeX className="w-10 h-10 text-muted-foreground" />
