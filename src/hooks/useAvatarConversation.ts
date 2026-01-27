@@ -649,23 +649,34 @@ export function useAvatarConversation() {
         let fullResponse = '';
         const allVisuals: ParsedResponse['visuals'] = [];
 
-        // Speech queue - we queue sentences and speak them sequentially (waiting for each to complete)
-        const speechQueue: string[] = [];
+        // Speech batching - combine short sentences for smoother delivery
+        // Instead of speaking each fragment separately, we batch them together
+        const MIN_BATCH_LENGTH = 80; // Minimum characters before speaking
+        const MAX_BATCH_LENGTH = 200; // Maximum characters per batch
+        let pendingBatch = '';
         let isProcessingQueue = false;
+        const speechQueue: string[] = [];
+
+        const flushBatch = () => {
+          if (pendingBatch.trim()) {
+            speechQueue.push(pendingBatch.trim());
+            console.log('[Speech Batch] Queued:', pendingBatch.trim().substring(0, 50) + '...');
+            pendingBatch = '';
+          }
+        };
 
         const processSpeechQueue = async () => {
           if (isProcessingQueue) return;
           isProcessingQueue = true;
 
           while (speechQueue.length > 0) {
-            const sentence = speechQueue.shift();
-            if (!sentence) continue;
+            const batch = speechQueue.shift();
+            if (!batch) continue;
 
-            console.log('[HeyGen] speaking sentence:', sentence.substring(0, 50) + (sentence.length > 50 ? '...' : ''));
+            console.log('[HeyGen] speaking batch:', batch.substring(0, 60) + (batch.length > 60 ? '...' : ''));
             try {
-              // Use the no-interrupt version that waits for speech to complete
-              await speakSentenceNoInterrupt(sentence);
-              console.log('[HeyGen] sentence complete');
+              await speakSentenceNoInterrupt(batch);
+              console.log('[HeyGen] batch complete');
             } catch (speakError) {
               console.error('[HeyGen] speak error:', speakError);
             }
@@ -695,14 +706,24 @@ export function useAvatarConversation() {
               allVisuals.push(...parsed.visuals);
             }
 
-            // Queue the clean speech text for speaking
+            // Batch sentences together for smoother speech
             if (parsed.speechText.trim()) {
-              speechQueue.push(parsed.speechText);
-              // Start processing queue (non-blocking)
-              processSpeechQueue();
+              pendingBatch += (pendingBatch ? ' ' : '') + parsed.speechText.trim();
+              
+              // Flush if batch is long enough or ends with strong punctuation
+              const endsWithStrongPunctuation = /[.!?]$/.test(parsed.speechText.trim());
+              if (pendingBatch.length >= MIN_BATCH_LENGTH || 
+                  (pendingBatch.length >= 40 && endsWithStrongPunctuation) ||
+                  pendingBatch.length >= MAX_BATCH_LENGTH) {
+                flushBatch();
+                processSpeechQueue(); // Start processing (non-blocking)
+              }
             }
           } else if (chunk.type === 'done') {
             console.log('[Agentforce] stream complete');
+            // Flush any remaining text
+            flushBatch();
+            processSpeechQueue();
           }
         }
 
