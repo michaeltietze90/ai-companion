@@ -41,10 +41,6 @@ const ProtoL = () => {
     startConversation(videoRef.current);
   };
 
-  // Toggle mic - actually starts/stops the STT
-  const handleMicToggle = () => {
-    toggleListening();
-  };
 
   return (
     <div 
@@ -84,7 +80,7 @@ const ProtoL = () => {
                 ? 'bg-blue-500 hover:bg-blue-600' 
                 : 'bg-gray-600 hover:bg-gray-500'
             }`}
-            onClick={handleMicToggle}
+            onClick={toggleListening}
           >
             {isListening ? (
               <Mic className="w-14 h-14 text-white" />
