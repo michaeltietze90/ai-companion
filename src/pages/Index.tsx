@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2 } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -125,6 +126,22 @@ const Index = () => {
               <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Fullscreen Display Links */}
+          <div className="flex items-center gap-1">
+            <Link to="/proto-m">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                <Maximize2 className="w-3 h-3 mr-1" />
+                Proto M
+              </Button>
+            </Link>
+            <Link to="/proto-l">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                <Maximize2 className="w-3 h-3 mr-1" />
+                Proto L
+              </Button>
+            </Link>
+          </div>
 
           {/* Demo Mode Toggle */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">

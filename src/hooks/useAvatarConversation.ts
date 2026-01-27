@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
+import { synthesizeSpeech } from '@/services/elevenLabsTTS';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -31,6 +32,9 @@ export function useAvatarConversation() {
   // Speech completion tracking
   const speechResolveRef = useRef<(() => void) | null>(null);
   const isSpeakingRef = useRef(false);
+  
+  // ElevenLabs audio element reference
+  const elevenLabsAudioRef = useRef<HTMLAudioElement | null>(null);
   
   const {
     sessionId,
@@ -181,6 +185,45 @@ export function useAvatarConversation() {
     });
   }, []);
 
+  // Speak via ElevenLabs TTS
+  const speakViaElevenLabs = useCallback(async (text: string): Promise<void> => {
+    const activeProfile = getActiveProfile();
+    
+    try {
+      isSpeakingRef.current = true;
+      setSpeaking(true);
+      
+      console.log('[ElevenLabs TTS] Speaking:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+      
+      const audioBlob = await synthesizeSpeech(text, {
+        voiceId: activeProfile?.elevenLabsVoiceId || 'EXAVITQu4vr4xnSDxMaL',
+        emotion: activeProfile?.selectedEmotion || 'friendly',
+        speed: activeProfile?.elevenLabsSpeed || 1.0,
+      });
+      
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      elevenLabsAudioRef.current = audio;
+      
+      await new Promise<void>((resolve, reject) => {
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        };
+        audio.onerror = (e) => {
+          URL.revokeObjectURL(audioUrl);
+          reject(e);
+        };
+        audio.play().catch(reject);
+      });
+      
+      elevenLabsAudioRef.current = null;
+    } finally {
+      isSpeakingRef.current = false;
+      setSpeaking(false);
+    }
+  }, [getActiveProfile, setSpeaking]);
+
   // Speak text WITHOUT interrupting (for queued sentences)
   const speakSentenceNoInterrupt = useCallback(async (text: string): Promise<void> => {
     const spokenText = text
@@ -196,6 +239,21 @@ export function useAvatarConversation() {
     if (isSpeakingRef.current) {
       console.log('[Speech] Waiting for current speech to finish...');
       await waitForSpeechComplete();
+    }
+
+    // Get active profile to check TTS provider
+    const activeProfile = getActiveProfile();
+    const useElevenLabs = activeProfile?.ttsProvider === 'elevenlabs';
+    
+    // Use ElevenLabs TTS (plays audio separately from HeyGen video)
+    if (useElevenLabs) {
+      try {
+        await speakViaElevenLabs(spokenText);
+        return;
+      } catch (error) {
+        console.error('[ElevenLabs TTS] speak failed:', error);
+        // Fall through to HeyGen as backup
+      }
     }
 
     // Preferred: use the HeyGen SDK instance
@@ -222,9 +280,9 @@ export function useAvatarConversation() {
       }
     }
 
-    // NO browser TTS fallback - just skip if HeyGen is unavailable
-    console.warn('[Speech] HeyGen unavailable, skipping speech for:', spokenText.substring(0, 50));
-  }, [setLastSpokenText, waitForSpeechComplete]);
+    // NO browser TTS fallback - just skip if unavailable
+    console.warn('[Speech] TTS unavailable, skipping speech for:', spokenText.substring(0, 50));
+  }, [setLastSpokenText, waitForSpeechComplete, getActiveProfile, speakViaElevenLabs]);
 
   // Speak using HeyGen WITH interrupt (for new messages, welcome message, etc.)
   const speakViaProxy = useCallback(async (text: string) => {
@@ -236,6 +294,27 @@ export function useAvatarConversation() {
 
     setLastSpokenText(spokenText);
     if (!spokenText) return;
+
+    // Get active profile to check TTS provider
+    const activeProfile = getActiveProfile();
+    const useElevenLabs = activeProfile?.ttsProvider === 'elevenlabs';
+    
+    // Interrupt any current ElevenLabs audio
+    if (useElevenLabs && elevenLabsAudioRef.current) {
+      elevenLabsAudioRef.current.pause();
+      elevenLabsAudioRef.current = null;
+    }
+    
+    // Use ElevenLabs TTS
+    if (useElevenLabs) {
+      try {
+        await speakViaElevenLabs(spokenText);
+        return;
+      } catch (error) {
+        console.error('[ElevenLabs TTS] speak failed:', error);
+        // Fall through to HeyGen as backup
+      }
+    }
 
     // Preferred: use the HeyGen SDK instance that owns the session + auth.
     if (avatarRef.current) {
@@ -269,9 +348,9 @@ export function useAvatarConversation() {
       }
     }
 
-    // NO browser TTS fallback - just skip if HeyGen is unavailable
-    console.warn('[Speech] HeyGen unavailable, skipping speech for:', spokenText.substring(0, 50));
-  }, [setLastSpokenText]);
+    // NO browser TTS fallback - just skip if unavailable
+    console.warn('[Speech] TTS unavailable, skipping speech for:', spokenText.substring(0, 50));
+  }, [setLastSpokenText, getActiveProfile, speakViaElevenLabs]);
 
   // Start full conversation (HeyGen + Agentforce)
   // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.

@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AgentforceTest from "./pages/AgentforceTest";
+import ProtoM from "./pages/ProtoM";
+import ProtoL from "./pages/ProtoL";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +19,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/proto-m" element={<ProtoM />} />
+          <Route path="/proto-l" element={<ProtoL />} />
           <Route path="/agentforce-test" element={<AgentforceTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
