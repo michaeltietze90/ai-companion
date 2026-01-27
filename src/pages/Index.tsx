@@ -21,24 +21,16 @@ import { useAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/us
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
-import { useSettingsStore, VoiceEmotionType, TTSProvider } from "@/stores/settingsStore";
-import { VoicePreviewButton } from "@/components/VoicePreview/VoicePreviewButton";
+import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
 
 const Index = () => {
-  // Controls whether the HeyGen video element is muted.
-  // When using ElevenLabs TTS, video is auto-muted so we hear ElevenLabs audio instead.
-  const [manualMute, setManualMute] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  // Get TTS provider to determine auto-mute
   const activeProfile = useSettingsStore((state) => state.getActiveProfile());
-  const isElevenLabsTTS = activeProfile?.ttsProvider === 'elevenlabs';
-  
-  // Video is muted if: manual mute OR using ElevenLabs (so we hear 11Labs audio, not HeyGen)
-  const isMuted = manualMute || isElevenLabsTTS;
 
   const {
     isConnected,
@@ -68,38 +60,14 @@ const Index = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   
-  // Settings store for emotion and voice (activeProfile already retrieved above)
+  // Settings store for emotion and voice
   const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   const currentVoice = activeProfile?.heygenVoice || 'miguel';
-  const currentTTSProvider = activeProfile?.ttsProvider || 'heygen';
-  
-  // Default ElevenLabs voices fallback (for users with old persisted settings)
-  const DEFAULT_ELEVENLABS_VOICES = [
-    { id: '91c3c9b4f73c47879b3a98d399db808d', name: 'Miguelito (Cloned)' },
-    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George' },
-  ];
-  const customElevenLabsVoices = activeProfile?.customElevenLabsVoices?.length 
-    ? activeProfile.customElevenLabsVoices 
-    : DEFAULT_ELEVENLABS_VOICES;
-  const currentElevenLabsVoiceId = activeProfile?.elevenLabsVoiceId || DEFAULT_ELEVENLABS_VOICES[0].id;
   
   const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { heygenVoice: voice });
-      // Note: Voice change will apply on next avatar session start
-    }
-  }, [activeProfileId, updateProfile]);
-  
-  const handleTTSProviderChange = useCallback((provider: TTSProvider) => {
-    if (activeProfileId) {
-      updateProfile(activeProfileId, { ttsProvider: provider });
-    }
-  }, [activeProfileId, updateProfile]);
-  
-  const handleElevenLabsVoiceChange = useCallback((voiceId: string) => {
-    if (activeProfileId) {
-      updateProfile(activeProfileId, { elevenLabsVoiceId: voiceId });
     }
   }, [activeProfileId, updateProfile]);
   
@@ -107,8 +75,8 @@ const Index = () => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { selectedEmotion: emotion });
       
-      // If connected and HeyGen TTS is active, reinitialize avatar with new emotion
-      if (isConnected && videoRef.current && activeProfile?.ttsProvider !== 'elevenlabs') {
+      // If connected, reinitialize avatar with new emotion
+      if (isConnected && videoRef.current) {
         setIsChangingEmotion(true);
         try {
           await reinitializeAvatarWithEmotion(videoRef.current, emotion);
@@ -119,7 +87,7 @@ const Index = () => {
         }
       }
     }
-  }, [activeProfileId, updateProfile, isConnected, activeProfile?.ttsProvider, reinitializeAvatarWithEmotion]);
+  }, [activeProfileId, updateProfile, isConnected, reinitializeAvatarWithEmotion]);
 
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -162,89 +130,48 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Voice Selector - Shows HeyGen voices or ElevenLabs voices based on TTS provider */}
-          {currentTTSProvider === 'heygen' ? (
-            <Select
-              value={currentVoice}
-              onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-              disabled={isConnected}
-            >
-              <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                  <SelectItem key={key} value={key}>
-                    🎙️ {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Select 
-              value={currentElevenLabsVoiceId} 
-              onValueChange={handleElevenLabsVoiceChange}
-            >
-              <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-                <SelectValue placeholder="Select voice" />
-              </SelectTrigger>
-              <SelectContent>
-                {customElevenLabsVoices.map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    🔊 {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {/* HeyGen Voice Selector */}
+          <Select
+            value={currentVoice}
+            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
+            disabled={isConnected}
+          >
+            <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
+                <SelectItem key={key} value={key}>
+                  🎙️ {voice.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
-          {/* Emotion Selector with Preview Button */}
-          <div className="flex items-center gap-1">
-            <Select
-              value={currentEmotion}
-              onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
-              disabled={isChangingEmotion}
-            >
-              <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
-                {isChangingEmotion ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Changing...
-                  </span>
-                ) : (
-                  <SelectValue />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="excited">🎉 Excited</SelectItem>
-                <SelectItem value="friendly">😊 Friendly</SelectItem>
-                <SelectItem value="serious">🎯 Serious</SelectItem>
-                <SelectItem value="soothing">🧘 Soothing</SelectItem>
-                <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
-              </SelectContent>
-            </Select>
-            <VoicePreviewButton 
-              emotion={currentEmotion}
-              voiceId={activeProfile?.elevenLabsVoiceId}
-              speed={activeProfile?.elevenLabsSpeed}
-              disabled={currentTTSProvider !== 'elevenlabs'}
-              className="h-9 w-9 bg-secondary/50 backdrop-blur-sm border border-border rounded-md"
-            />
-          </div>
-
-          {/* TTS Provider Toggle */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
-            <Switch
-              id="tts-provider"
-              checked={currentTTSProvider === 'heygen'}
-              onCheckedChange={(checked) => handleTTSProviderChange(checked ? 'heygen' : 'elevenlabs')}
-            />
-            <Label htmlFor="tts-provider" className="text-muted-foreground text-sm">
-              {currentTTSProvider === 'heygen' ? '🎭 HeyGen' : '🔊 11Labs'}
-            </Label>
-          </div>
-
-
+          {/* Emotion Selector */}
+          <Select
+            value={currentEmotion}
+            onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
+            disabled={isChangingEmotion}
+          >
+            <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+              {isChangingEmotion ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Changing...
+                </span>
+              ) : (
+                <SelectValue />
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="excited">🎉 Excited</SelectItem>
+              <SelectItem value="friendly">😊 Friendly</SelectItem>
+              <SelectItem value="serious">🎯 Serious</SelectItem>
+              <SelectItem value="soothing">🧘 Soothing</SelectItem>
+              <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
+            </SelectContent>
+          </Select>
           {/* Fullscreen Display Links */}
           <div className="flex items-center gap-1">
             <Link to="/proto-m">
@@ -457,7 +384,7 @@ const Index = () => {
                 size="lg"
                 variant="ghost"
                 className="w-12 h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
-                onClick={() => setManualMute(!manualMute)}
+                onClick={() => setIsMuted(!isMuted)}
               >
                 {isMuted ? (
                   <VolumeX className="w-5 h-5 text-muted-foreground" />
