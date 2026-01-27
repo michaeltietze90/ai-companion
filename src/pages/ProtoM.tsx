@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { Volume2, VolumeX, Play, Loader2 } from "lucide-react";
+import { Volume2, VolumeX, Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
@@ -15,13 +15,16 @@ import { useConversationStore } from "@/stores/conversationStore";
  */
 const ProtoM = () => {
   const [isMuted, setIsMuted] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
+    isListening,
     startConversation,
+    setListening,
   } = useAvatarConversation();
 
   const { demoMode } = useConversationStore();
@@ -29,6 +32,12 @@ const ProtoM = () => {
 
   const handleStart = () => {
     startConversation(videoRef.current);
+  };
+
+  const handleMicToggle = () => {
+    const newMuted = !isMicMuted;
+    setIsMicMuted(newMuted);
+    setListening(!newMuted);
   };
 
   return (
@@ -53,6 +62,33 @@ const ProtoM = () => {
           isMuted={isMuted}
         />
       </main>
+
+      {/* Mic Mute Button - Top Right */}
+      {isConnected && (
+        <motion.div
+          className="absolute top-8 right-8 z-30"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Button
+            size="lg"
+            variant="ghost"
+            className={`w-16 h-16 rounded-full backdrop-blur-sm ${
+              isMicMuted 
+                ? 'bg-destructive/50 hover:bg-destructive/70' 
+                : 'bg-secondary/50 hover:bg-secondary/80'
+            }`}
+            onClick={handleMicToggle}
+          >
+            {isMicMuted ? (
+              <MicOff className="w-8 h-8 text-destructive-foreground" />
+            ) : (
+              <Mic className={`w-8 h-8 ${isListening ? 'text-primary animate-pulse' : 'text-foreground'}`} />
+            )}
+          </Button>
+        </motion.div>
+      )}
 
       {/* Status Indicator - only when not connected */}
       {!isConnected && (
