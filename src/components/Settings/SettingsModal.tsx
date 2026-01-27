@@ -210,17 +210,52 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
 
-              {/* Voice Tab - ElevenLabs TTS */}
+              {/* Voice Tab - TTS Settings */}
               <TabsContent value="voice" className="space-y-6">
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Volume2 className="w-5 h-5 text-primary" />
-                    <span className="font-medium">ElevenLabs Text-to-Speech</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    High-quality, expressive voice synthesis with emotion control using the multilingual v2 model.
+                {/* TTS Provider Toggle */}
+                <div className="space-y-3">
+                  <Label>TTS Provider</Label>
+                  <Select
+                    value={editingProfile.ttsProvider || 'heygen'}
+                    onValueChange={(provider) => updateField('ttsProvider', provider as TTSProvider)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="heygen">
+                        <span className="flex items-center gap-2">
+                          🎭 HeyGen Native Voice
+                          <span className="text-xs text-muted-foreground">- Miguel's voice, synced lips</span>
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="elevenlabs">
+                        <span className="flex items-center gap-2">
+                          🎙️ ElevenLabs
+                          <span className="text-xs text-muted-foreground">- Expressive emotions, custom voices</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {editingProfile.ttsProvider === 'heygen' 
+                      ? "Uses Miguel's original voice with lip-synced avatar. Emotions are subtle."
+                      : "Uses ElevenLabs voices with stronger emotion support. Audio plays separately from avatar."}
                   </p>
                 </div>
+
+                {/* ElevenLabs Settings - only show when ElevenLabs is selected */}
+                {editingProfile.ttsProvider === 'elevenlabs' && (
+                  <>
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Volume2 className="w-5 h-5 text-primary" />
+                        <span className="font-medium">ElevenLabs Text-to-Speech</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        High-quality, expressive voice synthesis with emotion control using the multilingual v2 model.
+                      </p>
+                    </div>
 
                 {/* Voice Selection */}
                 <div className="space-y-3">
@@ -394,6 +429,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* Salesforce Tab */}
