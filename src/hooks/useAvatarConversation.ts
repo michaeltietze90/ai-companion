@@ -35,6 +35,9 @@ export function useAvatarConversation() {
   const heygenSessionRef = useRef<string | null>(null);
   const demoIndexRef = useRef(0);
   const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Ensures we dispatch speech requests to HeyGen in strict order.
+  // Without this, concurrent ASYNC speak() calls can reach the server out-of-order.
+  const heygenDispatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   
   // Speech completion tracking
   const speechResolveRef = useRef<(() => void) | null>(null);
@@ -424,18 +427,27 @@ export function useAvatarConversation() {
       }
     }
 
-    // Preferred: use the HeyGen SDK with ASYNC mode for smooth queuing
-    // ASYNC mode lets HeyGen queue text internally - no visual glitches!
+    // Preferred: use the HeyGen SDK with ASYNC mode for smooth queuing.
+    // IMPORTANT: we still serialize *dispatch* to preserve sentence order.
     if (avatarRef.current) {
       try {
         console.log('[HeyGen] Queueing speech (ASYNC):', spokenText.substring(0, 40) + '...');
-        // Use ASYNC mode - fire and forget, HeyGen handles the queue
-        await avatarRef.current.speak({ 
-          text: spokenText, 
-          task_type: TaskType.REPEAT,
-          taskMode: TaskMode.ASYNC  // Key: Don't block, let HeyGen queue it
-        });
-        // Don't wait for completion - let the queue flow naturally
+
+        const avatar = avatarRef.current;
+        const dispatch = async () => {
+          await avatar.speak({
+            text: spokenText,
+            task_type: TaskType.REPEAT,
+            taskMode: TaskMode.ASYNC,
+          });
+        };
+
+        // Chain dispatch to guarantee ordering while keeping streaming non-blocking.
+        const chained = heygenDispatchQueueRef.current.then(dispatch);
+        // Prevent the queue from getting stuck on a single rejection.
+        heygenDispatchQueueRef.current = chained.catch(() => undefined);
+
+        await chained;
         return;
       } catch (error) {
         console.error('[HeyGen SDK] speak failed, trying proxy:', error);
