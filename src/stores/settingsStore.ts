@@ -72,9 +72,12 @@ const defaultProfile: Profile = {
   customAvatars: [],
   // TTS settings - HeyGen native voice (ElevenLabs quota depleted)
   ttsProvider: 'heygen',
-  elevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb', // George - warm British male voice
+  elevenLabsVoiceId: '91c3c9b4f73c47879b3a98d399db808d', // Miguelito - cloned voice
   elevenLabsSpeed: 1.0,
-  customElevenLabsVoices: [],
+  customElevenLabsVoices: [
+    { id: '91c3c9b4f73c47879b3a98d399db808d', name: 'Miguelito (Cloned)' },
+    { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George' },
+  ],
   // HeyGen voice selection
   heygenVoice: 'miguel',
 };
