@@ -47,7 +47,10 @@ const Index = () => {
     startConversation,
     sendMessage,
     endConversation,
+    reinitializeAvatarWithEmotion,
   } = useAvatarConversation();
+  
+  const [isChangingEmotion, setIsChangingEmotion] = useState(false);
 
   const {
     messages,
@@ -68,11 +71,23 @@ const Index = () => {
   const { updateProfile, activeProfileId } = useSettingsStore();
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   
-  const handleEmotionChange = (emotion: VoiceEmotionType) => {
+  const handleEmotionChange = useCallback(async (emotion: VoiceEmotionType) => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { selectedEmotion: emotion });
+      
+      // If connected and HeyGen TTS is active, reinitialize avatar with new emotion
+      if (isConnected && videoRef.current && activeProfile?.ttsProvider !== 'elevenlabs') {
+        setIsChangingEmotion(true);
+        try {
+          await reinitializeAvatarWithEmotion(videoRef.current, emotion);
+        } catch (error) {
+          console.error('Failed to change emotion:', error);
+        } finally {
+          setIsChangingEmotion(false);
+        }
+      }
     }
-  };
+  }, [activeProfileId, updateProfile, isConnected, activeProfile?.ttsProvider, reinitializeAvatarWithEmotion]);
 
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -115,14 +130,21 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Emotion Selector */}
+          {/* Emotion Selector - now works during session for HeyGen TTS */}
           <Select
             value={currentEmotion}
             onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
-            disabled={isConnected}
+            disabled={isChangingEmotion}
           >
-            <SelectTrigger className="w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
+            <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+              {isChangingEmotion ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Changing...
+                </span>
+              ) : (
+                <SelectValue />
+              )}
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="excited">🎉 Excited</SelectItem>
