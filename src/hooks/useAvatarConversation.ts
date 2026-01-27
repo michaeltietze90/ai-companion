@@ -185,7 +185,8 @@ export function useAvatarConversation() {
     });
   }, []);
 
-  // Speak via ElevenLabs TTS
+  // Speak via ElevenLabs TTS with HeyGen lip-sync
+  // Plays ElevenLabs audio while sending text to HeyGen (muted video) for lip-sync
   const speakViaElevenLabs = useCallback(async (text: string): Promise<void> => {
     const activeProfile = getActiveProfile();
     
@@ -193,18 +194,42 @@ export function useAvatarConversation() {
       isSpeakingRef.current = true;
       setSpeaking(true);
       
-      console.log('[ElevenLabs TTS] Speaking:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
+      console.log('[ElevenLabs TTS] Speaking with lip-sync:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
       
-      const audioBlob = await synthesizeSpeech(text, {
+      // Start both in parallel:
+      // 1. Generate and play ElevenLabs audio
+      // 2. Send text to HeyGen for lip-sync animation (video is muted so we only see lips move)
+      
+      const audioPromise = synthesizeSpeech(text, {
         voiceId: activeProfile?.elevenLabsVoiceId || 'EXAVITQu4vr4xnSDxMaL',
         emotion: activeProfile?.selectedEmotion || 'friendly',
         speed: activeProfile?.elevenLabsSpeed || 1.0,
       });
       
+      // Trigger HeyGen lip-sync (fire and forget - the video element should be muted)
+      const lipSyncPromise = (async () => {
+        if (avatarRef.current) {
+          try {
+            await avatarRef.current.speak({ text, task_type: TaskType.REPEAT });
+          } catch (e) {
+            console.warn('[HeyGen] Lip-sync speak failed:', e);
+          }
+        } else if (tokenRef.current && heygenSessionRef.current) {
+          try {
+            await speakText(tokenRef.current, heygenSessionRef.current, text);
+          } catch (e) {
+            console.warn('[HeyGen proxy] Lip-sync speak failed:', e);
+          }
+        }
+      })();
+      
+      // Wait for audio to be ready
+      const audioBlob = await audioPromise;
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       elevenLabsAudioRef.current = audio;
       
+      // Play ElevenLabs audio and wait for it to finish
       await new Promise<void>((resolve, reject) => {
         audio.onended = () => {
           URL.revokeObjectURL(audioUrl);
@@ -216,6 +241,12 @@ export function useAvatarConversation() {
         };
         audio.play().catch(reject);
       });
+      
+      // Wait for lip-sync to finish too (or timeout)
+      await Promise.race([
+        lipSyncPromise,
+        new Promise(resolve => setTimeout(resolve, 1000)) // 1s grace period
+      ]);
       
       elevenLabsAudioRef.current = null;
     } finally {
