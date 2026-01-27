@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-import StreamingAvatar, { AvatarQuality, ElevenLabsModel, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, ElevenLabsModel, StreamingEvents, TaskType, TaskMode, VoiceEmotion } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
@@ -396,8 +396,8 @@ export function useAvatarConversation() {
     }
   }, [getActiveProfile, setSpeaking]);
 
-  // Speak text WITHOUT interrupting (for queued sentences)
-  // Optimized for faster queue processing with shorter waits
+  // Speak text using ASYNC mode - HeyGen queues internally for smooth streaming
+  // This enables true streaming without visual glitches between chunks
   const speakSentenceNoInterrupt = useCallback(async (text: string): Promise<void> => {
     const spokenText = text
       .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
@@ -407,16 +407,6 @@ export function useAvatarConversation() {
 
     setLastSpokenText(spokenText);
     if (!spokenText) return;
-
-    // Wait briefly if currently speaking (but don't block too long)
-    if (isSpeakingRef.current) {
-      console.log('[Speech] Waiting for current speech to finish...');
-      // Quick wait with shorter timeout
-      await Promise.race([
-        waitForSpeechComplete(),
-        new Promise(resolve => setTimeout(resolve, 5000)) // 5s max wait
-      ]);
-    }
 
     // Get active profile to check TTS provider
     const activeProfile = getActiveProfile();
@@ -434,38 +424,37 @@ export function useAvatarConversation() {
       }
     }
 
-    // Preferred: use the HeyGen SDK instance
+    // Preferred: use the HeyGen SDK with ASYNC mode for smooth queuing
+    // ASYNC mode lets HeyGen queue text internally - no visual glitches!
     if (avatarRef.current) {
       try {
-        // Start speaking (don't await completion - let the event handler track it)
-        isSpeakingRef.current = true;
-        await avatarRef.current.speak({ text: spokenText, task_type: TaskType.REPEAT });
-        // Wait for speech to complete, but with a reasonable timeout
-        await waitForSpeechComplete();
+        console.log('[HeyGen] Queueing speech (ASYNC):', spokenText.substring(0, 40) + '...');
+        // Use ASYNC mode - fire and forget, HeyGen handles the queue
+        await avatarRef.current.speak({ 
+          text: spokenText, 
+          task_type: TaskType.REPEAT,
+          taskMode: TaskMode.ASYNC  // Key: Don't block, let HeyGen queue it
+        });
+        // Don't wait for completion - let the queue flow naturally
         return;
       } catch (error) {
         console.error('[HeyGen SDK] speak failed, trying proxy:', error);
-        isSpeakingRef.current = false;
       }
     }
 
-    // Fallback: direct API calls via our proxy
+    // Fallback: direct API calls via our proxy (still blocking for now)
     if (tokenRef.current && heygenSessionRef.current) {
       try {
-        isSpeakingRef.current = true;
         await speakText(tokenRef.current, heygenSessionRef.current, spokenText);
-        // Wait for speech completion with timeout
-        await waitForSpeechComplete();
         return;
       } catch (error) {
         console.error('[HeyGen proxy] speak failed:', error);
-        isSpeakingRef.current = false;
       }
     }
 
     // NO browser TTS fallback - just skip if unavailable
     console.warn('[Speech] TTS unavailable, skipping speech for:', spokenText.substring(0, 50));
-  }, [setLastSpokenText, waitForSpeechComplete, getActiveProfile, speakViaElevenLabs, maybeToastElevenLabsError]);
+  }, [setLastSpokenText, getActiveProfile, speakViaElevenLabs, maybeToastElevenLabsError]);
 
   // Speak using HeyGen WITH interrupt (for new messages, welcome message, etc.)
   const speakViaProxy = useCallback(async (text: string) => {
@@ -649,41 +638,9 @@ export function useAvatarConversation() {
         let fullResponse = '';
         const allVisuals: ParsedResponse['visuals'] = [];
 
-        // Speech batching - combine short sentences for smoother delivery
-        // Instead of speaking each fragment separately, we batch them together
-        const MIN_BATCH_LENGTH = 80; // Minimum characters before speaking
-        const MAX_BATCH_LENGTH = 200; // Maximum characters per batch
-        let pendingBatch = '';
-        let isProcessingQueue = false;
-        const speechQueue: string[] = [];
-
-        const flushBatch = () => {
-          if (pendingBatch.trim()) {
-            speechQueue.push(pendingBatch.trim());
-            console.log('[Speech Batch] Queued:', pendingBatch.trim().substring(0, 50) + '...');
-            pendingBatch = '';
-          }
-        };
-
-        const processSpeechQueue = async () => {
-          if (isProcessingQueue) return;
-          isProcessingQueue = true;
-
-          while (speechQueue.length > 0) {
-            const batch = speechQueue.shift();
-            if (!batch) continue;
-
-            console.log('[HeyGen] speaking batch:', batch.substring(0, 60) + (batch.length > 60 ? '...' : ''));
-            try {
-              await speakSentenceNoInterrupt(batch);
-              console.log('[HeyGen] batch complete');
-            } catch (speakError) {
-              console.error('[HeyGen] speak error:', speakError);
-            }
-          }
-
-          isProcessingQueue = false;
-        };
+        // With ASYNC TaskMode, HeyGen queues speech internally
+        // We can send sentences immediately for true low-latency streaming
+        let speechPromises: Promise<void>[] = [];
 
         // Stream sentences from Agentforce
         for await (const chunk of streamAgentMessage(activeSessionId, text, activeMessagesStreamUrl)) {
@@ -696,7 +653,7 @@ export function useAvatarConversation() {
             // Parse for visuals in this sentence
             const parsed = parseRichResponse(chunk.text);
 
-            // Add to streaming display (with sentence boundary marker)
+            // Add to streaming display
             addStreamingSentence(parsed.speechText.trim() || chunk.text);
 
             // Start any visuals immediately
@@ -706,24 +663,14 @@ export function useAvatarConversation() {
               allVisuals.push(...parsed.visuals);
             }
 
-            // Batch sentences together for smoother speech
+            // Send to HeyGen immediately - ASYNC mode queues internally
             if (parsed.speechText.trim()) {
-              pendingBatch += (pendingBatch ? ' ' : '') + parsed.speechText.trim();
-              
-              // Flush if batch is long enough or ends with strong punctuation
-              const endsWithStrongPunctuation = /[.!?]$/.test(parsed.speechText.trim());
-              if (pendingBatch.length >= MIN_BATCH_LENGTH || 
-                  (pendingBatch.length >= 40 && endsWithStrongPunctuation) ||
-                  pendingBatch.length >= MAX_BATCH_LENGTH) {
-                flushBatch();
-                processSpeechQueue(); // Start processing (non-blocking)
-              }
+              // Fire and forget - HeyGen will queue and play smoothly
+              const speakPromise = speakSentenceNoInterrupt(parsed.speechText.trim());
+              speechPromises.push(speakPromise);
             }
           } else if (chunk.type === 'done') {
             console.log('[Agentforce] stream complete');
-            // Flush any remaining text
-            flushBatch();
-            processSpeechQueue();
           }
         }
 
@@ -736,10 +683,15 @@ export function useAvatarConversation() {
           addMessage({ role: 'assistant', content: finalParsed.displayText });
         }
 
-        // Wait for all queued speech to finish
-        while (speechQueue.length > 0 || isProcessingQueue) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
+        // Wait for all speech commands to be sent (not for speech to complete)
+        await Promise.all(speechPromises);
+        console.log('[HeyGen] All speech commands sent to queue');
+        
+        // Give HeyGen time to finish speaking the queue
+        // We don't have a reliable way to know when it's done, so we estimate
+        // A rough estimate: ~150ms per character of speech
+        const estimatedSpeechTime = Math.min(fullResponse.length * 50, 30000); // Cap at 30s
+        await new Promise(resolve => setTimeout(resolve, estimatedSpeechTime));
 
         console.log('[HeyGen] all sentences spoken');
       };
