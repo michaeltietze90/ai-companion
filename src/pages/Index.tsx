@@ -193,6 +193,7 @@ const Index = () => {
               emotion={currentEmotion}
               voiceId={activeProfile?.elevenLabsVoiceId}
               speed={activeProfile?.elevenLabsSpeed}
+              disabled={currentTTSProvider !== 'elevenlabs'}
               className="h-9 w-9 bg-secondary/50 backdrop-blur-sm border border-border rounded-md"
             />
           </div>
