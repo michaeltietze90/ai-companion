@@ -300,6 +300,7 @@ export function useAvatarConversation() {
   }, [setSpeaking, setListening]);
 
   // Wait for avatar to finish speaking (resolves on AVATAR_STOP_TALKING event)
+  // Uses a shorter timeout to prevent long delays if event doesn't fire
   const waitForSpeechComplete = useCallback((): Promise<void> => {
     return new Promise((resolve) => {
       // If not currently speaking, resolve immediately
@@ -308,12 +309,14 @@ export function useAvatarConversation() {
         return;
       }
       
-      // Set a timeout so we don't hang forever if event never fires
+      // Set a shorter timeout - don't hang forever if event doesn't fire
+      // HeyGen speak calls typically complete within a few seconds
       const timeout = setTimeout(() => {
-        console.warn('[Speech] Timeout waiting for avatar to stop talking');
+        console.warn('[Speech] Timeout waiting for avatar to stop talking (continuing)');
+        isSpeakingRef.current = false; // Reset state to unblock queue
         speechResolveRef.current = null;
         resolve();
-      }, 30000); // 30 second max per sentence
+      }, 8000); // 8 second max per sentence (much shorter than 30s)
       
       // Store resolver to be called by AVATAR_STOP_TALKING event
       speechResolveRef.current = () => {
@@ -394,6 +397,7 @@ export function useAvatarConversation() {
   }, [getActiveProfile, setSpeaking]);
 
   // Speak text WITHOUT interrupting (for queued sentences)
+  // Optimized for faster queue processing with shorter waits
   const speakSentenceNoInterrupt = useCallback(async (text: string): Promise<void> => {
     const spokenText = text
       .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
@@ -404,10 +408,14 @@ export function useAvatarConversation() {
     setLastSpokenText(spokenText);
     if (!spokenText) return;
 
-    // Wait for any currently speaking to finish first
+    // Wait briefly if currently speaking (but don't block too long)
     if (isSpeakingRef.current) {
       console.log('[Speech] Waiting for current speech to finish...');
-      await waitForSpeechComplete();
+      // Quick wait with shorter timeout
+      await Promise.race([
+        waitForSpeechComplete(),
+        new Promise(resolve => setTimeout(resolve, 5000)) // 5s max wait
+      ]);
     }
 
     // Get active profile to check TTS provider
@@ -429,24 +437,29 @@ export function useAvatarConversation() {
     // Preferred: use the HeyGen SDK instance
     if (avatarRef.current) {
       try {
+        // Start speaking (don't await completion - let the event handler track it)
+        isSpeakingRef.current = true;
         await avatarRef.current.speak({ text: spokenText, task_type: TaskType.REPEAT });
-        // Wait for speech to actually complete
+        // Wait for speech to complete, but with a reasonable timeout
         await waitForSpeechComplete();
         return;
       } catch (error) {
         console.error('[HeyGen SDK] speak failed, trying proxy:', error);
+        isSpeakingRef.current = false;
       }
     }
 
     // Fallback: direct API calls via our proxy
     if (tokenRef.current && heygenSessionRef.current) {
       try {
+        isSpeakingRef.current = true;
         await speakText(tokenRef.current, heygenSessionRef.current, spokenText);
-        // Wait for speech completion
+        // Wait for speech completion with timeout
         await waitForSpeechComplete();
         return;
       } catch (error) {
         console.error('[HeyGen proxy] speak failed:', error);
+        isSpeakingRef.current = false;
       }
     }
 
