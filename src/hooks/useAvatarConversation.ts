@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-import StreamingAvatar, { AvatarQuality, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
+import StreamingAvatar, { AvatarQuality, ElevenLabsModel, StreamingEvents, TaskType, VoiceEmotion } from '@heygen/streaming-avatar';
 import { startAgentSession, endAgentSession, sendAgentMessage, streamAgentMessage, type StreamChunk } from '@/services/api';
 import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '@/services/heygenProxy';
 import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
@@ -149,6 +149,7 @@ export function useAvatarConversation() {
         voice: {
           voiceId: MIGUEL_VOICE_ID,
           emotion: selectedEmotion,
+          model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
         },
       });
       
@@ -256,6 +257,7 @@ export function useAvatarConversation() {
         voice: {
           voiceId: MIGUEL_VOICE_ID,
           emotion: selectedEmotion,
+          model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
         },
       });
       
