@@ -3,41 +3,47 @@ import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { Volume2, VolumeX, Play, Loader2, Mic, MicOff } from "lucide-react";
+import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
+import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 
 /**
  * Proto M Fullscreen Page
  * Resolution: 1080x1920 (9:16 portrait)
- * Minimal UI - just avatar with mute/unmute control
+ * Minimal UI - just avatar with mic mute/unmute control
  */
 const ProtoM = () => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isMicMuted, setIsMicMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
-    isListening,
     startConversation,
-    setListening,
+    sendMessage,
   } = useAvatarConversation();
 
   const { demoMode } = useConversationStore();
   const { activeVisuals } = useVisualOverlayStore();
 
+  // Handle voice transcript from STT
+  const handleVoiceTranscript = useCallback((transcript: string) => {
+    console.log('[ProtoM] Voice transcript:', transcript);
+    sendMessage(transcript);
+  }, [sendMessage]);
+
+  // Use the actual ElevenLabs STT hook for mic control
+  const { isListening, toggleListening, startListening, stopListening } = useElevenLabsSTT(handleVoiceTranscript);
+
   const handleStart = () => {
     startConversation(videoRef.current);
   };
 
+  // Toggle mic - actually starts/stops the STT
   const handleMicToggle = () => {
-    const newMuted = !isMicMuted;
-    setIsMicMuted(newMuted);
-    setListening(!newMuted);
+    toggleListening();
   };
 
   return (
@@ -59,7 +65,6 @@ const ProtoM = () => {
           isConnected={isConnected} 
           isSpeaking={isSpeaking}
           videoRef={videoRef}
-          isMuted={isMuted}
         />
       </main>
 
@@ -75,16 +80,16 @@ const ProtoM = () => {
             size="lg"
             variant="ghost"
             className={`w-16 h-16 rounded-full backdrop-blur-sm ${
-              isMicMuted 
+              !isListening 
                 ? 'bg-destructive/50 hover:bg-destructive/70' 
                 : 'bg-secondary/50 hover:bg-secondary/80'
             }`}
             onClick={handleMicToggle}
           >
-            {isMicMuted ? (
+            {!isListening ? (
               <MicOff className="w-8 h-8 text-destructive-foreground" />
             ) : (
-              <Mic className={`w-8 h-8 ${isListening ? 'text-primary animate-pulse' : 'text-foreground'}`} />
+              <Mic className="w-8 h-8 text-primary animate-pulse" />
             )}
           </Button>
         </motion.div>
@@ -106,7 +111,7 @@ const ProtoM = () => {
         </div>
       )}
 
-      {/* Minimal Controls */}
+      {/* Minimal Controls - Start button only */}
       <footer className="absolute bottom-0 left-0 right-0 z-20 p-8">
         <motion.div
           className="flex items-center justify-center gap-6"
@@ -114,7 +119,7 @@ const ProtoM = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          {!isConnected ? (
+          {!isConnected && (
             <Button
               size="lg"
               className="px-16 py-8 text-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg shadow-primary/30 rounded-2xl"
@@ -131,19 +136,6 @@ const ProtoM = () => {
                   <Play className="w-6 h-6 mr-3" />
                   Start
                 </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              size="lg"
-              variant="ghost"
-              className="w-20 h-20 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
-              onClick={() => setIsMuted(!isMuted)}
-            >
-              {isMuted ? (
-                <VolumeX className="w-10 h-10 text-muted-foreground" />
-              ) : (
-                <Volume2 className="w-10 h-10 text-foreground" />
               )}
             </Button>
           )}
