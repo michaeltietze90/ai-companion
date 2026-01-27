@@ -79,17 +79,17 @@ const ProtoL = () => {
           <Button
             size="lg"
             variant="ghost"
-            className={`w-28 h-28 rounded-full backdrop-blur-sm ${
-              !isListening 
-                ? 'bg-destructive/50 hover:bg-destructive/70' 
-                : 'bg-secondary/50 hover:bg-secondary/80'
+            className={`w-28 h-28 rounded-full ${
+              isListening 
+                ? 'bg-blue-500 hover:bg-blue-600' 
+                : 'bg-gray-600 hover:bg-gray-500'
             }`}
             onClick={handleMicToggle}
           >
-            {!isListening ? (
-              <MicOff className="w-14 h-14 text-destructive-foreground" />
+            {isListening ? (
+              <Mic className="w-14 h-14 text-white" />
             ) : (
-              <Mic className="w-14 h-14 text-primary animate-pulse" />
+              <MicOff className="w-14 h-14 text-white" />
             )}
           </Button>
         </motion.div>
