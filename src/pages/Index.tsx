@@ -73,6 +73,8 @@ const Index = () => {
   const currentEmotion = activeProfile?.selectedEmotion || 'excited';
   const currentVoice = activeProfile?.heygenVoice || 'miguel';
   const currentTTSProvider = activeProfile?.ttsProvider || 'heygen';
+  const currentElevenLabsVoiceId = activeProfile?.elevenLabsVoiceId || '';
+  const customElevenLabsVoices = activeProfile?.customElevenLabsVoices || [];
   
   const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
     if (activeProfileId) {
@@ -84,6 +86,12 @@ const Index = () => {
   const handleTTSProviderChange = useCallback((provider: TTSProvider) => {
     if (activeProfileId) {
       updateProfile(activeProfileId, { ttsProvider: provider });
+    }
+  }, [activeProfileId, updateProfile]);
+  
+  const handleElevenLabsVoiceChange = useCallback((voiceId: string) => {
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { elevenLabsVoiceId: voiceId });
     }
   }, [activeProfileId, updateProfile]);
   
@@ -209,6 +217,22 @@ const Index = () => {
               {currentTTSProvider === 'heygen' ? '🎭 HeyGen' : '🔊 11Labs'}
             </Label>
           </div>
+
+          {/* ElevenLabs Voice Selector - only show when ElevenLabs is selected */}
+          {currentTTSProvider === 'elevenlabs' && customElevenLabsVoices.length > 0 && (
+            <Select value={currentElevenLabsVoiceId} onValueChange={handleElevenLabsVoiceChange}>
+              <SelectTrigger className="w-[140px] h-9 bg-secondary/50 backdrop-blur-sm border-border">
+                <SelectValue placeholder="Voice" />
+              </SelectTrigger>
+              <SelectContent>
+                {customElevenLabsVoices.map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Fullscreen Display Links */}
           <div className="flex items-center gap-1">
