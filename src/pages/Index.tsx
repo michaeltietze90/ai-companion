@@ -154,23 +154,41 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Voice Selector */}
-          <Select
-            value={currentVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Voice Selector - Shows HeyGen voices or ElevenLabs voices based on TTS provider */}
+          {currentTTSProvider === 'heygen' ? (
+            <Select
+              value={currentVoice}
+              onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
+              disabled={isConnected}
+            >
+              <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
+                  <SelectItem key={key} value={key}>
+                    🎙️ {voice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select 
+              value={currentElevenLabsVoiceId} 
+              onValueChange={handleElevenLabsVoiceChange}
+            >
+              <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+                <SelectValue placeholder="Select voice" />
+              </SelectTrigger>
+              <SelectContent>
+                {customElevenLabsVoices.map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    🔊 {voice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           
           {/* Emotion Selector with Preview Button */}
           <div className="flex items-center gap-1">
@@ -218,21 +236,6 @@ const Index = () => {
             </Label>
           </div>
 
-          {/* ElevenLabs Voice Selector - only show when ElevenLabs is selected */}
-          {currentTTSProvider === 'elevenlabs' && customElevenLabsVoices.length > 0 && (
-            <Select value={currentElevenLabsVoiceId} onValueChange={handleElevenLabsVoiceChange}>
-              <SelectTrigger className="w-[140px] h-9 bg-secondary/50 backdrop-blur-sm border-border">
-                <SelectValue placeholder="Voice" />
-              </SelectTrigger>
-              <SelectContent>
-                {customElevenLabsVoices.map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
 
           {/* Fullscreen Display Links */}
           <div className="flex items-center gap-1">
