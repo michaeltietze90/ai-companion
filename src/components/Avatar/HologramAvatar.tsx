@@ -17,18 +17,8 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
       <div className="relative w-full h-full">
         {/* Video/Avatar fills entire screen */}
         <div className="absolute inset-0">
-          {/* Hologram flicker effect */}
-          <motion.div
-            className="absolute inset-0"
-            animate={{
-              opacity: [0.95, 1, 0.97, 1, 0.95],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
+          {/* Removed hologram flicker effect to prevent visual glitches during speech */}
+          <div className="absolute inset-0">
             {videoRef ? (
               <video
                 ref={videoRef}
@@ -135,7 +125,7 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
                 ))}
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Subtle blue overlay for hologram effect - only when video is showing */}
           {(videoRef || avatarUrl) && (
