@@ -7,6 +7,8 @@ import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { parseRichResponse, type ParsedResponse } from '@/lib/richResponseParser';
+import { parseStructuredResponse } from '@/lib/structuredResponseParser';
+import { useStructuredActions } from '@/hooks/useStructuredActions';
 import { toast } from 'sonner';
 
 // Demo responses for testing without credentials (with visual examples)
@@ -103,6 +105,7 @@ export function useAvatarConversation() {
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
+  const { executeActions, applyData } = useStructuredActions();
 
   // Initialize HeyGen Avatar with Proto token and fixed avatar/voice
   const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
@@ -646,6 +649,11 @@ export function useAvatarConversation() {
       const runStreamingTurn = async (activeSessionId: string, activeMessagesStreamUrl: string | null) => {
         console.log('[Agentforce] send message (streaming)', { sessionId: activeSessionId, text });
 
+        // Check if JSON mode is enabled for this profile
+        const activeProfile = getActiveProfile();
+        const useJsonMode = activeProfile?.responseMode === 'json';
+        console.log('[Response Mode]', useJsonMode ? 'JSON (structured)' : 'Text (plain)');
+
         // Track full response for display and debugging
         let fullResponse = '';
         const allVisuals: ParsedResponse['visuals'] = [];
@@ -662,25 +670,28 @@ export function useAvatarConversation() {
             // Accumulate full response
             fullResponse += (fullResponse ? ' ' : '') + chunk.text;
 
-            // Parse for visuals in this sentence
-            const parsed = parseRichResponse(chunk.text);
+            // For plain text mode, use rich response parser for visual tags
+            if (!useJsonMode) {
+              // Parse for visuals in this sentence
+              const parsed = parseRichResponse(chunk.text);
 
-            // Add to streaming display
-            addStreamingSentence(parsed.speechText.trim() || chunk.text);
+              // Add to streaming display
+              addStreamingSentence(parsed.speechText.trim() || chunk.text);
 
-            // Start any visuals immediately
-            if (parsed.hasRichContent) {
-              console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
-              startVisuals(parsed.visuals);
-              allVisuals.push(...parsed.visuals);
+              // Start any visuals immediately
+              if (parsed.hasRichContent) {
+                console.log('[Rich Response] Starting visuals from sentence:', parsed.visuals);
+                startVisuals(parsed.visuals);
+                allVisuals.push(...parsed.visuals);
+              }
+
+              // Send to HeyGen immediately - ASYNC mode queues internally
+              if (parsed.speechText.trim()) {
+                const speakPromise = speakSentenceNoInterrupt(parsed.speechText.trim());
+                speechPromises.push(speakPromise);
+              }
             }
-
-            // Send to HeyGen immediately - ASYNC mode queues internally
-            if (parsed.speechText.trim()) {
-              // Fire and forget - HeyGen will queue and play smoothly
-              const speakPromise = speakSentenceNoInterrupt(parsed.speechText.trim());
-              speechPromises.push(speakPromise);
-            }
+            // JSON mode sentences are accumulated and parsed at the end
           } else if (chunk.type === 'done') {
             console.log('[Agentforce] stream complete');
           }
@@ -689,10 +700,49 @@ export function useAvatarConversation() {
         // Store full response for debugging
         setLastAgentforceResponse(fullResponse);
 
-        // Add complete message to chat
+        // Process the complete response
         if (fullResponse) {
-          const finalParsed = parseRichResponse(fullResponse);
-          addMessage({ role: 'assistant', content: finalParsed.displayText });
+          if (useJsonMode) {
+            // JSON mode: parse structured response
+            const structured = parseStructuredResponse(fullResponse);
+            console.log('[Structured Response] Parsed:', {
+              isStructured: structured.isStructured,
+              speechText: structured.speechText.substring(0, 50) + '...',
+              actionsCount: structured.actions.length,
+              hasData: !!structured.data,
+            });
+
+            // Add speech text to display
+            addStreamingSentence(structured.speechText);
+            
+            // Execute any actions (showNameEntry, showLeaderboard, showVisual, etc.)
+            if (structured.actions.length > 0) {
+              executeActions(structured.actions);
+            }
+
+            // Apply prefill data
+            if (structured.data) {
+              applyData(structured.data);
+            }
+
+            // Speak the response text
+            if (structured.speechText.trim()) {
+              const speakPromise = speakSentenceNoInterrupt(structured.speechText.trim());
+              speechPromises.push(speakPromise);
+            }
+
+            // Also parse for any visual tags in the speech text (hybrid support)
+            const richParsed = parseRichResponse(structured.speechText);
+            if (richParsed.hasRichContent) {
+              startVisuals(richParsed.visuals);
+            }
+
+            addMessage({ role: 'assistant', content: structured.speechText });
+          } else {
+            // Plain text mode: use rich response parser
+            const finalParsed = parseRichResponse(fullResponse);
+            addMessage({ role: 'assistant', content: finalParsed.displayText });
+          }
         }
 
         // Wait for all speech commands to be sent (not for speech to complete)
@@ -704,6 +754,7 @@ export function useAvatarConversation() {
         // A rough estimate: ~150ms per character of speech
         const estimatedSpeechTime = Math.min(fullResponse.length * 50, 30000); // Cap at 30s
         await new Promise(resolve => setTimeout(resolve, estimatedSpeechTime));
+
 
         console.log('[HeyGen] all sentences spoken');
       };
@@ -734,7 +785,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences]);
+  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, getActiveProfile, executeActions, applyData]);
 
   // End conversation
   const endConversation = useCallback(async () => {
