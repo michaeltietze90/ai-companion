@@ -30,98 +30,93 @@ export function NameEntryOverlay() {
 
   return (
     <motion.div
-      className="absolute inset-0 z-40 flex items-end justify-center pb-[8%] pointer-events-none"
+      className="absolute inset-x-[3%] bottom-[6%] z-40 pointer-events-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="pointer-events-auto w-[85%] max-w-[280px]"
-        initial={{ y: 30, opacity: 0, scale: 0.95 }}
+        className="pointer-events-auto w-full"
+        initial={{ y: 20, opacity: 0, scale: 0.98 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 30, opacity: 0, scale: 0.95 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        exit={{ y: 20, opacity: 0, scale: 0.98 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
       >
-        {/* Holographic card */}
-        <div className="relative rounded-xl overflow-hidden">
-          {/* Hologram glow effect */}
-          <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-primary/20 to-accent/10 blur-xl opacity-60" />
+        {/* Card with Agentforce purple gradient */}
+        <div className="relative rounded-2xl overflow-hidden">
+          {/* Glow effect - purple/magenta */}
+          <div 
+            className="absolute -inset-2 blur-2xl opacity-40"
+            style={{
+              background: 'linear-gradient(135deg, hsl(280 70% 55% / 0.5) 0%, hsl(310 80% 50% / 0.4) 100%)',
+            }}
+          />
           
-          {/* Card content */}
-          <div className="relative bg-black/70 backdrop-blur-md border border-primary/30 rounded-xl p-4">
-            {/* Scan line effect */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(180deg, transparent 0%, hsl(210 100% 50% / 0.03) 50%, transparent 100%)',
-                backgroundSize: '100% 8px',
-              }}
-            />
+          {/* Card body */}
+          <div className="relative bg-[hsl(220_30%_8%/0.92)] backdrop-blur-xl border border-[hsl(280_70%_55%/0.3)] rounded-2xl overflow-hidden">
+            {/* Top gradient accent */}
+            <div className="h-1 w-full gradient-agentforce-wave" />
             
-            {/* Top accent line */}
-            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-
-            {/* Header */}
-            <div className="text-center mb-3">
-              <div className="text-xs text-primary/80 font-medium tracking-wider uppercase mb-1">
-                Quiz Complete
+            <div className="p-5">
+              {/* Header */}
+              <div className="text-center mb-4">
+                <div 
+                  className="text-xs font-semibold tracking-[0.2em] uppercase mb-1"
+                  style={{ color: 'hsl(310 80% 70%)' }}
+                >
+                  Quiz Complete
+                </div>
+                <div className="text-2xl font-bold text-foreground">
+                  <span className="text-gradient-agentforce">{currentScore}</span>
+                  <span className="text-muted-foreground text-base ml-1.5 font-normal">pts</span>
+                </div>
               </div>
-              <div className="text-lg font-semibold text-foreground">
-                <span className="text-primary">{currentScore}</span>
-                <span className="text-muted-foreground text-sm ml-1">pts</span>
-              </div>
-            </div>
 
-            {/* Compact Form */}
-            <form onSubmit={handleSubmit} className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <Input
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First name"
-                    className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.firstName ? 'border-destructive/50' : ''}`}
+                    className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.firstName ? 'border-destructive/50' : ''}`}
                   />
-                </div>
-                <div>
                   <Input
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last name"
-                    className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.lastName ? 'border-destructive/50' : ''}`}
+                    className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.lastName ? 'border-destructive/50' : ''}`}
                   />
                 </div>
-              </div>
-              
-              <Input
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="Country"
-                className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.country ? 'border-destructive/50' : ''}`}
-              />
+                
+                <Input
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  placeholder="Country"
+                  className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.country ? 'border-destructive/50' : ''}`}
+                />
 
-              <div className="flex gap-2 pt-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={hideOverlay}
-                  className="flex-1 h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="flex-1 h-8 text-xs bg-primary/80 hover:bg-primary text-white rounded-lg shadow-lg shadow-primary/20"
-                >
-                  Submit
-                </Button>
-              </div>
-            </form>
-
-            {/* Bottom accent */}
-            <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                <div className="flex gap-3 pt-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={hideOverlay}
+                    className="flex-1 h-11 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 h-11 text-white font-medium rounded-xl shadow-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
+                    }}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </motion.div>

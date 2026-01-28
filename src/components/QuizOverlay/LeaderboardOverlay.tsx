@@ -3,10 +3,10 @@ import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuizOverlayStore, LeaderboardEntry } from '@/stores/quizOverlayStore';
 
-// Compact rank badge
+// Rank display with medals
 const getRankDisplay = (rank: number) => {
   const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
-  return medals[rank] || `#${rank}`;
+  return medals[rank] || String(rank);
 };
 
 function LeaderboardRow({ 
@@ -22,9 +22,9 @@ function LeaderboardRow({
 }) {
   return (
     <motion.div
-      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-xs
+      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all
         ${isCurrentUser 
-          ? 'bg-primary/20 border border-primary/40' 
+          ? 'bg-[hsl(280_70%_55%/0.15)] border border-[hsl(280_70%_55%/0.4)]' 
           : 'bg-white/5 border border-transparent'
         }
       `}
@@ -33,22 +33,23 @@ function LeaderboardRow({
       transition={{ delay: animationDelay, duration: 0.15 }}
     >
       {/* Rank */}
-      <div className="w-6 text-center flex-shrink-0">
+      <div className="w-8 text-center flex-shrink-0">
         {rank <= 3 ? (
-          <span className="text-sm">{getRankDisplay(rank)}</span>
+          <span className="text-lg">{getRankDisplay(rank)}</span>
         ) : (
-          <span className="text-muted-foreground font-medium">{rank}</span>
+          <span className="text-muted-foreground font-medium text-sm">{rank}</span>
         )}
       </div>
 
       {/* Name */}
-      <div className="flex-1 min-w-0 flex items-center gap-1">
-        <span className={`truncate ${isCurrentUser ? 'text-primary font-medium' : 'text-foreground'}`}>
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <span className={`truncate font-medium ${isCurrentUser ? 'text-[hsl(310_80%_70%)]' : 'text-foreground'}`}>
           {entry.firstName} {entry.lastName.charAt(0)}.
         </span>
         {isCurrentUser && (
           <motion.span
-            className="px-1 py-0.5 rounded bg-primary text-[10px] text-white font-medium leading-none"
+            className="px-1.5 py-0.5 rounded text-[10px] text-white font-semibold leading-none"
+            style={{ background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)' }}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: animationDelay + 0.1, type: 'spring' }}
@@ -58,8 +59,11 @@ function LeaderboardRow({
         )}
       </div>
 
+      {/* Country */}
+      <span className="text-xs text-muted-foreground hidden sm:block">{entry.country}</span>
+
       {/* Score */}
-      <div className={`font-semibold tabular-nums ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+      <div className={`font-bold tabular-nums ${isCurrentUser ? 'text-[hsl(310_80%_70%)]' : 'text-foreground'}`}>
         {entry.score}
       </div>
     </motion.div>
@@ -77,89 +81,93 @@ export function LeaderboardOverlay() {
 
   return (
     <motion.div
-      className="absolute inset-0 z-40 flex items-end justify-center pb-[8%] pointer-events-none"
+      className="absolute inset-x-[3%] bottom-[6%] z-40 pointer-events-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="pointer-events-auto w-[85%] max-w-[280px]"
-        initial={{ y: 30, opacity: 0, scale: 0.95 }}
+        className="pointer-events-auto w-full"
+        initial={{ y: 20, opacity: 0, scale: 0.98 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: 30, opacity: 0, scale: 0.95 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        exit={{ y: 20, opacity: 0, scale: 0.98 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 350 }}
       >
-        {/* Holographic card */}
-        <div className="relative rounded-xl overflow-hidden">
-          {/* Hologram glow effect */}
-          <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-primary/20 to-accent/10 blur-xl opacity-60" />
+        {/* Card with Agentforce purple gradient */}
+        <div className="relative rounded-2xl overflow-hidden">
+          {/* Glow effect */}
+          <div 
+            className="absolute -inset-2 blur-2xl opacity-40"
+            style={{
+              background: 'linear-gradient(135deg, hsl(280 70% 55% / 0.5) 0%, hsl(310 80% 50% / 0.4) 100%)',
+            }}
+          />
           
-          {/* Card content */}
-          <div className="relative bg-black/70 backdrop-blur-md border border-primary/30 rounded-xl p-3">
-            {/* Scan line effect */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(180deg, transparent 0%, hsl(210 100% 50% / 0.03) 50%, transparent 100%)',
-                backgroundSize: '100% 8px',
-              }}
-            />
+          {/* Card body */}
+          <div className="relative bg-[hsl(220_30%_8%/0.92)] backdrop-blur-xl border border-[hsl(280_70%_55%/0.3)] rounded-2xl overflow-hidden">
+            {/* Top gradient accent */}
+            <div className="h-1 w-full gradient-agentforce-wave" />
             
-            {/* Top accent line */}
-            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-
-            {/* Header */}
-            <div className="text-center mb-3">
-              <div className="text-xs text-primary/80 font-medium tracking-wider uppercase">
-                Leaderboard
+            <div className="p-5">
+              {/* Header */}
+              <div className="text-center mb-4">
+                <div 
+                  className="text-xs font-semibold tracking-[0.2em] uppercase"
+                  style={{ color: 'hsl(310 80% 70%)' }}
+                >
+                  Leaderboard
+                </div>
               </div>
-            </div>
 
-            {/* Leaderboard List */}
-            <div className="space-y-1 mb-3">
-              {leaderboard.map((entry, index) => (
-                <LeaderboardRow
-                  key={entry.id}
-                  entry={entry}
-                  rank={index + 1}
-                  isCurrentUser={userEntry?.id === entry.id}
-                  animationDelay={0.15 + index * 0.05}
-                />
-              ))}
-
-              {/* User's rank if outside top 5 */}
-              {userEntry && !isInTop5 && userRank && (
-                <>
-                  <motion.div
-                    className="flex items-center justify-center py-1"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                  </motion.div>
-
+              {/* Leaderboard List */}
+              <div className="space-y-1.5 mb-4">
+                {leaderboard.map((entry, index) => (
                   <LeaderboardRow
-                    entry={userEntry}
-                    rank={userRank}
-                    isCurrentUser={true}
-                    animationDelay={0.45}
+                    key={entry.id}
+                    entry={entry}
+                    rank={index + 1}
+                    isCurrentUser={userEntry?.id === entry.id}
+                    animationDelay={0.1 + index * 0.05}
                   />
-                </>
-              )}
+                ))}
+
+                {/* User's rank if outside top 5 */}
+                {userEntry && !isInTop5 && userRank && (
+                  <>
+                    <motion.div
+                      className="flex items-center justify-center py-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.35 }}
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground/50">
+                        <div className="w-12 h-px bg-[hsl(280_70%_55%/0.2)]" />
+                        <ChevronDown className="w-4 h-4" />
+                        <div className="w-12 h-px bg-[hsl(280_70%_55%/0.2)]" />
+                      </div>
+                    </motion.div>
+
+                    <LeaderboardRow
+                      entry={userEntry}
+                      rank={userRank}
+                      isCurrentUser={true}
+                      animationDelay={0.4}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <Button
+                onClick={handleClose}
+                className="w-full h-11 text-white font-medium rounded-xl shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
+                }}
+              >
+                Close
+              </Button>
             </div>
-
-            {/* Close Button */}
-            <Button
-              onClick={handleClose}
-              size="sm"
-              className="w-full h-7 text-xs bg-primary/80 hover:bg-primary text-white rounded-lg shadow-lg shadow-primary/20"
-            >
-              Close
-            </Button>
-
-            {/* Bottom accent */}
-            <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
           </div>
         </div>
       </motion.div>
