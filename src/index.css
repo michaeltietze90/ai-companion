@@ -36,11 +36,13 @@
 
     --radius: 0.75rem;
 
-    /* Agentforce colors */
+    /* Agentforce colors - updated with purple/magenta palette */
     --agentforce-blue: 210 100% 50%;
     --agentforce-blue-dark: 215 100% 35%;
     --agentforce-cyan: 190 100% 50%;
-    --agentforce-purple: 260 70% 55%;
+    --agentforce-purple: 280 70% 55%;
+    --agentforce-magenta: 310 80% 50%;
+    --agentforce-violet: 265 85% 60%;
     --agentforce-navy: 220 50% 12%;
     --agentforce-slate: 220 30% 18%;
 
@@ -110,31 +112,39 @@
   .gradient-agentforce {
     background: linear-gradient(135deg, 
       hsl(220 50% 12%) 0%, 
-      hsl(210 100% 20%) 50%, 
-      hsl(200 100% 25%) 100%
+      hsl(280 70% 20%) 50%, 
+      hsl(310 80% 25%) 100%
     );
   }
 
   .gradient-agentforce-hero {
     background: linear-gradient(180deg, 
-      hsl(210 100% 45%) 0%, 
-      hsl(215 100% 35%) 40%,
+      hsl(280 70% 45%) 0%, 
+      hsl(310 80% 40%) 40%,
       hsl(220 50% 15%) 100%
     );
   }
 
   .gradient-agentforce-wave {
     background: linear-gradient(135deg, 
-      hsl(210 100% 50%) 0%, 
-      hsl(200 100% 45%) 50%, 
-      hsl(190 100% 40%) 100%
+      hsl(280 70% 55%) 0%, 
+      hsl(300 75% 50%) 50%, 
+      hsl(320 80% 55%) 100%
+    );
+  }
+
+  .gradient-agentforce-purple {
+    background: linear-gradient(135deg, 
+      hsl(265 85% 60%) 0%, 
+      hsl(280 70% 55%) 50%, 
+      hsl(310 80% 50%) 100%
     );
   }
 
   .text-gradient-agentforce {
     background: linear-gradient(135deg, 
-      hsl(210 100% 60%) 0%, 
-      hsl(200 100% 70%) 50%,
+      hsl(280 70% 70%) 0%, 
+      hsl(310 80% 70%) 50%,
       hsl(0 0% 100%) 100%
     );
     -webkit-background-clip: text;
