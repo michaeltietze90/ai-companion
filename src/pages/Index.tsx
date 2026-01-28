@@ -116,9 +116,6 @@ const Index = () => {
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />
-      
-      {/* Quiz Overlay Manager */}
-      <QuizOverlayManager />
 
       {/* Header - Agentforce inspired */}
       <header className="absolute top-0 left-0 right-0 z-20 p-5 flex items-center justify-between">
@@ -247,6 +244,8 @@ const Index = () => {
             videoRef={videoRef}
             isMuted={isMuted}
           />
+          {/* Quiz Overlay - integrated in hologram */}
+          <QuizOverlayManager />
         </ProtoMDevice>
       </main>
 

@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
 
 export function NameEntryOverlay() {
@@ -16,9 +14,9 @@ export function NameEntryOverlay() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!country.trim()) newErrors.country = 'Country is required';
+    if (!firstName.trim()) newErrors.firstName = 'Required';
+    if (!lastName.trim()) newErrors.lastName = 'Required';
+    if (!country.trim()) newErrors.country = 'Required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -32,114 +30,99 @@ export function NameEntryOverlay() {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="absolute inset-0 z-40 flex items-end justify-center pb-[8%] pointer-events-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Backdrop with Salesforce-style blur */}
-      <motion.div 
-        className="absolute inset-0 bg-background/80 backdrop-blur-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      />
-
       <motion.div
-        className="relative w-full max-w-md mx-4 rounded-2xl bg-card border border-border overflow-hidden shadow-2xl"
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+        className="pointer-events-auto w-[85%] max-w-[280px]"
+        initial={{ y: 30, opacity: 0, scale: 0.95 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 30, opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       >
-        {/* Header gradient bar - Agentforce style */}
-        <div className="h-1.5 w-full gradient-agentforce-wave" />
-        
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full"
-          onClick={hideOverlay}
-        >
-          <X className="w-4 h-4" />
-        </Button>
-
-        <div className="p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
+        {/* Holographic card */}
+        <div className="relative rounded-xl overflow-hidden">
+          {/* Hologram glow effect */}
+          <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-primary/20 to-accent/10 blur-xl opacity-60" />
+          
+          {/* Card content */}
+          <div className="relative bg-black/70 backdrop-blur-md border border-primary/30 rounded-xl p-4">
+            {/* Scan line effect */}
             <motion.div
-              className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 mb-4"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.15, type: 'spring' }}
-            >
-              <span className="text-2xl">🏆</span>
-            </motion.div>
-            <h2 className="text-xl font-semibold text-foreground mb-1">Great Job!</h2>
-            <p className="text-muted-foreground text-sm">
-              You scored <span className="text-primary font-medium">{currentScore}</span> points
-            </p>
-          </div>
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, transparent 0%, hsl(210 100% 50% / 0.03) 50%, transparent 100%)',
+                backgroundSize: '100% 8px',
+              }}
+            />
+            
+            {/* Top accent line */}
+            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="firstName" className="text-sm text-muted-foreground">
-                First Name
-              </Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Enter your first name"
-                className="h-11 bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-lg"
-              />
-              {errors.firstName && (
-                <p className="text-xs text-destructive mt-1">{errors.firstName}</p>
-              )}
+            {/* Header */}
+            <div className="text-center mb-3">
+              <div className="text-xs text-primary/80 font-medium tracking-wider uppercase mb-1">
+                Quiz Complete
+              </div>
+              <div className="text-lg font-semibold text-foreground">
+                <span className="text-primary">{currentScore}</span>
+                <span className="text-muted-foreground text-sm ml-1">pts</span>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="lastName" className="text-sm text-muted-foreground">
-                Last Name
-              </Label>
+            {/* Compact Form */}
+            <form onSubmit={handleSubmit} className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                    className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.firstName ? 'border-destructive/50' : ''}`}
+                  />
+                </div>
+                <div>
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                    className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.lastName ? 'border-destructive/50' : ''}`}
+                  />
+                </div>
+              </div>
+              
               <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Enter your last name"
-                className="h-11 bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-lg"
-              />
-              {errors.lastName && (
-                <p className="text-xs text-destructive mt-1">{errors.lastName}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="country" className="text-sm text-muted-foreground">
-                Country
-              </Label>
-              <Input
-                id="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="Enter your country"
-                className="h-11 bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-lg"
+                placeholder="Country"
+                className={`h-8 text-xs bg-black/50 border-primary/20 focus:border-primary/50 rounded-lg placeholder:text-muted-foreground/50 ${errors.country ? 'border-destructive/50' : ''}`}
               />
-              {errors.country && (
-                <p className="text-xs text-destructive mt-1">{errors.country}</p>
-              )}
-            </div>
 
-            <div className="pt-4">
-              <Button
-                type="submit"
-                className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg shadow-lg shadow-primary/20"
-              >
-                Submit & View Leaderboard
-              </Button>
-            </div>
-          </form>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={hideOverlay}
+                  className="flex-1 h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="flex-1 h-8 text-xs bg-primary/80 hover:bg-primary text-white rounded-lg shadow-lg shadow-primary/20"
+                >
+                  Submit
+                </Button>
+              </div>
+            </form>
+
+            {/* Bottom accent */}
+            <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          </div>
         </div>
       </motion.div>
     </motion.div>
