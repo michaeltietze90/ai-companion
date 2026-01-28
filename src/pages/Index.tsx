@@ -125,31 +125,32 @@ const Index = () => {
       <VisualOverlay visuals={activeVisuals} />
 
       {/* Header - Agentforce inspired */}
-      <header className="absolute top-0 left-0 right-0 z-20 p-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="absolute top-0 left-0 right-0 z-20 p-4 md:p-5 flex items-center justify-between">
+        {/* Logo - simplified on mobile */}
+        <div className="flex items-center gap-2 md:gap-3">
           <motion.div
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20"
             whileHover={{ scale: 1.05 }}
           >
-            <span className="text-white font-bold text-lg">A</span>
+            <span className="text-white font-bold text-base md:text-lg">A</span>
           </motion.div>
-          <div>
+          <div className="hidden sm:block">
             <span className="text-foreground font-semibold">Agentforce</span>
             <span className="text-muted-foreground text-sm block">AI Assistant</span>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          {/* Agent Profile Switcher */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Agent Profile Switcher - always visible */}
           <ProfileSwitcher disabled={isConnected} />
           
-          {/* HeyGen Voice Selector */}
+          {/* HeyGen Voice Selector - Desktop only */}
           <Select
             value={currentVoice}
             onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
             disabled={isConnected}
           >
-            <SelectTrigger className="w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
+            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -161,13 +162,13 @@ const Index = () => {
             </SelectContent>
           </Select>
           
-          {/* Emotion Selector */}
+          {/* Emotion Selector - Desktop only */}
           <Select
             value={currentEmotion}
             onValueChange={(value) => handleEmotionChange(value as VoiceEmotionType)}
             disabled={isChangingEmotion}
           >
-            <SelectTrigger className={`w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
+            <SelectTrigger className={`hidden lg:flex w-36 h-9 bg-secondary/50 backdrop-blur-sm border-border ${isChangingEmotion ? 'opacity-50' : ''}`}>
               {isChangingEmotion ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -185,8 +186,9 @@ const Index = () => {
               <SelectItem value="broadcaster">📺 Broadcaster</SelectItem>
             </SelectContent>
           </Select>
-          {/* Fullscreen Display Links */}
-          <div className="flex items-center gap-1">
+          
+          {/* Fullscreen Display Links - Desktop only */}
+          <div className="hidden xl:flex items-center gap-1">
             <Link to="/proto-m">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                 <Maximize2 className="w-3 h-3 mr-1" />
@@ -223,8 +225,8 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* Demo Mode Toggle */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
+          {/* Demo Mode Toggle - Hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
             <Switch
               id="demo-mode"
               checked={demoMode}
@@ -277,9 +279,9 @@ const Index = () => {
       </div>
 
 
-      {/* Debug panel - vertical on the right */}
+      {/* Debug panel - vertical on the right, hidden on mobile */}
       {isConnected && !demoMode && (
-        <div className="absolute top-20 right-4 bottom-24 w-72 z-20 flex flex-col gap-2 overflow-hidden">
+        <div className="hidden lg:flex absolute top-20 right-4 bottom-24 w-72 z-20 flex-col gap-2 overflow-hidden">
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
             <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>
             <p className="text-sm text-foreground line-clamp-3">{lastVoiceTranscript || '—'}</p>
@@ -345,22 +347,22 @@ const Index = () => {
       </AnimatePresence>
 
       {/* Controls - Agentforce style */}
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-6">
+      <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
         {/* Text input for testing */}
         {isConnected && (
-          <form onSubmit={handleSendText} className="max-w-lg mx-auto mb-4">
+          <form onSubmit={handleSendText} className="max-w-lg mx-auto mb-3 md:mb-4 px-2 md:px-0">
             <div className="flex gap-2">
               <Input
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Ask me about products, features, and pricing..."
-                className="bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl"
+                placeholder="Ask me anything..."
+                className="bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
                 disabled={isThinking}
               />
               <Button 
                 type="submit" 
                 disabled={isThinking || !textInput.trim()}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-4 md:px-6"
               >
                 Send
               </Button>
@@ -369,7 +371,7 @@ const Index = () => {
         )}
 
         <motion.div
-          className="max-w-md mx-auto flex items-center justify-center gap-4"
+          className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -399,7 +401,7 @@ const Index = () => {
               {/* Mic button */}
               <Button
                 size="lg"
-                className={`w-14 h-14 rounded-full transition-all duration-300 ${
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-full transition-all duration-300 ${
                   isListening
                     ? 'bg-primary hover:bg-primary/90 shadow-lg shadow-primary/40'
                     : 'bg-secondary hover:bg-secondary/80'
@@ -408,11 +410,11 @@ const Index = () => {
                 disabled={sttConnecting || isThinking}
               >
                 {sttConnecting ? (
-                  <Loader2 className="w-6 h-6 text-foreground animate-spin" />
+                  <Loader2 className="w-5 h-5 md:w-6 md:h-6 text-foreground animate-spin" />
                 ) : isListening ? (
-                  <Mic className="w-6 h-6 text-white" />
+                  <Mic className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 ) : (
-                  <MicOff className="w-6 h-6 text-muted-foreground" />
+                  <MicOff className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
                 )}
               </Button>
 
@@ -420,34 +422,34 @@ const Index = () => {
               <Button
                 size="lg"
                 variant="ghost"
-                className="w-12 h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
                 onClick={() => setIsMuted(!isMuted)}
               >
                 {isMuted ? (
-                  <VolumeX className="w-5 h-5 text-muted-foreground" />
+                  <VolumeX className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
                 ) : (
-                  <Volume2 className="w-5 h-5 text-muted-foreground" />
+                  <Volume2 className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
                 )}
               </Button>
 
-              {/* History button */}
+              {/* History button - hidden on mobile */}
               <Button
                 size="lg"
                 variant="ghost"
-                className="w-12 h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
+                className="hidden sm:flex w-10 h-10 md:w-12 md:h-12 rounded-full bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm"
                 onClick={() => setShowHistory(!showHistory)}
               >
-                <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               </Button>
 
               {/* End button */}
               <Button
                 size="lg"
                 variant="ghost"
-                className="w-12 h-12 rounded-full bg-destructive/20 hover:bg-destructive/30 backdrop-blur-sm"
+                className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-destructive/20 hover:bg-destructive/30 backdrop-blur-sm"
                 onClick={endConversation}
               >
-                <X className="w-5 h-5 text-destructive" />
+                <X className="w-4 h-4 md:w-5 md:h-5 text-destructive" />
               </Button>
             </>
           )}
