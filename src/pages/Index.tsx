@@ -5,7 +5,9 @@ import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2 } from "lucide-react";
+import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
+import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
+import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2, Trophy, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -59,6 +61,7 @@ const Index = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
+  const { showNameEntry, showLeaderboard } = useQuizOverlayStore();
   
   // Settings store for emotion and voice
   const { updateProfile, activeProfileId } = useSettingsStore();
@@ -113,6 +116,9 @@ const Index = () => {
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />
+      
+      {/* Quiz Overlay Manager */}
+      <QuizOverlayManager />
 
       {/* Header - Agentforce inspired */}
       <header className="absolute top-0 left-0 right-0 z-20 p-5 flex items-center justify-between">
@@ -186,6 +192,28 @@ const Index = () => {
                 Proto L
               </Button>
             </Link>
+          </div>
+
+          {/* Quiz Overlay Demo Buttons */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground text-xs"
+              onClick={() => showNameEntry(Math.floor(Math.random() * 300) + 800)}
+            >
+              <UserPlus className="w-3 h-3 mr-1" />
+              Name Entry
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground text-xs"
+              onClick={() => showLeaderboard()}
+            >
+              <Trophy className="w-3 h-3 mr-1" />
+              Leaderboard
+            </Button>
           </div>
 
           {/* Demo Mode Toggle */}
