@@ -11,6 +11,13 @@ export interface LeaderboardEntry {
 
 type OverlayType = 'none' | 'nameEntry' | 'leaderboard';
 
+export interface PrefillData {
+  firstName?: string;
+  lastName?: string;
+  country?: string;
+  score?: number;
+}
+
 interface QuizOverlayState {
   /** Current overlay being shown */
   currentOverlay: OverlayType;
@@ -22,13 +29,17 @@ interface QuizOverlayState {
   leaderboard: LeaderboardEntry[];
   /** User's rank (could be outside top 5) */
   userRank: number | null;
+  /** Prefilled data from Agentforce */
+  prefillData: PrefillData | null;
 
   // Actions
-  showNameEntry: (score: number) => void;
+  showNameEntry: (score: number, prefill?: PrefillData) => void;
   showLeaderboard: () => void;
   hideOverlay: () => void;
   submitEntry: (firstName: string, lastName: string, country: string) => void;
   setLeaderboard: (entries: LeaderboardEntry[]) => void;
+  setPrefillData: (data: PrefillData) => void;
+  setScore: (score: number) => void;
   resetQuiz: () => void;
 }
 
@@ -47,11 +58,13 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   userEntry: null,
   leaderboard: demoLeaderboard,
   userRank: null,
+  prefillData: null,
 
-  showNameEntry: (score) => {
+  showNameEntry: (score, prefill) => {
     set({
       currentOverlay: 'nameEntry',
       currentScore: score,
+      prefillData: prefill || null,
     });
   },
 
@@ -89,11 +102,23 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
       leaderboard: top5,
       userRank,
       currentOverlay: 'leaderboard',
+      prefillData: null,
     });
   },
 
   setLeaderboard: (entries) => {
     set({ leaderboard: entries.slice(0, 5) });
+  },
+
+  setPrefillData: (data) => {
+    set({ 
+      prefillData: data,
+      currentScore: data.score ?? get().currentScore,
+    });
+  },
+
+  setScore: (score) => {
+    set({ currentScore: score });
   },
 
   resetQuiz: () => {
@@ -102,6 +127,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
       currentScore: 0,
       userEntry: null,
       userRank: null,
+      prefillData: null,
     });
   },
 }));

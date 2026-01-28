@@ -1,16 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
 
 export function NameEntryOverlay() {
+  const { currentScore, prefillData, submitEntry, hideOverlay } = useQuizOverlayStore();
+  
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [country, setCountry] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { currentScore, submitEntry, hideOverlay } = useQuizOverlayStore();
+  // Apply prefill data when it changes
+  useEffect(() => {
+    if (prefillData) {
+      if (prefillData.firstName) setFirstName(prefillData.firstName);
+      if (prefillData.lastName) setLastName(prefillData.lastName);
+      if (prefillData.country) setCountry(prefillData.country);
+    }
+  }, [prefillData]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};

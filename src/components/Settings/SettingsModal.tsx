@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSettingsStore, Profile, AvatarOption, VoiceEmotionType, TTSProvider, ElevenLabsVoice } from '@/stores/settingsStore';
+import { useSettingsStore, Profile, AvatarOption, VoiceEmotionType, TTSProvider, ElevenLabsVoice, ResponseMode } from '@/stores/settingsStore';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ELEVENLABS_VOICES } from '@/services/elevenLabsTTS';
@@ -99,6 +99,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       elevenLabsSpeed: 1.0,
       customElevenLabsVoices: [],
       heygenVoice: 'miguel',
+      responseMode: 'text',
     };
     addProfile(newProfile);
     setEditingProfile(newProfile);
@@ -623,6 +624,66 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               {/* Rich Responses Tab */}
               <TabsContent value="rich-responses" className="space-y-4">
                 <div className="space-y-4">
+                  {/* Response Mode Selector */}
+                  <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-3">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Code className="w-5 h-5" />
+                      <h3 className="font-semibold">Response Mode</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Choose how Agentforce responses are parsed. Use JSON mode for structured data and UI actions.
+                    </p>
+                    <div className="space-y-2">
+                      <Label>Mode</Label>
+                      <Select
+                        value={editingProfile.responseMode || 'text'}
+                        onValueChange={(value) => updateField('responseMode', value as ResponseMode)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">
+                            <div className="flex flex-col items-start">
+                              <span>Text Mode</span>
+                              <span className="text-xs text-muted-foreground">Plain text with optional visual tags</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="json">
+                            <div className="flex flex-col items-start">
+                              <span>JSON Mode</span>
+                              <span className="text-xs text-muted-foreground">Structured responses with actions & data</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* JSON Mode Example */}
+                    {editingProfile.responseMode === 'json' && (
+                      <div className="mt-4 space-y-2">
+                        <Label className="text-xs text-muted-foreground">Expected JSON Structure</Label>
+                        <div className="bg-background/80 p-3 rounded-md font-mono text-xs overflow-x-auto">
+                          <pre className="text-green-400">{`{
+  "response": "Hi Michael, great to have you!",
+  "actions": [
+    { "type": "showNameEntry" }
+  ],
+  "data": {
+    "firstName": "Michael",
+    "lastName": "Tietze",
+    "country": "Switzerland",
+    "score": 950
+  }
+}`}</pre>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Actions:</strong> showNameEntry, showLeaderboard, hideOverlay, setScore
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-2 text-primary">
                     <Image className="w-5 h-5" />
                     <h3 className="font-semibold">Rich Response Tags</h3>

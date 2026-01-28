@@ -12,6 +12,9 @@ export type VoiceEmotionType = 'excited' | 'serious' | 'friendly' | 'soothing' |
 
 export type TTSProvider = 'heygen' | 'elevenlabs';
 
+/** Response mode determines how Agentforce responses are parsed */
+export type ResponseMode = 'text' | 'json';
+
 export interface ElevenLabsVoice {
   id: string;
   name: string;
@@ -37,6 +40,8 @@ export interface Profile {
   customElevenLabsVoices: ElevenLabsVoice[];
   // HeyGen voice selection
   heygenVoice: 'miguel' | 'alternative';
+  // Response parsing mode
+  responseMode: ResponseMode;
 }
 
 interface SettingsState {
@@ -80,6 +85,8 @@ const defaultProfile: Profile = {
   ],
   // HeyGen voice selection
   heygenVoice: 'miguel',
+  // Response parsing mode - 'text' for plain text, 'json' for structured responses
+  responseMode: 'text',
 };
 
 export const useSettingsStore = create<SettingsState>()(
