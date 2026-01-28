@@ -45,6 +45,10 @@
     --agentforce-violet: 265 85% 60%;
     --agentforce-navy: 220 50% 12%;
     --agentforce-slate: 220 30% 18%;
+    
+    /* Status/indicator colors */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
 
     --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 210 40% 98%;
