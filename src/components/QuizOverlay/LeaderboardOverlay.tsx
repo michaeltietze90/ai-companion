@@ -1,43 +1,12 @@
 import { motion } from 'framer-motion';
-import { X, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuizOverlayStore, LeaderboardEntry } from '@/stores/quizOverlayStore';
 
-// Rank badge configurations - Salesforce style
-const getRankStyle = (rank: number, isCurrentUser: boolean) => {
-  const baseStyles = {
-    1: { 
-      badge: 'bg-gradient-to-br from-amber-400 to-amber-600',
-      ring: 'ring-amber-400/30',
-      text: 'text-amber-400',
-    },
-    2: { 
-      badge: 'bg-gradient-to-br from-slate-300 to-slate-500',
-      ring: 'ring-slate-400/30',
-      text: 'text-slate-300',
-    },
-    3: { 
-      badge: 'bg-gradient-to-br from-orange-400 to-orange-600',
-      ring: 'ring-orange-400/30',
-      text: 'text-orange-400',
-    },
-  };
-  
-  const style = baseStyles[rank as keyof typeof baseStyles] || {
-    badge: 'bg-secondary',
-    ring: 'ring-primary/20',
-    text: 'text-muted-foreground',
-  };
-
-  if (isCurrentUser) {
-    return {
-      ...style,
-      ring: 'ring-primary/40',
-      text: 'text-primary',
-    };
-  }
-  
-  return style;
+// Compact rank badge
+const getRankDisplay = (rank: number) => {
+  const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  return medals[rank] || `#${rank}`;
 };
 
 function LeaderboardRow({ 
@@ -51,67 +20,54 @@ function LeaderboardRow({
   isCurrentUser: boolean;
   animationDelay: number;
 }) {
-  const style = getRankStyle(rank, isCurrentUser);
-
   return (
     <motion.div
-      className={`relative flex items-center gap-4 p-4 rounded-xl transition-all
+      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-xs
         ${isCurrentUser 
-          ? 'bg-primary/10 border border-primary/30' 
-          : 'bg-secondary/30 border border-transparent hover:bg-secondary/50'
+          ? 'bg-primary/20 border border-primary/40' 
+          : 'bg-white/5 border border-transparent'
         }
       `}
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: animationDelay, duration: 0.2 }}
+      transition={{ delay: animationDelay, duration: 0.15 }}
     >
-      {/* Rank Badge */}
-      <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${style.badge} flex items-center justify-center shadow-md`}>
-        <span className="text-white font-bold text-sm">{rank}</span>
+      {/* Rank */}
+      <div className="w-6 text-center flex-shrink-0">
+        {rank <= 3 ? (
+          <span className="text-sm">{getRankDisplay(rank)}</span>
+        ) : (
+          <span className="text-muted-foreground font-medium">{rank}</span>
+        )}
       </div>
 
-      {/* Player Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className={`font-medium truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
-            {entry.firstName} {entry.lastName}
-          </span>
-          {isCurrentUser && (
-            <motion.span
-              className="px-2 py-0.5 rounded-md bg-primary text-primary-foreground text-xs font-medium"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: animationDelay + 0.2, type: 'spring' }}
-            >
-              You
-            </motion.span>
-          )}
-        </div>
-        <span className="text-sm text-muted-foreground">{entry.country}</span>
+      {/* Name */}
+      <div className="flex-1 min-w-0 flex items-center gap-1">
+        <span className={`truncate ${isCurrentUser ? 'text-primary font-medium' : 'text-foreground'}`}>
+          {entry.firstName} {entry.lastName.charAt(0)}.
+        </span>
+        {isCurrentUser && (
+          <motion.span
+            className="px-1 py-0.5 rounded bg-primary text-[10px] text-white font-medium leading-none"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: animationDelay + 0.1, type: 'spring' }}
+          >
+            YOU
+          </motion.span>
+        )}
       </div>
 
       {/* Score */}
-      <div className="text-right">
-        <span className={`text-lg font-semibold ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
-          {entry.score.toLocaleString()}
-        </span>
-        <span className="text-xs text-muted-foreground block">pts</span>
+      <div className={`font-semibold tabular-nums ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+        {entry.score}
       </div>
-
-      {/* Highlight glow for current user */}
-      {isCurrentUser && (
-        <motion.div
-          className="absolute inset-0 rounded-xl bg-primary/5 -z-10"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
     </motion.div>
   );
 }
 
 export function LeaderboardOverlay() {
-  const { leaderboard, userEntry, userRank, hideOverlay, resetQuiz } = useQuizOverlayStore();
+  const { leaderboard, userEntry, userRank, resetQuiz } = useQuizOverlayStore();
   
   const isInTop5 = userRank !== null && userRank <= 5;
 
@@ -121,100 +77,90 @@ export function LeaderboardOverlay() {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="absolute inset-0 z-40 flex items-end justify-center pb-[8%] pointer-events-none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Backdrop */}
-      <motion.div 
-        className="absolute inset-0 bg-background/80 backdrop-blur-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      />
-
       <motion.div
-        className="relative w-full max-w-md mx-4 rounded-2xl bg-card border border-border overflow-hidden shadow-2xl"
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+        className="pointer-events-auto w-[85%] max-w-[280px]"
+        initial={{ y: 30, opacity: 0, scale: 0.95 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 30, opacity: 0, scale: 0.95 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
       >
-        {/* Header gradient bar */}
-        <div className="h-1.5 w-full gradient-agentforce-wave" />
-
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-full z-10"
-          onClick={handleClose}
-        >
-          <X className="w-4 h-4" />
-        </Button>
-
-        <div className="p-8">
-          {/* Header */}
-          <div className="text-center mb-6">
+        {/* Holographic card */}
+        <div className="relative rounded-xl overflow-hidden">
+          {/* Hologram glow effect */}
+          <div className="absolute -inset-1 bg-gradient-to-t from-primary/40 via-primary/20 to-accent/10 blur-xl opacity-60" />
+          
+          {/* Card content */}
+          <div className="relative bg-black/70 backdrop-blur-md border border-primary/30 rounded-xl p-3">
+            {/* Scan line effect */}
             <motion.div
-              className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 mb-4"
-              initial={{ scale: 0, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ delay: 0.15, type: 'spring', damping: 15 }}
-            >
-              <span className="text-2xl">🏆</span>
-            </motion.div>
-            <h2 className="text-xl font-semibold text-foreground mb-1">Leaderboard</h2>
-            <p className="text-muted-foreground text-sm">Top performers this week</p>
-          </div>
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(180deg, transparent 0%, hsl(210 100% 50% / 0.03) 50%, transparent 100%)',
+                backgroundSize: '100% 8px',
+              }}
+            />
+            
+            {/* Top accent line */}
+            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-          {/* Leaderboard List */}
-          <div className="space-y-2 mb-6">
-            {leaderboard.map((entry, index) => (
-              <LeaderboardRow
-                key={entry.id}
-                entry={entry}
-                rank={index + 1}
-                isCurrentUser={userEntry?.id === entry.id}
-                animationDelay={0.2 + index * 0.08}
-              />
-            ))}
+            {/* Header */}
+            <div className="text-center mb-3">
+              <div className="text-xs text-primary/80 font-medium tracking-wider uppercase">
+                Leaderboard
+              </div>
+            </div>
 
-            {/* Show user's rank if outside top 5 */}
-            {userEntry && !isInTop5 && userRank && (
-              <>
-                {/* Separator */}
-                <motion.div
-                  className="flex items-center justify-center py-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="w-8 h-px bg-border" />
-                    <ChevronDown className="w-4 h-4" />
-                    <div className="w-8 h-px bg-border" />
-                  </div>
-                </motion.div>
-
-                {/* User's actual rank */}
+            {/* Leaderboard List */}
+            <div className="space-y-1 mb-3">
+              {leaderboard.map((entry, index) => (
                 <LeaderboardRow
-                  entry={userEntry}
-                  rank={userRank}
-                  isCurrentUser={true}
-                  animationDelay={0.7}
+                  key={entry.id}
+                  entry={entry}
+                  rank={index + 1}
+                  isCurrentUser={userEntry?.id === entry.id}
+                  animationDelay={0.15 + index * 0.05}
                 />
-              </>
-            )}
-          </div>
+              ))}
 
-          {/* Action Button */}
-          <Button
-            onClick={handleClose}
-            className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg shadow-lg shadow-primary/20"
-          >
-            Close
-          </Button>
+              {/* User's rank if outside top 5 */}
+              {userEntry && !isInTop5 && userRank && (
+                <>
+                  <motion.div
+                    className="flex items-center justify-center py-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                  </motion.div>
+
+                  <LeaderboardRow
+                    entry={userEntry}
+                    rank={userRank}
+                    isCurrentUser={true}
+                    animationDelay={0.45}
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Close Button */}
+            <Button
+              onClick={handleClose}
+              size="sm"
+              className="w-full h-7 text-xs bg-primary/80 hover:bg-primary text-white rounded-lg shadow-lg shadow-primary/20"
+            >
+              Close
+            </Button>
+
+            {/* Bottom accent */}
+            <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          </div>
         </div>
       </motion.div>
     </motion.div>
