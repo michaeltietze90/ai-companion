@@ -7,7 +7,13 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2, Trophy, UserPlus } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2, Trophy, UserPlus, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -195,8 +201,8 @@ const Index = () => {
             </Link>
           </div>
 
-          {/* Quiz Overlay Demo Buttons */}
-          <div className="flex items-center gap-1">
+          {/* Quiz Overlay Demo Buttons - Desktop */}
+          <div className="hidden md:flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -523,6 +529,33 @@ const Index = () => {
 
       {/* Settings Modal */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Mobile FAB for Test Overlays */}
+      <div className="md:hidden fixed bottom-6 right-6 z-50">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="lg"
+              className="rounded-full w-14 h-14 shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
+              }}
+            >
+              <MoreVertical className="w-6 h-6 text-white" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 mb-2">
+            <DropdownMenuItem onClick={() => showNameEntry(Math.floor(Math.random() * 300) + 800)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Name Entry
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => showLeaderboard()}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Leaderboard
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 };
