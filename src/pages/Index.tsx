@@ -23,6 +23,7 @@ import { useAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/us
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
+import { ProfileSwitcher } from "@/components/ProfileSwitcher/ProfileSwitcher";
 import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
 
 const Index = () => {
@@ -133,6 +134,9 @@ const Index = () => {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* Agent Profile Switcher */}
+          <ProfileSwitcher disabled={isConnected} />
+          
           {/* HeyGen Voice Selector */}
           <Select
             value={currentVoice}
