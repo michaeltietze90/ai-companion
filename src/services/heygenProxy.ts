@@ -1,18 +1,43 @@
+/**
+ * HeyGen Proxy Service
+ * 
+ * Abstracts API calls to work with both:
+ * - Lovable Cloud (Supabase Edge Functions)
+ * - Heroku Express backend (/api/* routes)
+ */
+
+// Detect environment
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
 // Proto endpoint for getting HeyGen access token
 const PROTO_TOKEN_URL = 'https://proto-salesforce-b927b6eea443.herokuapp.com/api/manage/getAccessToken';
 
-const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
+const getApiUrl = () => {
+  if (isSupabase) {
+    return `${SUPABASE_URL}/functions/v1/heygen-proxy`;
+  }
+  return '/api/heygen-proxy';
+};
+
+const getHeaders = () => {
+  if (isSupabase) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
 };
 
 async function callProxy(action: string, params: Record<string, unknown> = {}) {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/heygen-proxy`, {
+  const response = await fetch(getApiUrl(), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({ action, ...params }),
   });
 

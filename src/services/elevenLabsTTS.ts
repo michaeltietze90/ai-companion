@@ -1,5 +1,36 @@
+/**
+ * ElevenLabs TTS Service
+ * 
+ * Abstracts API calls to work with both:
+ * - Lovable Cloud (Supabase Edge Functions)
+ * - Heroku Express backend (/api/* routes)
+ */
+
+// Detect environment
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+const getApiUrl = () => {
+  if (isSupabase) {
+    return `${SUPABASE_URL}/functions/v1/elevenlabs-tts`;
+  }
+  return '/api/elevenlabs-tts';
+};
+
+const getHeaders = () => {
+  if (isSupabase) {
+    return {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
+};
 
 export class ElevenLabsTTSError extends Error {
   status: number;
@@ -36,13 +67,9 @@ export const ELEVENLABS_VOICES = [
 ];
 
 export async function synthesizeSpeech(text: string, options: TTSOptions = {}): Promise<Blob> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
+  const response = await fetch(getApiUrl(), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    },
+    headers: getHeaders(),
     body: JSON.stringify({
       text,
       voiceId: options.voiceId,

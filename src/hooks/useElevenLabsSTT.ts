@@ -1,8 +1,32 @@
 // ElevenLabs Scribe STT - Direct WebSocket implementation
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useConversationStore } from '@/stores/conversationStore';
 import { toast } from 'sonner';
+
+// Detect environment
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+const getScribeTokenUrl = () => {
+  if (isSupabase) {
+    return `${SUPABASE_URL}/functions/v1/elevenlabs-scribe-token`;
+  }
+  return '/api/elevenlabs-scribe-token';
+};
+
+const getHeaders = () => {
+  if (isSupabase) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
+};
 
 interface ScribeConnection {
   ws: WebSocket;
@@ -49,10 +73,20 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
 
     setIsConnecting(true);
     try {
-      // Get token from edge function
-      const { data, error } = await supabase.functions.invoke('elevenlabs-scribe-token');
+      // Get token from API (works with both Supabase and Heroku)
+      const response = await fetch(getScribeTokenUrl(), {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({}),
+      });
 
-      if (error || !data?.token) {
+      if (!response.ok) {
+        throw new Error('Failed to get speech recognition token');
+      }
+
+      const data = await response.json();
+
+      if (!data?.token) {
         throw new Error('Failed to get speech recognition token');
       }
 

@@ -1,0 +1,13 @@
+{
+  "heroku-run-build-script": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "preview": "vite preview",
+    "heroku-postbuild": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
