@@ -99,6 +99,16 @@ const Index = () => {
     }
   }, [activeProfileId, updateProfile, isConnected, reinitializeAvatarWithEmotion]);
 
+  // Reconnect avatar with current settings (used after changing voice tuning)
+  const handleReconnectAvatar = useCallback(async () => {
+    if (isConnected && videoRef.current) {
+      await endConversation();
+      // Small delay to ensure clean shutdown
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await startConversation(videoRef.current);
+    }
+  }, [isConnected, endConversation, startConversation]);
+
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('Voice transcript received:', transcript);
@@ -530,7 +540,11 @@ const Index = () => {
       </AnimatePresence>
 
       {/* Settings Modal */}
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsModal 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+        onReconnectAvatar={handleReconnectAvatar}
+      />
 
       {/* Mobile FAB for Test Overlays */}
       <div className="md:hidden fixed bottom-6 right-6 z-50">

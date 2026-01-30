@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, User, Key, Bot, Save, Check, Image, Code, Copy, Volume2 } from 'lucide-react';
+import { X, Plus, Trash2, User, Key, Bot, Save, Check, Image, Code, Copy, Volume2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,9 +38,10 @@ const DEFAULT_PUBLIC_AVATARS: AvatarOption[] = [
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onReconnectAvatar?: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, onReconnectAvatar }: SettingsModalProps) {
   const { toast } = useToast();
   const {
     profiles,
@@ -383,9 +384,25 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
 
-                    <p className="text-xs text-muted-foreground border-t border-border pt-4">
-                      ⚠️ Changes require reconnecting the avatar session to take effect.
-                    </p>
+                    <div className="border-t border-border pt-4 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ Changes require reconnecting the avatar session to take effect.
+                      </p>
+                      {onReconnectAvatar && (
+                        <Button 
+                          onClick={() => {
+                            handleSave();
+                            onReconnectAvatar();
+                            onClose();
+                          }}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Reconnect Avatar with New Settings
+                        </Button>
+                      )}
+                    </div>
                   </>
                 )}
 
