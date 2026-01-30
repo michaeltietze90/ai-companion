@@ -15,6 +15,15 @@ export type TTSProvider = 'heygen' | 'elevenlabs';
 /** Response mode determines how Agentforce responses are parsed */
 export type ResponseMode = 'text' | 'json';
 
+/** HeyGen ElevenLabs voice settings for fine-tuning */
+export interface HeyGenVoiceSettings {
+  stability: number;        // 0-1: Lower = more expressive/variable, higher = more consistent
+  similarityBoost: number;  // 0-1: How closely to match original voice characteristics
+  style: number;            // 0-1: Style exaggeration (higher = more stylized)
+  useSpeakerBoost: boolean; // Enhances clarity and voice similarity
+  rate: number;             // 0.5-2.0: Speech rate multiplier
+}
+
 export interface ElevenLabsVoice {
   id: string;
   name: string;
@@ -40,6 +49,8 @@ export interface Profile {
   customElevenLabsVoices: ElevenLabsVoice[];
   // HeyGen voice selection
   heygenVoice: 'miguel' | 'alternative';
+  // HeyGen voice tuning settings (ElevenLabs parameters)
+  heygenVoiceSettings: HeyGenVoiceSettings;
   // Response parsing mode
   responseMode: ResponseMode;
 }
@@ -63,6 +74,15 @@ interface SettingsState {
   getActiveProfile: () => Profile | null;
 }
 
+// Default HeyGen voice settings (balanced for natural speech)
+const defaultHeyGenVoiceSettings: HeyGenVoiceSettings = {
+  stability: 0.5,        // Balanced expressiveness
+  similarityBoost: 0.75, // Good voice matching
+  style: 0.5,            // Moderate stylization
+  useSpeakerBoost: true, // Enhanced clarity
+  rate: 1.0,             // Normal speed
+};
+
 const defaultProfile: Profile = {
   id: 'default',
   name: 'Default Profile',
@@ -85,6 +105,8 @@ const defaultProfile: Profile = {
   ],
   // HeyGen voice selection
   heygenVoice: 'miguel',
+  // HeyGen voice tuning settings
+  heygenVoiceSettings: defaultHeyGenVoiceSettings,
   // Response parsing mode - 'text' for plain text, 'json' for structured responses
   responseMode: 'text',
 };
