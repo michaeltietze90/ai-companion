@@ -796,17 +796,27 @@ export function useAvatarConversation() {
         await runStreamingTurn(sessionId, messagesStreamUrl);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        console.error('[Agentforce] Error during message:', msg);
 
         // Recover from session expiry (Agentforce returns 404 "V6Session not found")
-        if (msg.includes('AGENTFORCE_SESSION_NOT_FOUND') || msg.includes('Failed to send message: 404')) {
-          console.warn('[Agentforce] session expired; restarting session and retrying once');
+        if (msg.includes('AGENTFORCE_SESSION_NOT_FOUND') || msg.includes('V6Session not found') || msg.includes('404')) {
+          console.warn('[Agentforce] Session expired; restarting session and retrying once');
+          toast.info('Session expired, reconnecting...');
 
-          const { sessionId: newSessionId, welcomeMessage: _welcome, messagesStreamUrl: newStreamUrl } = await startAgentSession();
-          setSessionId(newSessionId);
-          setMessagesStreamUrl(newStreamUrl);
+          try {
+            const { sessionId: newSessionId, welcomeMessage: _welcome, messagesStreamUrl: newStreamUrl } = await startAgentSession();
+            console.log('[Agentforce] New session created:', newSessionId);
+            setSessionId(newSessionId);
+            setMessagesStreamUrl(newStreamUrl);
 
-          await runStreamingTurn(newSessionId, newStreamUrl);
-          return;
+            // Retry with new session
+            await runStreamingTurn(newSessionId, newStreamUrl);
+            toast.success('Reconnected successfully!');
+            return;
+          } catch (retryErr) {
+            console.error('[Agentforce] Retry failed:', retryErr);
+            throw new Error('Failed to reconnect to AI assistant. Please try again.');
+          }
         }
 
         throw err;
