@@ -1,15 +1,42 @@
+/**
+ * API Service
+ * 
+ * Abstracts API calls to work with both:
+ * - Lovable Cloud (Supabase Edge Functions) - when VITE_SUPABASE_URL is set
+ * - Heroku Express backend - when running on Heroku (/api/* routes)
+ */
+
+// Detect environment
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
+// Use Supabase if configured, otherwise use relative /api paths (Heroku)
+const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+const getApiUrl = (endpoint: string) => {
+  if (isSupabase) {
+    return `${SUPABASE_URL}/functions/v1/${endpoint}`;
+  }
+  // Heroku: use relative path
+  return `/api/${endpoint}`;
+};
+
+const getHeaders = () => {
+  if (isSupabase) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    };
+  }
+  return {
+    'Content-Type': 'application/json',
+  };
 };
 
 export async function getHeyGenToken(): Promise<string> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/heygen-token`, {
+  const response = await fetch(getApiUrl('heygen-token'), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({}),
   });
 
@@ -23,9 +50,9 @@ export async function getHeyGenToken(): Promise<string> {
 }
 
 export async function startAgentSession(): Promise<{ sessionId: string; welcomeMessage: string | null; messagesStreamUrl: string | null }> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/agentforce-session`, {
+  const response = await fetch(getApiUrl('agentforce-session'), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({ action: 'start' }),
   });
 
@@ -38,9 +65,9 @@ export async function startAgentSession(): Promise<{ sessionId: string; welcomeM
 }
 
 export async function endAgentSession(sessionId: string): Promise<void> {
-  await fetch(`${SUPABASE_URL}/functions/v1/agentforce-session`, {
+  await fetch(getApiUrl('agentforce-session'), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({ action: 'end', sessionId }),
   });
 }
@@ -51,9 +78,9 @@ export async function sendAgentMessage(
   message: string,
   messagesStreamUrl?: string | null
 ): Promise<{ message: string; progressIndicators: string[] }> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/agentforce-message`, {
+  const response = await fetch(getApiUrl('agentforce-message'), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({ sessionId, message, messagesStreamUrl }),
   });
 
@@ -77,9 +104,9 @@ export async function* streamAgentMessage(
   message: string,
   messagesStreamUrl?: string | null
 ): AsyncGenerator<StreamChunk, void, unknown> {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/agentforce-message`, {
+  const response = await fetch(getApiUrl('agentforce-message'), {
     method: 'POST',
-    headers,
+    headers: getHeaders(),
     body: JSON.stringify({ sessionId, message, messagesStreamUrl, streaming: true }),
   });
 

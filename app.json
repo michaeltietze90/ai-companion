@@ -1,0 +1,54 @@
+{
+  "name": "agentforce-avatar-platform",
+  "description": "Agentforce Avatar Platform with HeyGen and Salesforce integration",
+  "repository": "https://github.com/your-repo/agentforce-avatar",
+  "keywords": ["salesforce", "agentforce", "heygen", "avatar", "ai"],
+  "env": {
+    "SALESFORCE_ORG_DOMAIN": {
+      "description": "Your Salesforce org domain (e.g., https://your-org.my.salesforce.com)",
+      "required": true
+    },
+    "SALESFORCE_CLIENT_ID": {
+      "description": "Salesforce Connected App Client ID",
+      "required": true
+    },
+    "SALESFORCE_CLIENT_SECRET": {
+      "description": "Salesforce Connected App Client Secret",
+      "required": true
+    },
+    "SALESFORCE_AGENT_ID": {
+      "description": "Salesforce Agentforce Agent ID",
+      "required": true
+    },
+    "SALESFORCE_API_HOST": {
+      "description": "Salesforce API host (default: https://api.salesforce.com)",
+      "value": "https://api.salesforce.com"
+    },
+    "HEYGEN_API_KEY": {
+      "description": "HeyGen API key for avatar streaming",
+      "required": true
+    },
+    "ELEVENLABS_API_KEY": {
+      "description": "ElevenLabs API key for TTS and STT",
+      "required": false
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "value": "production"
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "scripts": {
+    "postdeploy": "echo 'Deployment complete!'"
+  }
+}
