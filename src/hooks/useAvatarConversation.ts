@@ -155,6 +155,16 @@ export function useAvatarConversation() {
       const selectedVoiceId = HEYGEN_VOICES[selectedVoiceKey].id;
       console.log('[HeyGen] Using voice:', selectedVoiceKey, selectedVoiceId);
 
+      // Get voice tuning settings from profile
+      const voiceSettings = activeProfile?.heygenVoiceSettings || {
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0.5,
+        useSpeakerBoost: true,
+        rate: 1.0,
+      };
+      console.log('[HeyGen] Voice settings:', voiceSettings);
+
       // HARDCODED: Always use EXCITED emotion
       const selectedEmotion = VoiceEmotion.EXCITED;
       console.log('[HeyGen] Using emotion: EXCITED (hardcoded)');
@@ -167,7 +177,14 @@ export function useAvatarConversation() {
         voice: {
           voiceId: selectedVoiceId,
           emotion: selectedEmotion,
+          rate: voiceSettings.rate,
           model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
+          elevenlabsSettings: {
+            stability: voiceSettings.stability,
+            similarity_boost: voiceSettings.similarityBoost,
+            style: voiceSettings.style,
+            use_speaker_boost: voiceSettings.useSpeakerBoost,
+          },
         },
       });
       
@@ -273,6 +290,15 @@ export function useAvatarConversation() {
       const selectedVoiceKey = activeProfile?.heygenVoice || 'miguel';
       const selectedVoiceId = HEYGEN_VOICES[selectedVoiceKey].id;
       
+      // Get voice tuning settings from profile
+      const voiceSettings = activeProfile?.heygenVoiceSettings || {
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0.5,
+        useSpeakerBoost: true,
+        rate: 1.0,
+      };
+      
       // Create new session
       const sessionInfo = await avatar.createStartAvatar({
         quality: 'very_high' as AvatarQuality, // Use very_high for best resolution
@@ -280,7 +306,14 @@ export function useAvatarConversation() {
         voice: {
           voiceId: selectedVoiceId,
           emotion: selectedEmotion,
+          rate: voiceSettings.rate,
           model: ElevenLabsModel.eleven_multilingual_v2, // Use multilingual model for better quality
+          elevenlabsSettings: {
+            stability: voiceSettings.stability,
+            similarity_boost: voiceSettings.similarityBoost,
+            style: voiceSettings.style,
+            use_speaker_boost: voiceSettings.useSpeakerBoost,
+          },
         },
       });
       

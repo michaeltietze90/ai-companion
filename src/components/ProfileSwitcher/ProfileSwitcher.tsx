@@ -78,6 +78,13 @@ export function ProfileSwitcher({ disabled }: ProfileSwitcherProps) {
       elevenLabsSpeed: 1.0,
       customElevenLabsVoices: [],
       heygenVoice: 'miguel',
+      heygenVoiceSettings: {
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0.5,
+        useSpeakerBoost: true,
+        rate: 1.0,
+      },
       responseMode: formData.responseMode,
     };
 

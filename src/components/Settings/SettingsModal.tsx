@@ -99,6 +99,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       elevenLabsSpeed: 1.0,
       customElevenLabsVoices: [],
       heygenVoice: 'miguel',
+      heygenVoiceSettings: {
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0.5,
+        useSpeakerBoost: true,
+        rate: 1.0,
+      },
       responseMode: 'text',
     };
     addProfile(newProfile);
@@ -245,6 +252,142 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       : "Uses ElevenLabs voices with stronger emotion support. Audio plays separately from avatar."}
                   </p>
                 </div>
+
+                {/* HeyGen Voice Settings - only show when HeyGen is selected */}
+                {editingProfile.ttsProvider === 'heygen' && (
+                  <>
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Volume2 className="w-5 h-5 text-primary" />
+                        <span className="font-medium">HeyGen Voice Tuning</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Fine-tune voice characteristics using ElevenLabs settings within HeyGen.
+                      </p>
+                    </div>
+
+                    {/* Stability */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Stability</Label>
+                        <span className="text-sm text-muted-foreground">
+                          {(editingProfile.heygenVoiceSettings?.stability ?? 0.5).toFixed(2)}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[editingProfile.heygenVoiceSettings?.stability ?? 0.5]}
+                        onValueChange={([value]) => updateField('heygenVoiceSettings', {
+                          ...editingProfile.heygenVoiceSettings,
+                          stability: value,
+                        })}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Lower = more expressive/variable, Higher = more consistent
+                      </p>
+                    </div>
+
+                    {/* Similarity Boost */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Similarity Boost</Label>
+                        <span className="text-sm text-muted-foreground">
+                          {(editingProfile.heygenVoiceSettings?.similarityBoost ?? 0.75).toFixed(2)}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[editingProfile.heygenVoiceSettings?.similarityBoost ?? 0.75]}
+                        onValueChange={([value]) => updateField('heygenVoiceSettings', {
+                          ...editingProfile.heygenVoiceSettings,
+                          similarityBoost: value,
+                        })}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        How closely to match original voice characteristics
+                      </p>
+                    </div>
+
+                    {/* Style */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Style Exaggeration</Label>
+                        <span className="text-sm text-muted-foreground">
+                          {(editingProfile.heygenVoiceSettings?.style ?? 0.5).toFixed(2)}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[editingProfile.heygenVoiceSettings?.style ?? 0.5]}
+                        onValueChange={([value]) => updateField('heygenVoiceSettings', {
+                          ...editingProfile.heygenVoiceSettings,
+                          style: value,
+                        })}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Higher = more stylized/emotional delivery
+                      </p>
+                    </div>
+
+                    {/* Speed/Rate */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Speaking Speed</Label>
+                        <span className="text-sm text-muted-foreground">
+                          {(editingProfile.heygenVoiceSettings?.rate ?? 1.0).toFixed(1)}x
+                        </span>
+                      </div>
+                      <Slider
+                        value={[editingProfile.heygenVoiceSettings?.rate ?? 1.0]}
+                        onValueChange={([value]) => updateField('heygenVoiceSettings', {
+                          ...editingProfile.heygenVoiceSettings,
+                          rate: value,
+                        })}
+                        min={0.5}
+                        max={2.0}
+                        step={0.1}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Slower (0.5x)</span>
+                        <span>Normal (1.0x)</span>
+                        <span>Faster (2.0x)</span>
+                      </div>
+                    </div>
+
+                    {/* Speaker Boost Toggle */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                      <div>
+                        <Label>Speaker Boost</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Enhances clarity and voice similarity
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={editingProfile.heygenVoiceSettings?.useSpeakerBoost ?? true}
+                        onChange={(e) => updateField('heygenVoiceSettings', {
+                          ...editingProfile.heygenVoiceSettings,
+                          useSpeakerBoost: e.target.checked,
+                        })}
+                        className="h-5 w-5 rounded border-muted-foreground"
+                      />
+                    </div>
+
+                    <p className="text-xs text-muted-foreground border-t border-border pt-4">
+                      ⚠️ Changes require reconnecting the avatar session to take effect.
+                    </p>
+                  </>
+                )}
 
                 {/* ElevenLabs Settings - only show when ElevenLabs is selected */}
                 {editingProfile.ttsProvider === 'elevenlabs' && (
