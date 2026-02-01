@@ -16,6 +16,7 @@ import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 // Swiss Post specific Agentforce Agent ID
 const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
@@ -27,7 +28,7 @@ const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
  */
 const SwissPost = () => {
   const [isMuted, setIsMuted] = useState(false);
-  const [showUI, setShowUI] = useState(true);
+  const [showUI, setShowUI] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
@@ -57,6 +58,12 @@ const SwissPost = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
+  const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
+
+  // Auto-mute video when using ElevenLabs TTS to prevent dual audio
+  const activeProfile = getActiveProfile();
+  const isUsingElevenLabsTTS = activeProfile?.ttsProvider === 'elevenlabs';
+  const effectiveMuted = isMuted || isUsingElevenLabsTTS;
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[SwissPost] Voice transcript:', transcript);
@@ -281,7 +288,7 @@ const SwissPost = () => {
                     isConnected={isConnected} 
                     isSpeaking={isSpeaking}
                     videoRef={videoRef}
-                    isMuted={isMuted}
+                    isMuted={effectiveMuted}
                   />
                   
                   {/* Confidential watermark overlay */}
