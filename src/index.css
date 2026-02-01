@@ -46,6 +46,14 @@
     --agentforce-navy: 220 50% 12%;
     --agentforce-slate: 220 30% 18%;
     
+    /* Swiss Post colors */
+    --post-yellow: 45 100% 50%;
+    --post-yellow-dark: 42 100% 45%;
+    --post-red: 0 85% 50%;
+    --post-dark: 220 15% 20%;
+    --post-gray: 220 10% 35%;
+    --post-background: 200 50% 85%;
+    
     /* Status/indicator colors */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
