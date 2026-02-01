@@ -63,8 +63,9 @@ serve(async (req) => {
   }
 
   try {
-    const { action, sessionId, reason } = await req.json();
-    const agentId = Deno.env.get('SALESFORCE_AGENT_ID');
+    const { action, sessionId, reason, agentId: requestAgentId } = await req.json();
+    // Use provided agentId from request, fallback to env variable
+    const agentId = requestAgentId || Deno.env.get('SALESFORCE_AGENT_ID');
     const orgDomain = Deno.env.get('SALESFORCE_ORG_DOMAIN');
     
     if (!agentId || !orgDomain) {

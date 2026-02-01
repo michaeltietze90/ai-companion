@@ -577,7 +577,8 @@ export function useAvatarConversation() {
 
   // Start full conversation (HeyGen + Agentforce)
   // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.
-  const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null) => {
+  // Optional agentId parameter overrides the default from settings/env
+  const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null, agentId?: string) => {
     setConnecting(true);
     setError(null);
     clearVisuals();
@@ -603,7 +604,8 @@ export function useAvatarConversation() {
       }
 
       // 1) Start Agentforce first (so "brain" is always available)
-      const { sessionId: newSessionId, welcomeMessage, messagesStreamUrl } = await startAgentSession();
+      // Pass agentId override if provided
+      const { sessionId: newSessionId, welcomeMessage, messagesStreamUrl } = await startAgentSession(agentId);
       setSessionId(newSessionId);
       setMessagesStreamUrl(messagesStreamUrl);
       setConnected(true);

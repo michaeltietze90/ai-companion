@@ -29,9 +29,11 @@ import { useSettingsStore } from "@/stores/settingsStore";
 // Available HeyGen Interactive Avatars
 // Note: Only avatars specifically enabled for Interactive Streaming in your HeyGen account will work
 const AVAILABLE_AVATARS = [
-  { id: '26c21d9041654675aa0c2eb479c7d341', name: 'Miguel' },
   { id: '26393b8e-e944-4367-98ef-e2bc75c4b792', name: 'Schweizer Post' },
 ];
+
+// Swiss Post specific Agentforce Agent ID
+const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
 
 /**
  * Swiss Post Themed Avatar Page
@@ -88,7 +90,8 @@ const SwissPost = () => {
   const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(handleVoiceTranscript);
 
   const handleStart = () => {
-    startConversation(videoRef.current);
+    // Use Swiss Post specific Agentforce agent ID
+    startConversation(videoRef.current, SWISS_POST_AGENT_ID);
   };
 
   const handleSendText = (e: React.FormEvent) => {
@@ -103,7 +106,8 @@ const SwissPost = () => {
     if (isConnected && videoRef.current) {
       await endConversation();
       await new Promise(resolve => setTimeout(resolve, 500));
-      await startConversation(videoRef.current);
+      // Use Swiss Post specific Agentforce agent ID on reconnect
+      await startConversation(videoRef.current, SWISS_POST_AGENT_ID);
     }
   }, [isConnected, endConversation, startConversation]);
 

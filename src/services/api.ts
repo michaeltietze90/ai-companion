@@ -49,11 +49,11 @@ export async function getHeyGenToken(): Promise<string> {
   return data.token;
 }
 
-export async function startAgentSession(): Promise<{ sessionId: string; welcomeMessage: string | null; messagesStreamUrl: string | null }> {
+export async function startAgentSession(agentId?: string): Promise<{ sessionId: string; welcomeMessage: string | null; messagesStreamUrl: string | null }> {
   const response = await fetch(getApiUrl('agentforce-session'), {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ action: 'start' }),
+    body: JSON.stringify({ action: 'start', agentId }),
   });
 
   if (!response.ok) {
