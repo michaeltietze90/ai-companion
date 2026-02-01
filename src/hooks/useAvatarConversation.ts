@@ -147,10 +147,12 @@ export function useAvatarConversation() {
         // Resume listening is handled by the STT hook
       });
 
-      console.log('[HeyGen] Using Miguel avatar:', MIGUEL_AVATAR_ID);
+      // Get avatar from settings, fallback to Miguel
+      const activeProfile = getActiveProfile();
+      const selectedAvatarId = activeProfile?.selectedAvatarId || MIGUEL_AVATAR_ID;
+      console.log('[HeyGen] Using avatar:', selectedAvatarId);
       
       // Get voice from settings
-      const activeProfile = getActiveProfile();
       const selectedVoiceKey = activeProfile?.heygenVoice || 'miguel';
       const selectedVoiceId = HEYGEN_VOICES[selectedVoiceKey].id;
       console.log('[HeyGen] Using voice:', selectedVoiceKey, selectedVoiceId);
@@ -173,7 +175,7 @@ export function useAvatarConversation() {
       // IMPORTANT: disableIdleTimeout is NOT set (defaults to false) to prevent draining hours
       const sessionInfo = await avatar.createStartAvatar({
         quality: 'very_high' as AvatarQuality, // Use very_high for best resolution
-        avatarName: MIGUEL_AVATAR_ID,
+        avatarName: selectedAvatarId,
         voice: {
           voiceId: selectedVoiceId,
           emotion: selectedEmotion,

@@ -7,16 +7,36 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2 } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher/ProfileSwitcher";
+import { useSettingsStore } from "@/stores/settingsStore";
+
+// Available HeyGen public avatars + Miguel
+const AVAILABLE_AVATARS = [
+  { id: '26c21d9041654675aa0c2eb479c7d341', name: 'Miguel' },
+  { id: 'Angela-inblackskirt-20220820', name: 'Angela' },
+  { id: 'Anna_public_3_20240108', name: 'Anna' },
+  { id: 'josh_lite3_20230714', name: 'Josh' },
+  { id: 'Kristin_public_2_20240108', name: 'Kristin' },
+  { id: 'Monica-insuit-20220818', name: 'Monica' },
+  { id: 'Tyler-incasualsuit-20220721', name: 'Tyler' },
+  { id: 'Wayne_20240711', name: 'Wayne' },
+];
 
 /**
  * Swiss Post Themed Avatar Page
@@ -53,6 +73,17 @@ const SwissPost = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { showNameEntry, showLeaderboard } = useQuizOverlayStore();
+  
+  // Settings store for avatar selection
+  const { updateProfile, activeProfileId, getActiveProfile } = useSettingsStore();
+  const activeProfile = getActiveProfile();
+  const currentAvatarId = activeProfile?.selectedAvatarId || AVAILABLE_AVATARS[0].id;
+  
+  const handleAvatarChange = useCallback((avatarId: string) => {
+    if (activeProfileId) {
+      updateProfile(activeProfileId, { selectedAvatarId: avatarId });
+    }
+  }, [activeProfileId, updateProfile]);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[SwissPost] Voice transcript:', transcript);
@@ -127,6 +158,32 @@ const SwissPost = () => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Avatar Selector */}
+          <Select
+            value={currentAvatarId}
+            onValueChange={handleAvatarChange}
+            disabled={isConnected}
+          >
+            <SelectTrigger 
+              className="w-32 md:w-40 h-9 border text-sm"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.9)',
+                borderColor: 'rgba(255, 199, 34, 0.4)',
+                color: '#333333',
+              }}
+            >
+              <User className="w-4 h-4 mr-1" style={{ color: '#666666' }} />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_AVATARS.map((avatar) => (
+                <SelectItem key={avatar.id} value={avatar.id}>
+                  {avatar.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           {/* Agent Profile Switcher */}
           <ProfileSwitcher disabled={isConnected} />
           
@@ -465,7 +522,7 @@ const SwissPost = () => {
       {/* Footer attribution */}
       <div className="absolute bottom-2 left-4 z-10">
         <span className="text-xs" style={{ color: 'rgba(102, 102, 102, 0.5)' }}>
-          Powered by Die Post
+          Powered by Agentforce
         </span>
       </div>
     </div>
