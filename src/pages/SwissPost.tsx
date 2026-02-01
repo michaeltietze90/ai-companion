@@ -7,7 +7,7 @@ import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
-import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -31,6 +31,7 @@ const SwissPost = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
+  const [showConfidential, setShowConfidential] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
@@ -192,6 +193,18 @@ const SwissPost = () => {
               )}
             </AnimatePresence>
             
+            {/* Confidential toggle button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-black/10"
+              style={{ color: showConfidential ? '#E30613' : '#000000' }}
+              onClick={() => setShowConfidential(!showConfidential)}
+              title={showConfidential ? "Hide Confidential" : "Show Confidential"}
+            >
+              <ShieldAlert className="w-5 h-5" />
+            </Button>
+            
             {/* Toggle UI button */}
             <Button
               variant="ghost"
@@ -270,6 +283,40 @@ const SwissPost = () => {
                     videoRef={videoRef}
                     isMuted={isMuted}
                   />
+                  
+                  {/* Confidential watermark overlay */}
+                  <AnimatePresence>
+                    {showConfidential && (
+                      <motion.div
+                        className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center"
+                          style={{
+                            transform: 'rotate(-35deg) scale(1.5)',
+                          }}
+                        >
+                          <div className="flex flex-col items-center gap-24">
+                            {[...Array(5)].map((_, i) => (
+                              <span 
+                                key={i}
+                                className="text-4xl md:text-5xl font-black tracking-widest uppercase whitespace-nowrap"
+                                style={{ 
+                                  color: 'rgba(227, 6, 19, 0.15)',
+                                  textShadow: '0 0 2px rgba(227, 6, 19, 0.1)',
+                                }}
+                              >
+                                CONFIDENTIAL
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 
                 {/* Bottom gradient for controls overlay */}
@@ -583,7 +630,7 @@ const SwissPost = () => {
         <img 
           src={agentforceLogo} 
           alt="Agentforce" 
-          className="h-5 object-contain"
+          className="h-10 object-contain"
           style={{ opacity: 0.8 }}
         />
       </div>
