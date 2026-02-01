@@ -1,13 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import DeliveryBoxDevice from "@/components/PostVan/DeliveryBoxDevice";
 import diePostLogo from "@/assets/die-post-logo.png";
 import salesforceLogo from "@/assets/salesforce-logo.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
-import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +53,6 @@ const SwissPost = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { showNameEntry, showLeaderboard } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[SwissPost] Voice transcript:', transcript);
@@ -86,38 +83,48 @@ const SwissPost = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Background with smooth gradient from yellow */}
+      {/* Clean white/cream background */}
       <div 
         className="absolute inset-0 z-0"
         style={{
-          background: 'linear-gradient(180deg, #FFC722 0%, #FFD54F 5%, #FFE57F 10%, #FFF3B8 18%, #FFFBEB 28%, #FFFDF5 40%, #F8F6F0 100%)',
+          background: '#FAFAF8',
         }}
       />
       
-      {/* Subtle pattern overlay */}
+      {/* Diagonal yellow gradient from bottom-right - doesn't touch header */}
       <div 
-        className="absolute inset-0 z-0 opacity-[0.015]"
+        className="absolute inset-0 z-0"
         style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, #000 1px, transparent 0)',
-          backgroundSize: '32px 32px',
+          background: 'linear-gradient(315deg, rgba(255, 199, 34, 0.25) 0%, rgba(255, 213, 79, 0.15) 20%, rgba(255, 235, 153, 0.08) 35%, transparent 50%)',
+        }}
+      />
+      
+      {/* Subtle red accent from bottom left */}
+      <div 
+        className="absolute bottom-0 left-0 w-[40%] h-[40%] z-0"
+        style={{
+          background: 'radial-gradient(ellipse at bottom left, rgba(227, 6, 19, 0.04) 0%, transparent 60%)',
         }}
       />
 
       {/* ===== HEADER ===== */}
       <header className="absolute top-0 left-0 right-0 z-30">
-        <div className="w-full py-3 px-4 md:px-6 flex items-center justify-between">
+        <div 
+          className="w-full py-3 px-4 md:px-6 flex items-center justify-between"
+          style={{ background: '#FFC722' }}
+        >
           {/* Logos */}
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-4 md:gap-5">
             <img 
               src={diePostLogo} 
               alt="Die Post" 
               className="h-8 md:h-10 object-contain"
             />
-            <div className="w-px h-6 bg-black/20" />
+            <div className="w-px h-8 bg-black/20" />
             <img 
               src={salesforceLogo} 
               alt="Salesforce" 
-              className="h-5 md:h-6 object-contain"
+              className="h-7 md:h-8 object-contain"
             />
           </div>
           
@@ -182,31 +189,77 @@ const SwissPost = () => {
         </div>
       </header>
 
-      {/* ===== MAIN CONTENT ===== */}
-      <main className="relative z-10 h-screen pt-14 md:pt-16">
-        <DeliveryBoxDevice isActive={isConnected}>
-          <HologramAvatar 
-            isConnected={isConnected} 
-            isSpeaking={isSpeaking}
-            videoRef={videoRef}
-            isMuted={isMuted}
-          />
-        </DeliveryBoxDevice>
+      {/* ===== MAIN CONTENT - Modern minimal avatar display ===== */}
+      <main className="relative z-10 h-screen pt-16 pb-32 flex items-center justify-center">
+        <div 
+          className="relative w-full h-full max-w-2xl mx-auto flex items-center justify-center"
+          style={{ maxHeight: 'calc(100vh - 12rem)' }}
+        >
+          {/* Modern floating avatar container */}
+          <div 
+            className="relative h-full"
+            style={{ aspectRatio: '9/16' }}
+          >
+            {/* Soft ambient shadow */}
+            <div 
+              className="absolute inset-0 rounded-[32px] blur-3xl opacity-20 -z-10"
+              style={{ 
+                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.4) 0%, rgba(0, 0, 0, 0.1) 100%)',
+                transform: 'translateY(20px) scale(0.95)',
+              }}
+            />
+            
+            {/* Main avatar container - clean, modern, minimal */}
+            <div 
+              className="relative w-full h-full rounded-[32px] overflow-hidden"
+              style={{
+                background: 'linear-gradient(180deg, #0D0D0F 0%, #1a1a1f 50%, #0D0D0F 100%)',
+                boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              {/* Subtle inner glow at top */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-32 pointer-events-none z-10"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.08) 0%, transparent 100%)',
+                }}
+              />
+              
+              {/* Avatar content */}
+              <div className="relative w-full h-full">
+                <HologramAvatar 
+                  isConnected={isConnected} 
+                  isSpeaking={isSpeaking}
+                  videoRef={videoRef}
+                  isMuted={isMuted}
+                />
+              </div>
+              
+              {/* Bottom subtle gradient */}
+              <div 
+                className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none z-10"
+                style={{
+                  background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* ===== QUIZ OVERLAYS - Outside the device ===== */}
+      {/* ===== QUIZ OVERLAYS ===== */}
       <div className="absolute inset-0 z-20 pointer-events-none">
         <div className="pointer-events-auto">
           <QuizOverlayManager />
         </div>
       </div>
 
-      {/* ===== VISUAL OVERLAY - Outside the device ===== */}
+      {/* ===== VISUAL OVERLAY ===== */}
       <div className="absolute inset-0 z-15 pointer-events-none">
         <VisualOverlay visuals={activeVisuals} />
       </div>
 
-      {/* Status indicator - hidden when UI is off */}
+      {/* Status indicator */}
       <AnimatePresence>
         {showUI && (
           <motion.div 
@@ -231,9 +284,6 @@ const SwissPost = () => {
               <span className="text-sm font-medium" style={{ color: '#333333' }}>
                 {isConnecting ? 'Verbinden...' : isConnected ? (demoMode ? 'Demo Modus' : 'Verbunden') : 'Bereit'}
               </span>
-              {isConnected && !demoMode && sessionId && (
-                <span className="text-xs" style={{ color: '#999999' }}>• {String(sessionId).slice(0, 8)}</span>
-              )}
             </div>
           </motion.div>
         )}
@@ -275,23 +325,21 @@ const SwissPost = () => {
         )}
       </AnimatePresence>
 
-      {/* ===== SIDE PANELS (toggled with showUI) ===== */}
+      {/* ===== SIDE PANELS ===== */}
       <AnimatePresence>
         {showUI && isConnected && !demoMode && (
           <motion.div
-            className="absolute top-20 md:top-24 right-4 bottom-28 w-72 z-25 flex flex-col gap-2 overflow-hidden"
+            className="absolute top-24 right-4 bottom-36 w-72 z-25 flex flex-col gap-2 overflow-hidden"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           >
-            {/* Voice transcript */}
             <div className="rounded-xl p-3 flex-shrink-0 border shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', borderColor: 'rgba(255, 199, 34, 0.4)' }}>
               <p className="text-xs font-semibold mb-1" style={{ color: '#666666' }}>Sprache → Agentforce</p>
               <p className="text-sm line-clamp-3" style={{ color: '#333333' }}>{lastVoiceTranscript || '—'}</p>
             </div>
             
-            {/* Streaming sentences */}
             <div className="rounded-xl p-3 flex-1 overflow-hidden flex flex-col border shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', borderColor: 'rgba(255, 199, 34, 0.4)' }}>
               <p className="text-xs font-semibold mb-2" style={{ color: '#666666' }}>Streaming Sätze</p>
               <div className="flex-1 overflow-y-auto space-y-1.5">
@@ -312,13 +360,11 @@ const SwissPost = () => {
               </div>
             </div>
             
-            {/* Last spoken */}
             <div className="rounded-xl p-3 flex-shrink-0 border shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', borderColor: 'rgba(255, 199, 34, 0.4)' }}>
               <p className="text-xs font-semibold mb-1" style={{ color: '#666666' }}>Zuletzt gesprochen</p>
               <p className="text-sm line-clamp-3" style={{ color: '#333333' }}>{lastSpokenText || '—'}</p>
             </div>
 
-            {/* Chat history */}
             <div className="rounded-xl p-3 flex-1 overflow-hidden flex flex-col border shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.95)', borderColor: 'rgba(255, 199, 34, 0.4)' }}>
               <p className="text-xs font-semibold mb-2" style={{ color: '#666666' }}>Gesprächsverlauf</p>
               <div className="flex-1 overflow-y-auto space-y-2">
@@ -346,8 +392,8 @@ const SwissPost = () => {
       </AnimatePresence>
 
       {/* ===== FOOTER CONTROLS ===== */}
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6 pb-12 md:pb-14">
-        {/* Text input - hidden when UI is off */}
+      <footer className="absolute bottom-8 left-0 right-0 z-20 px-4 md:px-6">
+        {/* Text input */}
         <AnimatePresence>
           {isConnected && showUI && (
             <motion.form 
@@ -383,12 +429,7 @@ const SwissPost = () => {
           )}
         </AnimatePresence>
 
-        <motion.div
-          className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <div className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4">
           {!isConnected ? (
             <Button
               size="lg"
@@ -458,7 +499,7 @@ const SwissPost = () => {
               </Button>
             </>
           )}
-        </motion.div>
+        </div>
 
         {/* Listening indicator */}
         <AnimatePresence>
