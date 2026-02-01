@@ -51,6 +51,15 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        // Swiss Post theme colors
+        post: {
+          yellow: "hsl(var(--post-yellow))",
+          "yellow-dark": "hsl(var(--post-yellow-dark))",
+          red: "hsl(var(--post-red))",
+          dark: "hsl(var(--post-dark))",
+          gray: "hsl(var(--post-gray))",
+          background: "hsl(var(--post-background))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import AgentforceTest from "./pages/AgentforceTest";
 import ProtoM from "./pages/ProtoM";
 import ProtoL from "./pages/ProtoL";
+import SwissPost from "./pages/SwissPost";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/proto-m" element={<ProtoM />} />
           <Route path="/proto-l" element={<ProtoL />} />
+          <Route path="/swiss-post" element={<SwissPost />} />
           <Route path="/agentforce-test" element={<AgentforceTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
