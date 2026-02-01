@@ -22,6 +22,11 @@ const DEMO_RESPONSES = [
 // Fixed avatar and voice IDs from Proto
 const MIGUEL_AVATAR_ID = '26c21d9041654675aa0c2eb479c7d341';
 
+// Known valid Interactive Avatar IDs
+const VALID_AVATAR_IDS = new Set([
+  '26c21d9041654675aa0c2eb479c7d341', // Miguel
+]);
+
 // Available HeyGen voices
 export const HEYGEN_VOICES = {
   miguel: { id: '35f1601abcf94ebd8970b08047d777f9', name: 'Miguel (Original)' },
@@ -147,9 +152,15 @@ export function useAvatarConversation() {
         // Resume listening is handled by the STT hook
       });
 
-      // Get avatar from settings, fallback to Miguel
+      // Get avatar from settings, fallback to Miguel if invalid
       const activeProfile = getActiveProfile();
-      const selectedAvatarId = activeProfile?.selectedAvatarId || MIGUEL_AVATAR_ID;
+      let selectedAvatarId = activeProfile?.selectedAvatarId || MIGUEL_AVATAR_ID;
+      
+      // Validate avatar ID - fallback to Miguel if not in known valid list
+      if (!VALID_AVATAR_IDS.has(selectedAvatarId)) {
+        console.warn('[HeyGen] Stored avatar ID not valid, falling back to Miguel:', selectedAvatarId);
+        selectedAvatarId = MIGUEL_AVATAR_ID;
+      }
       console.log('[HeyGen] Using avatar:', selectedAvatarId);
       
       // Get voice from settings
