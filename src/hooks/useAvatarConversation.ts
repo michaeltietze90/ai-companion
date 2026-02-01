@@ -107,13 +107,13 @@ export function useAvatarConversation() {
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
   const { executeActions, applyData } = useStructuredActions();
 
-  // Initialize HeyGen Avatar with Proto token and fixed avatar/voice
-  const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement) => {
+  // Initialize HeyGen Avatar with token (supports custom API key name)
+  const initializeAvatar = useCallback(async (videoElement: HTMLVideoElement, heygenApiKeyName?: string) => {
     try {
-      // Get token from Proto endpoint
-      const token = await createHeyGenToken();
+      // Get token - use custom API key if specified
+      const token = await createHeyGenToken(heygenApiKeyName);
       tokenRef.current = token;
-      console.log('[HeyGen] Got token from Proto endpoint');
+      console.log('[HeyGen] Got token', heygenApiKeyName ? `using ${heygenApiKeyName}` : 'from Proto endpoint');
       
       const avatar = new StreamingAvatar({ token });
       avatarRef.current = avatar;
@@ -578,7 +578,12 @@ export function useAvatarConversation() {
   // Start full conversation (HeyGen + Agentforce)
   // IMPORTANT: Agentforce should still connect even if HeyGen is down / rate-limited.
   // Optional agentId parameter overrides the default from settings/env
-  const startConversation = useCallback(async (videoElement?: HTMLVideoElement | null, agentId?: string) => {
+  // Optional heygenApiKeyName parameter uses a specific HeyGen API key
+  const startConversation = useCallback(async (
+    videoElement?: HTMLVideoElement | null, 
+    agentId?: string,
+    heygenApiKeyName?: string
+  ) => {
     setConnecting(true);
     setError(null);
     clearVisuals();
@@ -616,7 +621,7 @@ export function useAvatarConversation() {
       // 2) Try to initialize HeyGen video (optional). If it fails, keep Agentforce running.
       if (videoElement) {
         try {
-          await initializeAvatar(videoElement);
+          await initializeAvatar(videoElement, heygenApiKeyName);
         } catch (avatarError) {
           console.error('[HeyGen] avatar init failed (continuing with Agentforce):', avatarError);
           toast.warning('Avatar is temporarily unavailable; continuing with Agentforce.');
