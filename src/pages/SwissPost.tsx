@@ -32,8 +32,9 @@ const AVAILABLE_AVATARS = [
   { id: '26393b8e-e944-4367-98ef-e2bc75c4b792', name: 'Schweizer Post' },
 ];
 
-// Swiss Post specific Agentforce Agent ID
+// Swiss Post specific configuration
 const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
+const SWISS_POST_HEYGEN_API_KEY = 'HEYGEN_API_KEY_SWISS_POST';
 
 /**
  * Swiss Post Themed Avatar Page
@@ -90,8 +91,8 @@ const SwissPost = () => {
   const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(handleVoiceTranscript);
 
   const handleStart = () => {
-    // Use Swiss Post specific Agentforce agent ID
-    startConversation(videoRef.current, SWISS_POST_AGENT_ID);
+    // Use Swiss Post specific Agentforce agent ID and HeyGen API key
+    startConversation(videoRef.current, SWISS_POST_AGENT_ID, SWISS_POST_HEYGEN_API_KEY);
   };
 
   const handleSendText = (e: React.FormEvent) => {
@@ -106,8 +107,8 @@ const SwissPost = () => {
     if (isConnected && videoRef.current) {
       await endConversation();
       await new Promise(resolve => setTimeout(resolve, 500));
-      // Use Swiss Post specific Agentforce agent ID on reconnect
-      await startConversation(videoRef.current, SWISS_POST_AGENT_ID);
+      // Use Swiss Post specific configuration on reconnect
+      await startConversation(videoRef.current, SWISS_POST_AGENT_ID, SWISS_POST_HEYGEN_API_KEY);
     }
   }, [isConnected, endConversation, startConversation]);
 

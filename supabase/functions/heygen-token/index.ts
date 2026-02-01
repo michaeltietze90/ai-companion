@@ -11,10 +11,21 @@ serve(async (req) => {
   }
 
   try {
-    const HEYGEN_API_KEY = Deno.env.get('HEYGEN_API_KEY');
+    // Support custom API key via request body (e.g., for Swiss Post)
+    let apiKeyName = 'HEYGEN_API_KEY';
+    try {
+      const body = await req.json();
+      if (body?.apiKeyName) {
+        apiKeyName = body.apiKeyName;
+      }
+    } catch {
+      // No body or invalid JSON, use default
+    }
+
+    const HEYGEN_API_KEY = Deno.env.get(apiKeyName);
     
     if (!HEYGEN_API_KEY) {
-      throw new Error('HEYGEN_API_KEY is not configured');
+      throw new Error(`${apiKeyName} is not configured`);
     }
 
     const response = await fetch('https://api.heygen.com/v1/streaming.create_token', {

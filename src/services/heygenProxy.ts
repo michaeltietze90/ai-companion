@@ -49,8 +49,30 @@ async function callProxy(action: string, params: Record<string, unknown> = {}) {
   return response.json();
 }
 
-// Get HeyGen token from Proto endpoint
-export async function createHeyGenToken(): Promise<string> {
+// Get HeyGen token - supports custom API key via edge function or falls back to Proto endpoint
+export async function createHeyGenToken(apiKeyName?: string): Promise<string> {
+  // If a custom API key name is specified, use our edge function
+  if (apiKeyName && isSupabase) {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/heygen-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify({ apiKeyName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get HeyGen token');
+    }
+
+    const data = await response.json();
+    console.log(`Got access token using ${apiKeyName}`);
+    return data.token;
+  }
+
+  // Default: use Proto endpoint
   const response = await fetch(PROTO_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
