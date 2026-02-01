@@ -26,16 +26,10 @@ import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher/ProfileSwitcher";
 import { useSettingsStore } from "@/stores/settingsStore";
 
-// Available HeyGen public avatars + Miguel
+// Available HeyGen Interactive Avatars
+// Note: Only avatars specifically enabled for Interactive Streaming in your HeyGen account will work
 const AVAILABLE_AVATARS = [
   { id: '26c21d9041654675aa0c2eb479c7d341', name: 'Miguel' },
-  { id: 'Angela-inblackskirt-20220820', name: 'Angela' },
-  { id: 'Anna_public_3_20240108', name: 'Anna' },
-  { id: 'josh_lite3_20230714', name: 'Josh' },
-  { id: 'Kristin_public_2_20240108', name: 'Kristin' },
-  { id: 'Monica-insuit-20220818', name: 'Monica' },
-  { id: 'Tyler-incasualsuit-20220721', name: 'Tyler' },
-  { id: 'Wayne_20240711', name: 'Wayne' },
 ];
 
 /**
