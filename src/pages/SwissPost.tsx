@@ -30,6 +30,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 // Note: Only avatars specifically enabled for Interactive Streaming in your HeyGen account will work
 const AVAILABLE_AVATARS = [
   { id: '26c21d9041654675aa0c2eb479c7d341', name: 'Miguel' },
+  { id: '26393b8e-e944-4367-98ef-e2bc75c4b792', name: 'Schweizer Post' },
 ];
 
 /**
