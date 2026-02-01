@@ -284,39 +284,7 @@ const SwissPost = () => {
                     isMuted={isMuted}
                   />
                   
-                  {/* Confidential watermark overlay */}
-                  <AnimatePresence>
-                    {showConfidential && (
-                      <motion.div
-                        className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none overflow-hidden"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                      >
-                        <div 
-                          className="absolute inset-0 flex items-center justify-center"
-                          style={{
-                            transform: 'rotate(-35deg) scale(1.5)',
-                          }}
-                        >
-                          <div className="flex flex-col items-center gap-24">
-                            {[...Array(5)].map((_, i) => (
-                              <span 
-                                key={i}
-                                className="text-4xl md:text-5xl font-black tracking-widest uppercase whitespace-nowrap"
-                                style={{ 
-                                  color: 'rgba(227, 6, 19, 0.15)',
-                                  textShadow: '0 0 2px rgba(227, 6, 19, 0.1)',
-                                }}
-                              >
-                                CONFIDENTIAL
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Avatar content area - no watermark here, moved to page level */}
                 </div>
                 
                 {/* Bottom gradient for controls overlay */}
@@ -404,11 +372,11 @@ const SwissPost = () => {
                   )}
                 </AnimatePresence>
 
-                {/* Status indicator inside avatar at top */}
+                {/* Status indicator inside avatar - centered */}
                 <AnimatePresence>
                   {showUI && (
                     <motion.div 
-                      className="absolute top-4 left-1/2 -translate-x-1/2 z-30"
+                      className="absolute top-4 left-0 right-0 z-30 flex justify-center"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -622,7 +590,7 @@ const SwissPost = () => {
       {/* ===== POWERED BY AGENTFORCE - Bottom Left ===== */}
       <div className="absolute bottom-3 left-4 z-10 flex items-center gap-2">
         <span 
-          className="text-sm font-medium"
+          className="text-sm font-medium leading-none"
           style={{ color: 'rgba(60, 60, 60, 0.7)' }}
         >
           Powered by
@@ -630,10 +598,47 @@ const SwissPost = () => {
         <img 
           src={agentforceLogo} 
           alt="Agentforce" 
-          className="h-10 object-contain"
-          style={{ opacity: 0.8 }}
+          className="h-10 object-contain align-middle"
+          style={{ opacity: 0.8, marginTop: '-2px' }}
         />
       </div>
+
+      {/* ===== PAGE-WIDE CONFIDENTIAL WATERMARK ===== */}
+      <AnimatePresence>
+        {showConfidential && (
+          <motion.div
+            className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div 
+              className="absolute inset-0"
+              style={{
+                transform: 'rotate(-35deg)',
+              }}
+            >
+              <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ marginTop: '-50%', marginBottom: '-50%' }}>
+                {[...Array(12)].map((_, row) => (
+                  <div key={row} className="flex items-center gap-16 my-8">
+                    {[...Array(4)].map((_, col) => (
+                      <span 
+                        key={col}
+                        className="text-xl md:text-2xl font-bold tracking-widest uppercase whitespace-nowrap"
+                        style={{ 
+                          color: 'rgba(227, 6, 19, 0.12)',
+                        }}
+                      >
+                        CONFIDENTIAL
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Settings Modal */}
       <SettingsModal 
