@@ -29,12 +29,11 @@ import { useSettingsStore } from "@/stores/settingsStore";
 // Available HeyGen Interactive Avatars
 // Note: Only avatars specifically enabled for Interactive Streaming in your HeyGen account will work
 const AVAILABLE_AVATARS = [
-  { id: '26393b8e-e944-4367-98ef-e2bc75c4b792', name: 'Schweizer Post' },
+  { id: '26c21d9041654675aa0c2eb479c7d341', name: 'Miguel' },
 ];
 
-// Swiss Post specific configuration
+// Swiss Post specific Agentforce Agent ID
 const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
-const SWISS_POST_HEYGEN_API_KEY = 'HEYGEN_API_KEY_SWISS_POST';
 
 /**
  * Swiss Post Themed Avatar Page
@@ -91,8 +90,8 @@ const SwissPost = () => {
   const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(handleVoiceTranscript);
 
   const handleStart = () => {
-    // Use Swiss Post specific Agentforce agent ID and HeyGen API key
-    startConversation(videoRef.current, SWISS_POST_AGENT_ID, SWISS_POST_HEYGEN_API_KEY);
+    // Use Swiss Post specific Agentforce agent ID (default HeyGen)
+    startConversation(videoRef.current, SWISS_POST_AGENT_ID);
   };
 
   const handleSendText = (e: React.FormEvent) => {
@@ -107,8 +106,7 @@ const SwissPost = () => {
     if (isConnected && videoRef.current) {
       await endConversation();
       await new Promise(resolve => setTimeout(resolve, 500));
-      // Use Swiss Post specific configuration on reconnect
-      await startConversation(videoRef.current, SWISS_POST_AGENT_ID, SWISS_POST_HEYGEN_API_KEY);
+      await startConversation(videoRef.current, SWISS_POST_AGENT_ID);
     }
   }, [isConnected, endConversation, startConversation]);
 
