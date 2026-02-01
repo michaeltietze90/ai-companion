@@ -111,14 +111,49 @@ const SwissPost = () => {
   }, [isConnected, endConversation, startConversation]);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden" style={{ background: '#F5F5F5' }}>
-      {/* Subtle Post horn background */}
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Professional Swiss Post gradient background */}
       <div 
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.04]"
+        className="absolute inset-0 z-0"
+        style={{
+          background: 'linear-gradient(135deg, #FAFAFA 0%, #F5F0E8 30%, #FFF9E8 60%, #FFFDF5 100%)',
+        }}
+      />
+      
+      {/* Subtle geometric pattern overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `
+            linear-gradient(30deg, #FFC722 12%, transparent 12.5%, transparent 87%, #FFC722 87.5%, #FFC722),
+            linear-gradient(150deg, #FFC722 12%, transparent 12.5%, transparent 87%, #FFC722 87.5%, #FFC722),
+            linear-gradient(30deg, #FFC722 12%, transparent 12.5%, transparent 87%, #FFC722 87.5%, #FFC722),
+            linear-gradient(150deg, #FFC722 12%, transparent 12.5%, transparent 87%, #FFC722 87.5%, #FFC722),
+            linear-gradient(60deg, #E3061333 25%, transparent 25.5%, transparent 75%, #E3061333 75%, #E3061333),
+            linear-gradient(60deg, #E3061333 25%, transparent 25.5%, transparent 75%, #E3061333 75%, #E3061333)
+          `,
+          backgroundSize: '80px 140px',
+          backgroundPosition: '0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px',
+        }}
+      />
+      
+      {/* Large ambient glow effects */}
+      <div 
+        className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[150px] z-0"
+        style={{ background: 'rgba(255, 199, 34, 0.15)' }}
+      />
+      <div 
+        className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] z-0"
+        style={{ background: 'rgba(227, 6, 19, 0.06)' }}
+      />
+      
+      {/* Subtle Post horn watermark */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.02]"
         style={{
           backgroundImage: `url(${postHorn})`,
-          backgroundSize: '80%',
-          backgroundPosition: 'center right',
+          backgroundSize: '40%',
+          backgroundPosition: 'bottom right',
           backgroundRepeat: 'no-repeat',
         }}
       />
