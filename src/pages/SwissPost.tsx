@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import diePostLogo from "@/assets/die-post-logo.png";
 import salesforceLogo from "@/assets/salesforce-logo.png";
@@ -6,7 +6,7 @@ import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
-import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Eye, EyeOff } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -22,12 +22,14 @@ const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
 /**
  * Swiss Post Themed Avatar Page
  * Clean, professional design with Post.ch branding
+ * Auto-starts session on page load
  */
 const SwissPost = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showUI, setShowUI] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const {
@@ -61,9 +63,27 @@ const SwissPost = () => {
 
   const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(handleVoiceTranscript);
 
-  const handleStart = () => {
-    startConversation(videoRef.current, SWISS_POST_AGENT_ID);
-  };
+  // Auto-start session on page load
+  useEffect(() => {
+    if (!hasAutoStarted && !isConnected && !isConnecting && videoRef.current) {
+      console.log('[SwissPost] Auto-starting session...');
+      setHasAutoStarted(true);
+      // Small delay to ensure video element is ready
+      const timer = setTimeout(() => {
+        startConversation(videoRef.current, SWISS_POST_AGENT_ID);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasAutoStarted, isConnected, isConnecting, startConversation]);
+
+  const handleRestart = useCallback(() => {
+    if (videoRef.current) {
+      endConversation();
+      setTimeout(() => {
+        startConversation(videoRef.current, SWISS_POST_AGENT_ID);
+      }, 500);
+    }
+  }, [endConversation, startConversation]);
 
   const handleSendText = (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,59 +209,75 @@ const SwissPost = () => {
         </div>
       </header>
 
-      {/* ===== MAIN CONTENT - Modern minimal avatar display ===== */}
-      <main className="relative z-10 h-screen pt-16 pb-32 flex items-center justify-center">
+      {/* ===== MAIN CONTENT - Modern avatar display ===== */}
+      <main className="relative z-10 h-screen pt-16 pb-28 flex items-center justify-center">
         <div 
-          className="relative w-full h-full max-w-2xl mx-auto flex items-center justify-center"
-          style={{ maxHeight: 'calc(100vh - 12rem)' }}
+          className="relative w-full h-full max-w-3xl mx-auto flex items-center justify-center px-4"
+          style={{ maxHeight: 'calc(100vh - 10rem)' }}
         >
-          {/* Modern floating avatar container */}
+          {/* Avatar container with Post-themed frame */}
           <div 
             className="relative h-full"
             style={{ aspectRatio: '9/16' }}
           >
             {/* Soft ambient shadow */}
             <div 
-              className="absolute inset-0 rounded-[32px] blur-3xl opacity-20 -z-10"
+              className="absolute inset-0 rounded-[28px] blur-3xl opacity-25 -z-10"
               style={{ 
-                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.4) 0%, rgba(0, 0, 0, 0.1) 100%)',
-                transform: 'translateY(20px) scale(0.95)',
+                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.5) 0%, rgba(0, 0, 0, 0.15) 100%)',
+                transform: 'translateY(24px) scale(0.92)',
               }}
             />
             
-            {/* Main avatar container - clean, modern, minimal */}
+            {/* Outer frame - subtle Post yellow accent */}
             <div 
-              className="relative w-full h-full rounded-[32px] overflow-hidden"
+              className="relative w-full h-full rounded-[28px] p-[3px]"
               style={{
-                background: 'linear-gradient(180deg, #0D0D0F 0%, #1a1a1f 50%, #0D0D0F 100%)',
-                boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.6) 0%, rgba(255, 199, 34, 0.2) 30%, rgba(60, 60, 60, 0.3) 100%)',
               }}
             >
-              {/* Subtle inner glow at top */}
+              {/* Inner container */}
               <div 
-                className="absolute top-0 left-0 right-0 h-32 pointer-events-none z-10"
+                className="relative w-full h-full rounded-[26px] overflow-hidden"
                 style={{
-                  background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.08) 0%, transparent 100%)',
+                  background: 'linear-gradient(180deg, #111113 0%, #0a0a0c 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
                 }}
-              />
-              
-              {/* Avatar content */}
-              <div className="relative w-full h-full">
-                <HologramAvatar 
-                  isConnected={isConnected} 
-                  isSpeaking={isSpeaking}
-                  videoRef={videoRef}
-                  isMuted={isMuted}
+              >
+                {/* Top accent bar - subtle Post branding */}
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1 z-20"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent 10%, #FFC722 50%, transparent 90%)',
+                  }}
+                />
+                
+                {/* Subtle inner glow at top */}
+                <div 
+                  className="absolute top-0 left-0 right-0 h-40 pointer-events-none z-10"
+                  style={{
+                    background: 'radial-gradient(ellipse at top center, rgba(255, 199, 34, 0.06) 0%, transparent 70%)',
+                  }}
+                />
+                
+                {/* Avatar content */}
+                <div className="relative w-full h-full">
+                  <HologramAvatar 
+                    isConnected={isConnected} 
+                    isSpeaking={isSpeaking}
+                    videoRef={videoRef}
+                    isMuted={isMuted}
+                  />
+                </div>
+                
+                {/* Bottom subtle gradient */}
+                <div 
+                  className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none z-10"
+                  style={{
+                    background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, transparent 100%)',
+                  }}
                 />
               </div>
-              
-              {/* Bottom subtle gradient */}
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none z-10"
-                style={{
-                  background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0%, transparent 100%)',
-                }}
-              />
             </div>
           </div>
         </div>
@@ -430,26 +466,21 @@ const SwissPost = () => {
         </AnimatePresence>
 
         <div className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4">
-          {!isConnected ? (
+          {!isConnected && !isConnecting ? (
             <Button
               size="lg"
               className="px-10 py-6 font-bold shadow-xl rounded-xl text-black text-lg hover:brightness-105"
               style={{ background: 'linear-gradient(135deg, #FFC722 0%, #E5B31F 100%)' }}
-              onClick={handleStart}
-              disabled={isConnecting}
+              onClick={handleRestart}
             >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Verbinden...
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5 mr-2" />
-                  Gespräch starten
-                </>
-              )}
+              <RefreshCw className="w-5 h-5 mr-2" />
+              Neu verbinden
             </Button>
+          ) : isConnecting ? (
+            <div className="flex items-center gap-2 px-6 py-3 rounded-xl" style={{ background: 'rgba(255, 199, 34, 0.2)' }}>
+              <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#B8860B' }} />
+              <span className="font-semibold" style={{ color: '#8B6914' }}>Verbinden...</span>
+            </div>
           ) : (
             <>
               {/* Mic button */}
