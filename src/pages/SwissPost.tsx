@@ -284,29 +284,26 @@ const SwissPost = () => {
                     isMuted={isMuted}
                   />
                   
-                  {/* Confidential watermark overlay - extends beyond box */}
+                  {/* Confidential watermark overlay */}
                   <AnimatePresence>
                     {showConfidential && (
                       <motion.div
-                        className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none"
-                        style={{ overflow: 'visible' }}
+                        className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none overflow-hidden"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                       >
                         <div 
-                          className="absolute flex items-center justify-center"
+                          className="absolute inset-0 flex items-center justify-center"
                           style={{
-                            transform: 'rotate(-35deg)',
-                            width: '200%',
-                            height: '200%',
+                            transform: 'rotate(-35deg) scale(1.5)',
                           }}
                         >
-                          <div className="flex flex-col items-center gap-8 md:gap-12">
-                            {[...Array(8)].map((_, i) => (
+                          <div className="flex flex-col items-center gap-16 md:gap-24">
+                            {[...Array(5)].map((_, i) => (
                               <span 
                                 key={i}
-                                className="text-lg md:text-2xl font-bold tracking-widest uppercase whitespace-nowrap"
+                                className="text-3xl md:text-5xl font-black tracking-widest uppercase whitespace-nowrap"
                                 style={{ 
                                   color: 'rgba(227, 6, 19, 0.15)',
                                   textShadow: '0 0 2px rgba(227, 6, 19, 0.1)',
