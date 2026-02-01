@@ -2,12 +2,13 @@ import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DeliveryBoxDevice from "@/components/PostVan/DeliveryBoxDevice";
 import diePostLogo from "@/assets/die-post-logo.png";
+import salesforceLogo from "@/assets/salesforce-logo.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -26,7 +27,7 @@ const SWISS_POST_AGENT_ID = '0XxKZ000000yfDv0AI';
  */
 const SwissPost = () => {
   const [isMuted, setIsMuted] = useState(false);
-  const [showPanels, setShowPanels] = useState(false);
+  const [showUI, setShowUI] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -85,17 +86,17 @@ const SwissPost = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Professional Swiss Post gradient background */}
+      {/* Background with smooth gradient from yellow */}
       <div 
         className="absolute inset-0 z-0"
         style={{
-          background: 'linear-gradient(180deg, #FFC722 0%, #FFD54F 8%, #FFFDF5 20%, #F8F6F0 100%)',
+          background: 'linear-gradient(180deg, #FFC722 0%, #FFD54F 5%, #FFE57F 10%, #FFF3B8 18%, #FFFBEB 28%, #FFFDF5 40%, #F8F6F0 100%)',
         }}
       />
       
       {/* Subtle pattern overlay */}
       <div 
-        className="absolute inset-0 z-0 opacity-[0.02]"
+        className="absolute inset-0 z-0 opacity-[0.015]"
         style={{
           backgroundImage: 'radial-gradient(circle at 2px 2px, #000 1px, transparent 0)',
           backgroundSize: '32px 32px',
@@ -104,56 +105,77 @@ const SwissPost = () => {
 
       {/* ===== HEADER ===== */}
       <header className="absolute top-0 left-0 right-0 z-30">
-        {/* Yellow banner bar */}
-        <div 
-          className="w-full py-3 px-4 md:px-6 flex items-center justify-between"
-          style={{ background: '#FFC722' }}
-        >
-          {/* Die Post Logo */}
-          <img 
-            src={diePostLogo} 
-            alt="Die Post" 
-            className="h-8 md:h-10 object-contain"
-          />
+        <div className="w-full py-3 px-4 md:px-6 flex items-center justify-between">
+          {/* Logos */}
+          <div className="flex items-center gap-3 md:gap-4">
+            <img 
+              src={diePostLogo} 
+              alt="Die Post" 
+              className="h-8 md:h-10 object-contain"
+            />
+            <div className="w-px h-6 bg-black/20" />
+            <img 
+              src={salesforceLogo} 
+              alt="Salesforce" 
+              className="h-5 md:h-6 object-contain"
+            />
+          </div>
           
           {/* Right side controls */}
           <div className="flex items-center gap-2">
             {/* Demo Mode Toggle */}
-            <div 
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
-              style={{ background: 'rgba(0, 0, 0, 0.1)' }}
-            >
-              <Switch
-                id="demo-mode"
-                checked={demoMode}
-                onCheckedChange={setDemoMode}
-                disabled={isConnected}
-              />
-              <Label htmlFor="demo-mode" className="text-sm font-medium text-black">Demo</Label>
-            </div>
+            <AnimatePresence>
+              {showUI && (
+                <motion.div 
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
+                  style={{ background: 'rgba(0, 0, 0, 0.1)' }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                >
+                  <Switch
+                    id="demo-mode"
+                    checked={demoMode}
+                    onCheckedChange={setDemoMode}
+                    disabled={isConnected}
+                  />
+                  <Label htmlFor="demo-mode" className="text-sm font-medium text-black">Demo</Label>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {/* Settings button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hover:bg-black/10 text-black"
-              onClick={() => setShowSettings(true)}
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
+            <AnimatePresence>
+              {showUI && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-black/10 text-black"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
-            {/* Toggle panels button */}
+            {/* Toggle UI button */}
             <Button
               variant="ghost"
               size="icon"
               className="hover:bg-black/10 text-black"
-              onClick={() => setShowPanels(!showPanels)}
-              title={showPanels ? "Hide panels" : "Show panels"}
+              onClick={() => setShowUI(!showUI)}
+              title={showUI ? "Hide UI" : "Show UI"}
             >
-              {showPanels ? (
-                <PanelRightClose className="w-5 h-5" />
+              {showUI ? (
+                <EyeOff className="w-5 h-5" />
               ) : (
-                <PanelRightOpen className="w-5 h-5" />
+                <Eye className="w-5 h-5" />
               )}
             </Button>
           </div>
@@ -184,35 +206,42 @@ const SwissPost = () => {
         <VisualOverlay visuals={activeVisuals} />
       </div>
 
-      {/* Status indicator */}
-      <div className="absolute top-20 md:top-24 left-1/2 -translate-x-1/2 z-20">
-        <motion.div
-          className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border"
-          style={{ 
-            background: 'rgba(255, 255, 255, 0.95)',
-            borderColor: 'rgba(255, 199, 34, 0.4)',
-          }}
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div 
-            className="w-2.5 h-2.5 rounded-full animate-pulse"
-            style={{ 
-              background: isConnected ? '#00A650' : isConnecting ? '#FFC722' : '#E30613'
-            }}
-          />
-          <span className="text-sm font-medium" style={{ color: '#333333' }}>
-            {isConnecting ? 'Verbinden...' : isConnected ? (demoMode ? 'Demo Modus' : 'Verbunden') : 'Bereit'}
-          </span>
-          {isConnected && !demoMode && sessionId && (
-            <span className="text-xs" style={{ color: '#999999' }}>• {String(sessionId).slice(0, 8)}</span>
-          )}
-        </motion.div>
-      </div>
+      {/* Status indicator - hidden when UI is off */}
+      <AnimatePresence>
+        {showUI && (
+          <motion.div 
+            className="absolute top-20 md:top-24 left-1/2 -translate-x-1/2 z-20"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.95)',
+                borderColor: 'rgba(255, 199, 34, 0.4)',
+              }}
+            >
+              <div 
+                className="w-2.5 h-2.5 rounded-full animate-pulse"
+                style={{ 
+                  background: isConnected ? '#00A650' : isConnecting ? '#FFC722' : '#E30613'
+                }}
+              />
+              <span className="text-sm font-medium" style={{ color: '#333333' }}>
+                {isConnecting ? 'Verbinden...' : isConnected ? (demoMode ? 'Demo Modus' : 'Verbunden') : 'Bereit'}
+              </span>
+              {isConnected && !demoMode && sessionId && (
+                <span className="text-xs" style={{ color: '#999999' }}>• {String(sessionId).slice(0, 8)}</span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Thinking indicator */}
       <AnimatePresence>
-        {isThinking && (
+        {isThinking && showUI && (
           <motion.div
             className="absolute top-32 md:top-36 left-1/2 -translate-x-1/2 z-20"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -232,7 +261,7 @@ const SwissPost = () => {
 
       {/* Error display */}
       <AnimatePresence>
-        {error && (
+        {error && showUI && (
           <motion.div
             className="absolute top-32 md:top-36 left-1/2 -translate-x-1/2 z-20"
             initial={{ opacity: 0, y: -10 }}
@@ -246,9 +275,9 @@ const SwissPost = () => {
         )}
       </AnimatePresence>
 
-      {/* ===== SIDE PANELS (toggled) ===== */}
+      {/* ===== SIDE PANELS (toggled with showUI) ===== */}
       <AnimatePresence>
-        {showPanels && isConnected && !demoMode && (
+        {showUI && isConnected && !demoMode && (
           <motion.div
             className="absolute top-20 md:top-24 right-4 bottom-28 w-72 z-25 flex flex-col gap-2 overflow-hidden"
             initial={{ opacity: 0, x: 50 }}
@@ -318,33 +347,41 @@ const SwissPost = () => {
 
       {/* ===== FOOTER CONTROLS ===== */}
       <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6 pb-12 md:pb-14">
-        {/* Text input */}
-        {isConnected && (
-          <form onSubmit={handleSendText} className="max-w-lg mx-auto mb-4 px-2 md:px-0">
-            <div className="flex gap-2">
-              <Input
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Stellen Sie mir eine Frage..."
-                className="rounded-xl text-sm border shadow-md"
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.98)',
-                  borderColor: 'rgba(255, 199, 34, 0.4)',
-                  color: '#333333',
-                }}
-                disabled={isThinking}
-              />
-              <Button 
-                type="submit" 
-                disabled={isThinking || !textInput.trim()}
-                className="rounded-xl px-6 text-black font-semibold shadow-md hover:brightness-105"
-                style={{ background: '#FFC722' }}
-              >
-                Senden
-              </Button>
-            </div>
-          </form>
-        )}
+        {/* Text input - hidden when UI is off */}
+        <AnimatePresence>
+          {isConnected && showUI && (
+            <motion.form 
+              onSubmit={handleSendText} 
+              className="max-w-lg mx-auto mb-4 px-2 md:px-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <div className="flex gap-2">
+                <Input
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="Stellen Sie mir eine Frage..."
+                  className="rounded-xl text-sm border shadow-md"
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    borderColor: 'rgba(255, 199, 34, 0.4)',
+                    color: '#333333',
+                  }}
+                  disabled={isThinking}
+                />
+                <Button 
+                  type="submit" 
+                  disabled={isThinking || !textInput.trim()}
+                  className="rounded-xl px-6 text-black font-semibold shadow-md hover:brightness-105"
+                  style={{ background: '#FFC722' }}
+                >
+                  Senden
+                </Button>
+              </div>
+            </motion.form>
+          )}
+        </AnimatePresence>
 
         <motion.div
           className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4"
@@ -449,8 +486,8 @@ const SwissPost = () => {
         </AnimatePresence>
       </footer>
 
-      {/* ===== POWERED BY AGENTFORCE ===== */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10">
+      {/* ===== POWERED BY AGENTFORCE - Bottom Left ===== */}
+      <div className="absolute bottom-3 left-4 z-10">
         <span 
           className="text-sm font-medium tracking-wide"
           style={{ color: 'rgba(60, 60, 60, 0.6)' }}
