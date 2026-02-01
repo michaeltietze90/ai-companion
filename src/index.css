@@ -46,13 +46,14 @@
     --agentforce-navy: 220 50% 12%;
     --agentforce-slate: 220 30% 18%;
     
-    /* Swiss Post colors */
-    --post-yellow: 45 100% 50%;
-    --post-yellow-dark: 42 100% 45%;
-    --post-red: 0 85% 50%;
-    --post-dark: 220 15% 20%;
-    --post-gray: 220 10% 35%;
-    --post-background: 200 50% 85%;
+    /* Swiss Post colors - authentic from brand guidelines */
+    --post-yellow: 45 100% 57%; /* #FFC722 */
+    --post-yellow-dark: 43 100% 51%;
+    --post-red: 356 93% 45%; /* #E30613 */
+    --post-dark: 0 0% 0%;
+    --post-gray: 0 0% 20%;
+    --post-background: 0 0% 96%; /* #F5F5F5 */
+    --post-green: 153 100% 32%; /* #00A650 */
     
     /* Status/indicator colors */
     --warning: 38 92% 50%;
