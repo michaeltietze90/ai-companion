@@ -59,11 +59,17 @@ const SwissPost = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
+  const updateProfile = useSettingsStore((state) => state.updateProfile);
 
-  // Auto-mute video when using ElevenLabs TTS to prevent dual audio
-  const activeProfile = getActiveProfile();
-  const isUsingElevenLabsTTS = activeProfile?.ttsProvider === 'elevenlabs';
-  const effectiveMuted = isMuted || isUsingElevenLabsTTS;
+  // Force HeyGen TTS on Swiss Post page to prevent dual audio issues
+  // ElevenLabs TTS + HeyGen lip-sync causes two voices playing simultaneously
+  useEffect(() => {
+    const profile = getActiveProfile();
+    if (profile && profile.ttsProvider !== 'heygen') {
+      console.log('[SwissPost] Forcing TTS provider to HeyGen for lip-sync');
+      updateProfile(profile.id, { ttsProvider: 'heygen' });
+    }
+  }, [getActiveProfile, updateProfile]);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[SwissPost] Voice transcript:', transcript);
@@ -288,7 +294,7 @@ const SwissPost = () => {
                     isConnected={isConnected} 
                     isSpeaking={isSpeaking}
                     videoRef={videoRef}
-                    isMuted={effectiveMuted}
+                    isMuted={isMuted}
                   />
                   
                   {/* Confidential watermark overlay */}
