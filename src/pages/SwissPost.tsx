@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DeliveryBoxDevice from "@/components/PostVan/DeliveryBoxDevice";
+import postHorn from "@/assets/post-horn.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
@@ -82,6 +83,16 @@ const SwissPost = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden" style={{ background: '#F5F5F5' }}>
+      {/* Subtle Post horn background */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.04]"
+        style={{
+          backgroundImage: `url(${postHorn})`,
+          backgroundSize: '80%',
+          backgroundPosition: 'center right',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />
 
