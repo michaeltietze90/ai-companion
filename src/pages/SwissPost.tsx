@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import diePostLogo from "@/assets/die-post-logo.png";
 import salesforceLogo from "@/assets/salesforce-logo.png";
+import agentforceLogo from "@/assets/agentforce-logo.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
@@ -210,10 +211,10 @@ const SwissPost = () => {
       </header>
 
       {/* ===== MAIN CONTENT - Modern avatar display ===== */}
-      <main className="relative z-10 h-screen pt-16 pb-28 flex items-center justify-center">
+      <main className="relative z-10 h-screen pt-24 pb-20 flex items-center justify-center">
         <div 
           className="relative w-full h-full max-w-3xl mx-auto flex items-center justify-center px-4"
-          style={{ maxHeight: 'calc(100vh - 10rem)' }}
+          style={{ maxHeight: 'calc(100vh - 8rem)' }}
         >
           {/* Avatar container with Post-themed frame */}
           <div 
@@ -222,41 +223,42 @@ const SwissPost = () => {
           >
             {/* Soft ambient shadow */}
             <div 
-              className="absolute inset-0 rounded-[28px] blur-3xl opacity-25 -z-10"
+              className="absolute inset-0 rounded-[32px] blur-3xl opacity-30 -z-10"
               style={{ 
-                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.5) 0%, rgba(0, 0, 0, 0.15) 100%)',
-                transform: 'translateY(24px) scale(0.92)',
+                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.6) 0%, rgba(0, 0, 0, 0.2) 100%)',
+                transform: 'translateY(30px) scale(0.9)',
               }}
             />
             
-            {/* Outer frame - subtle Post yellow accent */}
+            {/* Outer frame - more prominent Post yellow */}
             <div 
-              className="relative w-full h-full rounded-[28px] p-[3px]"
+              className="relative w-full h-full rounded-[32px] p-[4px]"
               style={{
-                background: 'linear-gradient(180deg, rgba(255, 199, 34, 0.6) 0%, rgba(255, 199, 34, 0.2) 30%, rgba(60, 60, 60, 0.3) 100%)',
+                background: 'linear-gradient(180deg, #FFC722 0%, rgba(255, 199, 34, 0.7) 40%, rgba(255, 199, 34, 0.3) 70%, rgba(40, 40, 40, 0.5) 100%)',
+                boxShadow: '0 0 40px rgba(255, 199, 34, 0.2)',
               }}
             >
               {/* Inner container */}
               <div 
-                className="relative w-full h-full rounded-[26px] overflow-hidden"
+                className="relative w-full h-full rounded-[30px] overflow-hidden"
                 style={{
-                  background: 'linear-gradient(180deg, #111113 0%, #0a0a0c 100%)',
-                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                  background: 'linear-gradient(180deg, #0f0f11 0%, #0a0a0c 100%)',
+                  boxShadow: 'inset 0 2px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.5)',
                 }}
               >
-                {/* Top accent bar - subtle Post branding */}
+                {/* Top accent bar - Post branding */}
                 <div 
-                  className="absolute top-0 left-0 right-0 h-1 z-20"
+                  className="absolute top-0 left-0 right-0 h-1.5 z-20"
                   style={{
-                    background: 'linear-gradient(90deg, transparent 10%, #FFC722 50%, transparent 90%)',
+                    background: 'linear-gradient(90deg, transparent 5%, #FFC722 30%, #FFC722 70%, transparent 95%)',
                   }}
                 />
                 
                 {/* Subtle inner glow at top */}
                 <div 
-                  className="absolute top-0 left-0 right-0 h-40 pointer-events-none z-10"
+                  className="absolute top-0 left-0 right-0 h-48 pointer-events-none z-10"
                   style={{
-                    background: 'radial-gradient(ellipse at top center, rgba(255, 199, 34, 0.06) 0%, transparent 70%)',
+                    background: 'radial-gradient(ellipse at top center, rgba(255, 199, 34, 0.08) 0%, transparent 60%)',
                   }}
                 />
                 
@@ -270,13 +272,120 @@ const SwissPost = () => {
                   />
                 </div>
                 
-                {/* Bottom subtle gradient */}
+                {/* Bottom gradient for controls overlay */}
                 <div 
-                  className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none z-10"
+                  className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none z-10"
                   style={{
-                    background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, transparent 100%)',
+                    background: 'linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%)',
                   }}
                 />
+
+                {/* ===== CONTROL BUTTONS OVERLAY (inside avatar, lower 20%) ===== */}
+                {isConnected && (
+                  <div className="absolute bottom-6 left-0 right-0 z-30 flex items-center justify-center gap-4">
+                    {/* Mic button */}
+                    <Button
+                      size="lg"
+                      className="w-14 h-14 rounded-full transition-all duration-300 shadow-xl"
+                      style={{ 
+                        background: isListening ? '#FFC722' : 'rgba(28, 28, 30, 0.9)',
+                        color: isListening ? '#000000' : '#FFFFFF',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                      onClick={toggleListening}
+                      disabled={sttConnecting || isThinking}
+                    >
+                      {sttConnecting ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : isListening ? (
+                        <Mic className="w-6 h-6" />
+                      ) : (
+                        <MicOff className="w-6 h-6" />
+                      )}
+                    </Button>
+
+                    {/* Mute button */}
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      className="w-12 h-12 rounded-full shadow-lg"
+                      style={{ background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)' }}
+                      onClick={() => setIsMuted(!isMuted)}
+                    >
+                      {isMuted ? (
+                        <VolumeX className="w-5 h-5 text-white" />
+                      ) : (
+                        <Volume2 className="w-5 h-5 text-white" />
+                      )}
+                    </Button>
+
+                    {/* End button */}
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      className="w-12 h-12 rounded-full shadow-lg"
+                      style={{ background: 'rgba(227, 6, 19, 0.3)', backdropFilter: 'blur(8px)' }}
+                      onClick={endConversation}
+                    >
+                      <X className="w-5 h-5 text-white" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Listening indicator inside avatar */}
+                <AnimatePresence>
+                  {isListening && (
+                    <motion.div
+                      className="absolute bottom-24 left-0 right-0 z-30 flex items-center justify-center gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <div className="flex items-center gap-1 px-3 py-1.5 rounded-full" style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(8px)' }}>
+                        {[...Array(3)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="w-1.5 h-4 rounded-full"
+                            style={{ background: '#FFC722' }}
+                            animate={{ scaleY: [0.3, 1, 0.3] }}
+                            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
+                          />
+                        ))}
+                        <span className="text-xs font-medium text-white ml-2">Hört zu...</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Status indicator inside avatar at top */}
+                <AnimatePresence>
+                  {showUI && (
+                    <motion.div 
+                      className="absolute top-4 left-1/2 -translate-x-1/2 z-30"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                    >
+                      <div
+                        className="flex items-center gap-2 px-4 py-2 rounded-full"
+                        style={{ 
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          backdropFilter: 'blur(8px)',
+                        }}
+                      >
+                        <div 
+                          className="w-2 h-2 rounded-full animate-pulse"
+                          style={{ 
+                            background: isConnected ? '#00A650' : isConnecting ? '#FFC722' : '#E30613'
+                          }}
+                        />
+                        <span className="text-sm font-medium text-white">
+                          {isConnecting ? 'Verbinden...' : isConnected ? (demoMode ? 'Demo Modus' : 'Verbunden') : 'Bereit'}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -295,35 +404,7 @@ const SwissPost = () => {
         <VisualOverlay visuals={activeVisuals} />
       </div>
 
-      {/* Status indicator */}
-      <AnimatePresence>
-        {showUI && (
-          <motion.div 
-            className="absolute top-20 md:top-24 left-1/2 -translate-x-1/2 z-20"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border"
-              style={{ 
-                background: 'rgba(255, 255, 255, 0.95)',
-                borderColor: 'rgba(255, 199, 34, 0.4)',
-              }}
-            >
-              <div 
-                className="w-2.5 h-2.5 rounded-full animate-pulse"
-                style={{ 
-                  background: isConnected ? '#00A650' : isConnecting ? '#FFC722' : '#E30613'
-                }}
-              />
-              <span className="text-sm font-medium" style={{ color: '#333333' }}>
-                {isConnecting ? 'Verbinden...' : isConnected ? (demoMode ? 'Demo Modus' : 'Verbunden') : 'Bereit'}
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Old status indicator removed - now inside avatar */}
 
       {/* Thinking indicator */}
       <AnimatePresence>
@@ -427,7 +508,7 @@ const SwissPost = () => {
         )}
       </AnimatePresence>
 
-      {/* ===== FOOTER CONTROLS ===== */}
+      {/* ===== FOOTER - Simplified ===== */}
       <footer className="absolute bottom-8 left-0 right-0 z-20 px-4 md:px-6">
         {/* Text input */}
         <AnimatePresence>
@@ -465,8 +546,9 @@ const SwissPost = () => {
           )}
         </AnimatePresence>
 
-        <div className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4">
-          {!isConnected && !isConnecting ? (
+        {/* Reconnect button only when disconnected */}
+        {!isConnected && !isConnecting && (
+          <div className="max-w-md mx-auto flex items-center justify-center">
             <Button
               size="lg"
               className="px-10 py-6 font-bold shadow-xl rounded-xl text-black text-lg hover:brightness-105"
@@ -476,96 +558,34 @@ const SwissPost = () => {
               <RefreshCw className="w-5 h-5 mr-2" />
               Neu verbinden
             </Button>
-          ) : isConnecting ? (
+          </div>
+        )}
+
+        {/* Connecting indicator */}
+        {isConnecting && (
+          <div className="max-w-md mx-auto flex items-center justify-center">
             <div className="flex items-center gap-2 px-6 py-3 rounded-xl" style={{ background: 'rgba(255, 199, 34, 0.2)' }}>
               <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#B8860B' }} />
               <span className="font-semibold" style={{ color: '#8B6914' }}>Verbinden...</span>
             </div>
-          ) : (
-            <>
-              {/* Mic button */}
-              <Button
-                size="lg"
-                className="w-14 h-14 rounded-full transition-all duration-300 shadow-xl"
-                style={{ 
-                  background: isListening ? '#FFC722' : '#1C1C1E',
-                  color: isListening ? '#000000' : '#FFFFFF',
-                }}
-                onClick={toggleListening}
-                disabled={sttConnecting || isThinking}
-              >
-                {sttConnecting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : isListening ? (
-                  <Mic className="w-6 h-6" />
-                ) : (
-                  <MicOff className="w-6 h-6" />
-                )}
-              </Button>
-
-              {/* Mute button */}
-              <Button
-                size="lg"
-                variant="ghost"
-                className="w-12 h-12 rounded-full shadow-lg"
-                style={{ background: 'rgba(255, 255, 255, 0.9)' }}
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted ? (
-                  <VolumeX className="w-5 h-5" style={{ color: '#666666' }} />
-                ) : (
-                  <Volume2 className="w-5 h-5" style={{ color: '#666666' }} />
-                )}
-              </Button>
-
-              {/* End button */}
-              <Button
-                size="lg"
-                variant="ghost"
-                className="w-12 h-12 rounded-full shadow-lg"
-                style={{ background: 'rgba(227, 6, 19, 0.15)' }}
-                onClick={endConversation}
-              >
-                <X className="w-5 h-5" style={{ color: '#E30613' }} />
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Listening indicator */}
-        <AnimatePresence>
-          {isListening && (
-            <motion.div
-              className="mt-4 flex items-center justify-center gap-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="flex items-center gap-1">
-                {[...Array(3)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1.5 h-5 rounded-full"
-                    style={{ background: '#FFC722' }}
-                    animate={{ scaleY: [0.3, 1, 0.3] }}
-                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
-                  />
-                ))}
-              </div>
-              <span className="text-sm font-medium" style={{ color: '#8B6914' }}>Hört zu...</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </div>
+        )}
       </footer>
 
       {/* ===== POWERED BY AGENTFORCE - Bottom Left ===== */}
-      <div className="absolute bottom-3 left-4 z-10">
+      <div className="absolute bottom-3 left-4 z-10 flex items-center gap-2">
         <span 
-          className="text-sm font-medium tracking-wide"
-          style={{ color: 'rgba(60, 60, 60, 0.6)' }}
+          className="text-sm font-medium"
+          style={{ color: 'rgba(60, 60, 60, 0.7)' }}
         >
-          Powered by Agentforce
+          Powered by
         </span>
+        <img 
+          src={agentforceLogo} 
+          alt="Agentforce" 
+          className="h-5 object-contain"
+          style={{ opacity: 0.8 }}
+        />
       </div>
 
       {/* Settings Modal */}
