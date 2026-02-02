@@ -13,7 +13,7 @@ interface ActiveVisual extends VisualCommand {
 }
 
 export function AvatarOverlay() {
-  const { activeVisuals: storeVisuals } = useVisualOverlayStore();
+  const { activeVisuals: storeVisuals, markVisualComplete } = useVisualOverlayStore();
   const [localVisuals, setLocalVisuals] = useState<ActiveVisual[]>([]);
   const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
 
@@ -34,7 +34,7 @@ export function AvatarOverlay() {
       // Skip if already processed
       if (processedIds.has(visual.id)) return;
       
-      // Mark as processed
+      // Mark as processed immediately
       setProcessedIds(prev => new Set([...prev, visual.id]));
       
       // Add to local visuals
@@ -49,9 +49,10 @@ export function AvatarOverlay() {
           prev.map(v => v.id === visual.id ? { ...v, isVisible: false } : v)
         );
         
-        // Remove after fade out
+        // Remove after fade out and mark complete in store
         setTimeout(() => {
           setLocalVisuals(prev => prev.filter(v => v.id !== visual.id));
+          markVisualComplete(visual.id);
           // Clean up processed ID after removal
           setProcessedIds(prev => {
             const next = new Set(prev);
@@ -61,7 +62,7 @@ export function AvatarOverlay() {
         }, 200);
       }, visual.duration);
     });
-  }, [avatarVisualIds, processedIds]);
+  }, [avatarVisualIds, processedIds, markVisualComplete]);
 
   if (localVisuals.length === 0) return null;
 
