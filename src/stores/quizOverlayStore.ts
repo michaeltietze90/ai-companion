@@ -38,6 +38,7 @@ interface QuizOverlayState {
   hideOverlay: () => void;
   submitEntry: (firstName: string, lastName: string, country: string) => void;
   setLeaderboard: (entries: LeaderboardEntry[]) => void;
+  setUserRankData: (rank: number, entry: LeaderboardEntry) => void;
   setPrefillData: (data: PrefillData) => void;
   setScore: (score: number) => void;
   resetQuiz: () => void;
@@ -108,6 +109,10 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
 
   setLeaderboard: (entries) => {
     set({ leaderboard: entries.slice(0, 5) });
+  },
+
+  setUserRankData: (rank, entry) => {
+    set({ userRank: rank, userEntry: entry });
   },
 
   setPrefillData: (data) => {

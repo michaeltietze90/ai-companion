@@ -73,7 +73,8 @@ function LeaderboardRow({
 export function LeaderboardOverlay() {
   const { leaderboard, userEntry, userRank, resetQuiz } = useQuizOverlayStore();
   
-  const isInTop5 = userRank !== null && userRank <= 5;
+  // Show user separately only if they're ranked 7th or lower (not in top 5 or 6)
+  const showUserSeparately = userRank !== null && userRank > 6;
 
   const handleClose = () => {
     resetQuiz();
@@ -131,8 +132,8 @@ export function LeaderboardOverlay() {
                   />
                 ))}
 
-                {/* User's rank if outside top 5 */}
-                {userEntry && !isInTop5 && userRank && (
+                {/* User's rank if outside top 6 */}
+                {userEntry && showUserSeparately && userRank && (
                   <>
                     <motion.div
                       className="flex items-center justify-center py-2"
