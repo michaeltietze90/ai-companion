@@ -32,7 +32,8 @@ export type VisualPosition =
   | 'topleft' 
   | 'topright' 
   | 'bottomleft' 
-  | 'bottomright';
+  | 'bottomright'
+  | 'avatar'; // Special: seamlessly overlays on the avatar
 
 export interface VisualCommand {
   id: string;
