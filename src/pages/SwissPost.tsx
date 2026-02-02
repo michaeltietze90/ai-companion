@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
-import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
+import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { useSettingsStore } from "@/stores/settingsStore";
 
@@ -80,7 +80,7 @@ const SwissPost = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(
+  const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
     handleVoiceTranscript,
     {
       // Prevent the avatar's voice from being picked up and re-sent while it speaks.

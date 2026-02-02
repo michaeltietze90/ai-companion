@@ -15,6 +15,7 @@ Set these in Heroku Dashboard → Settings → Config Vars:
 ```
 HEYGEN_API_KEY=<your-heygen-api-key>
 ELEVENLABS_API_KEY=<your-elevenlabs-api-key>
+DEEPGRAM_API_KEY=<your-deepgram-api-key>
 AGENTFORCE_INSTANCE_URL=<your-salesforce-instance-url>
 AGENTFORCE_API_KEY=<your-agentforce-api-key>
 AGENTFORCE_AGENT_ID=<your-agent-id>
@@ -84,7 +85,8 @@ The Express server handles these API endpoints:
 - `POST /api/heygen-token` - HeyGen streaming token
 - `POST /api/heygen-proxy` - HeyGen API proxy
 - `POST /api/elevenlabs-tts` - ElevenLabs text-to-speech
-- `POST /api/elevenlabs-scribe-token` - ElevenLabs Scribe token
+- `POST /api/elevenlabs-scribe-token` - ElevenLabs Scribe token (legacy)
+- `POST /api/deepgram-token` - Deepgram Nova STT token (default)
 - `POST /api/agentforce-session` - Agentforce session creation
 - `POST /api/agentforce-message` - Agentforce message handling
 

@@ -7,7 +7,7 @@ import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAvatarConversation } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
-import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
+import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 
 /**
  * Proto M Fullscreen Page
@@ -34,8 +34,8 @@ const ProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Use the actual ElevenLabs STT hook for mic control
-  const { isListening, toggleListening, startListening, stopListening } = useElevenLabsSTT(
+  // Use Deepgram Nova STT hook for mic control
+  const { isListening, toggleListening, startListening, stopListening } = useDeepgramSTT(
     handleVoiceTranscript,
     {
       disabled: isSpeaking,
