@@ -69,7 +69,27 @@ const Index = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { showNameEntry, showLeaderboard } = useQuizOverlayStore();
+  const { showNameEntry, showLeaderboard, setLeaderboard, setUserRankData } = useQuizOverlayStore();
+  
+  // Test leaderboard with user at rank 20
+  const handleTestLeaderboard = useCallback(() => {
+    setLeaderboard([
+      { id: '1', firstName: 'Sarah', lastName: 'Chen', country: 'Singapore', score: 980, timestamp: Date.now() },
+      { id: '2', firstName: 'Marcus', lastName: 'Johnson', country: 'USA', score: 945, timestamp: Date.now() },
+      { id: '3', firstName: 'Yuki', lastName: 'Tanaka', country: 'Japan', score: 920, timestamp: Date.now() },
+      { id: '4', firstName: 'Emma', lastName: 'Wilson', country: 'UK', score: 890, timestamp: Date.now() },
+      { id: '5', firstName: 'Carlos', lastName: 'Rodriguez', country: 'Spain', score: 875, timestamp: Date.now() },
+    ]);
+    setUserRankData(20, {
+      id: 'user-test',
+      firstName: 'Michael',
+      lastName: 'Tietze',
+      country: 'Switzerland',
+      score: 650,
+      timestamp: Date.now(),
+    });
+    showLeaderboard();
+  }, [setLeaderboard, setUserRankData, showLeaderboard]);
   
   // Settings store for emotion and voice
   const { updateProfile, activeProfileId } = useSettingsStore();
@@ -235,7 +255,7 @@ const Index = () => {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-foreground text-xs"
-              onClick={() => showLeaderboard()}
+              onClick={handleTestLeaderboard}
             >
               <Trophy className="w-3 h-3 mr-1" />
               Leaderboard
@@ -572,7 +592,7 @@ const Index = () => {
               <UserPlus className="w-4 h-4 mr-2" />
               Name Entry
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => showLeaderboard()}>
+            <DropdownMenuItem onClick={handleTestLeaderboard}>
               <Trophy className="w-4 h-4 mr-2" />
               Leaderboard
             </DropdownMenuItem>
