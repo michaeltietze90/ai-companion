@@ -7,6 +7,11 @@
 
 import backflipVideo from '@/assets/backflip.mp4';
 
+export type TriggerPosition = 
+  | 'center' | 'top' | 'bottom' | 'left' | 'right' 
+  | 'topleft' | 'topright' | 'bottomleft' | 'bottomright'
+  | 'avatar'; // Special: overlays seamlessly on the avatar
+
 export interface HardcodedTrigger {
   /** Keywords that trigger this response (case-insensitive, partial match) */
   keywords: string[];
@@ -16,13 +21,13 @@ export interface HardcodedTrigger {
   video?: {
     src: string;
     duration: number; // ms
-    position: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+    position: TriggerPosition;
   };
   /** Optional image to display */
   image?: {
     src: string;
     duration: number;
-    position: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+    position: TriggerPosition;
   };
 }
 
@@ -37,7 +42,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     video: {
       src: backflipVideo,
       duration: 5000,
-      position: 'center',
+      position: 'avatar', // Seamless overlay on avatar
     },
   },
   // Add more triggers here as needed...

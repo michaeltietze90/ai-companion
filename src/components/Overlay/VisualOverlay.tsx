@@ -19,6 +19,7 @@ const positionClasses: Record<VisualPosition, string> = {
   topright: 'items-start justify-end pt-24 pr-12',
   bottomleft: 'items-end justify-start pb-24 pl-12',
   bottomright: 'items-end justify-end pb-24 pr-12',
+  avatar: 'items-center justify-center', // Handled specially below
 };
 
 interface ActiveVisual extends VisualCommand {
@@ -92,50 +93,79 @@ export function VisualOverlay({ visuals, onVisualComplete, onAllComplete }: Visu
   return (
     <div className="fixed inset-0 z-40 pointer-events-none">
       <AnimatePresence mode="sync">
-        {activeVisuals.map(visual => (
-          <motion.div
-            key={visual.id}
-            className={`absolute inset-0 flex ${positionClasses[visual.position]}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: visual.isVisible ? 1 : 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-          >
+        {activeVisuals.map(visual => {
+          const isAvatarOverlay = visual.position === 'avatar';
+          
+          return (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ 
-                scale: visual.isVisible ? 1 : 0.95, 
-                opacity: visual.isVisible ? 1 : 0 
-              }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="max-w-[80vw] max-h-[80vh]"
+              key={visual.id}
+              className={`absolute inset-0 flex ${positionClasses[visual.position]}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: visual.isVisible ? 1 : 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: isAvatarOverlay ? 0.15 : 0.4, ease: 'easeInOut' }}
             >
-              {visual.type === 'video' ? (
-                <video
-                  src={visual.src}
-                  autoPlay
-                  muted
-                  loop={false}
-                  playsInline
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                  style={{ background: 'transparent' }}
-                />
+              {isAvatarOverlay ? (
+                // Avatar overlay: fullscreen, no styling, seamless blend
+                <div className="w-full h-full flex items-center justify-center">
+                  {visual.type === 'video' ? (
+                    <video
+                      src={visual.src}
+                      autoPlay
+                      muted
+                      loop={false}
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ background: 'transparent' }}
+                    />
+                  ) : (
+                    <img
+                      src={visual.src}
+                      alt={visual.alt || 'Avatar overlay'}
+                      className="w-full h-full object-cover"
+                      style={{ background: 'transparent' }}
+                    />
+                  )}
+                </div>
               ) : (
-                <img
-                  src={visual.src}
-                  alt={visual.alt || 'Visual overlay'}
-                  className="max-w-full max-h-full object-contain"
-                  style={{ background: 'transparent' }}
-                  onError={(e) => {
-                    console.error('Failed to load visual:', visual.src);
-                    (e.target as HTMLImageElement).style.display = 'none';
+                // Regular overlay with animations and styling
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ 
+                    scale: visual.isVisible ? 1 : 0.95, 
+                    opacity: visual.isVisible ? 1 : 0 
                   }}
-                />
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  className="max-w-[80vw] max-h-[80vh]"
+                >
+                  {visual.type === 'video' ? (
+                    <video
+                      src={visual.src}
+                      autoPlay
+                      muted
+                      loop={false}
+                      playsInline
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                      style={{ background: 'transparent' }}
+                    />
+                  ) : (
+                    <img
+                      src={visual.src}
+                      alt={visual.alt || 'Visual overlay'}
+                      className="max-w-full max-h-full object-contain"
+                      style={{ background: 'transparent' }}
+                      onError={(e) => {
+                        console.error('Failed to load visual:', visual.src);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                </motion.div>
               )}
             </motion.div>
-          </motion.div>
-        ))}
+          );
+        })}
       </AnimatePresence>
     </div>
   );
