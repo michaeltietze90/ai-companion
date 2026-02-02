@@ -59,18 +59,29 @@ async function getSalesforceToken(): Promise<string> {
 // Clause boundary regex - splits on . ! ? , or " - " for faster TTS streaming
 const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 
-// Extract text chunk from SSE data - returns the NEW portion only (deduplicates against accumulated text)
-function extractTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
+/**
+ * Extract text chunk from SSE data for STREAMING mode.
+ * 
+ * IMPORTANT: Salesforce sends TWO types of text events:
+ * 1. Delta events (data.delta.text) - Streaming chunks as they're generated (may have tokenization artifacts)
+ * 2. Final message events (data.message.text with type="Inform") - Complete cleaned text at the end
+ * 
+ * For streaming, we ONLY want delta events to avoid speaking the same content twice.
+ * The final "Inform" message is a duplicate and should be skipped.
+ */
+function extractStreamingTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
   
-  // Priority order - only pick ONE source
-  const chunk = 
-    delta?.text ?? 
-    delta?.content ?? 
-    msg?.text ?? 
-    msg?.message ?? 
-    data?.content;
+  // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
+  // These arrive after all delta events and contain the complete cleaned text
+  if (msg?.type === 'Inform' || msg?.type === 'Text') {
+    console.log('[Streaming] Skipping final Inform/Text message (already streamed via deltas)');
+    return null;
+  }
+  
+  // For streaming mode, ONLY process delta events
+  const chunk = delta?.text ?? delta?.content;
   
   if (typeof chunk !== 'string' || !chunk) return null;
 
@@ -87,24 +98,67 @@ function extractTextChunk(data: Record<string, unknown>, accumulatedText: string
   // If this chunk is an extension of what we've accumulated, return only the NEW part
   if (chunk.startsWith(accumulatedText) && chunk.length > accumulatedText.length) {
     const newPart = chunk.slice(accumulatedText.length);
-    console.log('[Dedup] Extension detected, extracting new part:', newPart.substring(0, 50));
     return { newText: newPart, fullChunk: chunk };
   }
   
   // If what we have is an extension of this chunk, skip (we already have more)
   if (accumulatedText.startsWith(chunk)) {
-    console.log('[Dedup] Skipping - already have this or longer:', chunk.substring(0, 50));
     return null;
   }
 
   // Overlap dedup: if incoming begins with a suffix of accumulated, only append the non-overlapping part.
-  // Example:
-  // accumulated: "Hello world"
-  // incoming:    "world and more"  -> append " and more"
   const overlap = computeOverlap(accumulatedText, chunk);
   if (overlap > 0 && chunk.length > overlap) {
     const newPart = chunk.slice(overlap);
-    console.log('[Dedup] Overlap detected, extracting new part:', newPart.substring(0, 50));
+    return { newText: newPart, fullChunk: accumulatedText + newPart };
+  }
+  
+  // This is genuinely new text to append
+  return { newText: chunk, fullChunk: accumulatedText + chunk };
+}
+
+/**
+ * Extract text chunk for NON-STREAMING mode (legacy).
+ * In this mode we DO want the final message since we're not streaming deltas.
+ */
+function extractTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
+  const msg = data?.message as Record<string, unknown> | undefined;
+  const delta = data?.delta as Record<string, unknown> | undefined;
+  
+  // Priority order - only pick ONE source
+  const chunk = 
+    delta?.text ?? 
+    delta?.content ?? 
+    msg?.text ?? 
+    msg?.message ?? 
+    data?.content;
+  
+  if (typeof chunk !== 'string' || !chunk) return null;
+
+  // Helper: longest overlap between end(accumulated) and start(incoming)
+  const computeOverlap = (acc: string, incoming: string): number => {
+    const max = Math.min(acc.length, incoming.length);
+    for (let len = max; len > 0; len--) {
+      if (acc.endsWith(incoming.slice(0, len))) return len;
+    }
+    return 0;
+  };
+  
+  // If this chunk is an extension of what we've accumulated, return only the NEW part
+  if (chunk.startsWith(accumulatedText) && chunk.length > accumulatedText.length) {
+    const newPart = chunk.slice(accumulatedText.length);
+    return { newText: newPart, fullChunk: chunk };
+  }
+  
+  // If what we have is an extension of this chunk, skip (we already have more)
+  if (accumulatedText.startsWith(chunk)) {
+    return null;
+  }
+
+  // Overlap dedup
+  const overlap = computeOverlap(accumulatedText, chunk);
+  if (overlap > 0 && chunk.length > overlap) {
+    const newPart = chunk.slice(overlap);
     return { newText: newPart, fullChunk: accumulatedText + newPart };
   }
   
@@ -216,8 +270,8 @@ serve(async (req) => {
                     continue;
                   }
                   
-                  // Extract and buffer text (deduplicating against what we've accumulated)
-                  const result = extractTextChunk(data, accumulatedFromAPI);
+                  // Extract and buffer text from DELTA events only (skip final Inform message)
+                  const result = extractStreamingTextChunk(data, accumulatedFromAPI);
                   if (result) {
                     // Avoid word-joining across chunk boundaries (e.g. "Fragen?Ein").
                     // Only affects the spoken/display buffer; we keep accumulatedFromAPI as raw provider text.
