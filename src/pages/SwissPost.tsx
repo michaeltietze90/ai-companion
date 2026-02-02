@@ -76,7 +76,13 @@ const SwissPost = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(handleVoiceTranscript);
+  const { toggleListening, isListening, isConnecting: sttConnecting } = useElevenLabsSTT(
+    handleVoiceTranscript,
+    {
+      // Prevent the avatar's voice from being picked up and re-sent while it speaks.
+      disabled: isSpeaking || isThinking,
+    }
+  );
 
   // Auto-start session on page load
   useEffect(() => {

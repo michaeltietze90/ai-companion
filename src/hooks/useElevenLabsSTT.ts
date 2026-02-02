@@ -35,13 +35,31 @@ interface ScribeConnection {
   processor: ScriptProcessorNode | null;
 }
 
-export function useElevenLabsSTT(onTranscript: (text: string) => void) {
+type UseElevenLabsSTTOptions = {
+  /**
+   * When true, we keep the connection but stop sending mic audio and ignore transcripts.
+   * This prevents the avatar's own voice from being transcribed (echo) while it is speaking.
+   */
+  disabled?: boolean;
+};
+
+export function useElevenLabsSTT(
+  onTranscript: (text: string) => void,
+  options?: UseElevenLabsSTTOptions
+) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [partialTranscript, setPartialTranscript] = useState('');
   const connectionRef = useRef<ScribeConnection | null>(null);
   const lastCommittedRef = useRef<string>('');
+  const disabledRef = useRef<boolean>(Boolean(options?.disabled));
   const { setListening, setLastVoiceTranscript } = useConversationStore();
+
+  useEffect(() => {
+    disabledRef.current = Boolean(options?.disabled);
+    // If we just disabled STT, clear any partial text so the UI doesn't look stuck.
+    if (disabledRef.current) setPartialTranscript('');
+  }, [options?.disabled]);
 
   const cleanup = useCallback(() => {
     const conn = connectionRef.current;
@@ -139,8 +157,10 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
           if (data.message_type === 'session_started') {
             console.log('Scribe session started:', data.session_id);
           } else if (data.message_type === 'partial_transcript') {
+            if (disabledRef.current) return;
             setPartialTranscript(data.text || '');
           } else if (data.message_type === 'committed_transcript') {
+            if (disabledRef.current) return;
             const text = data.text?.trim();
             if (text && text !== lastCommittedRef.current) {
               lastCommittedRef.current = text;
@@ -173,6 +193,9 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
       // Send audio data
       processor.onaudioprocess = (e) => {
         if (ws.readyState === WebSocket.OPEN) {
+          // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
+          if (disabledRef.current) return;
+
           const inputData = e.inputBuffer.getChannelData(0);
           // Convert to 16-bit PCM
           const pcmData = new Int16Array(inputData.length);
