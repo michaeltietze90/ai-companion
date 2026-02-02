@@ -6,6 +6,8 @@
  * - Heroku Express backend - when running on Heroku (/api/* routes)
  */
 
+import { debugLog } from '@/stores/debugStore';
+
 // Detect environment
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -33,12 +35,34 @@ const getHeaders = () => {
   };
 };
 
+// Instrumented fetch with debug logging
+const debugFetch = async (endpoint: string, options: RequestInit, body?: unknown): Promise<Response> => {
+  const url = getApiUrl(endpoint);
+  const startTime = Date.now();
+  
+  debugLog('api-request', endpoint, `${options.method || 'GET'} ${endpoint}`, body);
+  
+  try {
+    const response = await fetch(url, options);
+    const duration = Date.now() - startTime;
+    
+    debugLog('api-response', endpoint, `${response.status} ${response.statusText}`, undefined, duration);
+    
+    return response;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    debugLog('error', endpoint, `Request failed: ${error}`, undefined, duration);
+    throw error;
+  }
+};
+
 export async function getHeyGenToken(): Promise<string> {
-  const response = await fetch(getApiUrl('heygen-token'), {
+  const body = {};
+  const response = await debugFetch('heygen-token', {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({}),
-  });
+    body: JSON.stringify(body),
+  }, body);
 
   if (!response.ok) {
     const error = await response.json();
@@ -46,25 +70,35 @@ export async function getHeyGenToken(): Promise<string> {
   }
 
   const data = await response.json();
+  debugLog('api-response', 'heygen-token', 'Token received', { tokenLength: data.token?.length });
   return data.token;
 }
 
 export async function startAgentSession(agentId?: string): Promise<{ sessionId: string; welcomeMessage: string | null; messagesStreamUrl: string | null }> {
-  const response = await fetch(getApiUrl('agentforce-session'), {
+  const body = { action: 'start', agentId };
+  const response = await debugFetch('agentforce-session', {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ action: 'start', agentId }),
-  });
+    body: JSON.stringify(body),
+  }, body);
 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to start session');
   }
 
-  return response.json();
+  const data = await response.json();
+  debugLog('api-response', 'agentforce-session', `Session started: ${data.sessionId?.slice(0, 8)}...`, {
+    sessionId: data.sessionId,
+    hasWelcome: !!data.welcomeMessage,
+    hasStreamUrl: !!data.messagesStreamUrl,
+  });
+  return data;
 }
 
 export async function endAgentSession(sessionId: string): Promise<void> {
+  const body = { action: 'end', sessionId };
+  debugLog('api-request', 'agentforce-session', `Ending session: ${sessionId.slice(0, 8)}...`);
   await fetch(getApiUrl('agentforce-session'), {
     method: 'POST',
     headers: getHeaders(),
@@ -104,16 +138,24 @@ export async function* streamAgentMessage(
   message: string,
   messagesStreamUrl?: string | null
 ): AsyncGenerator<StreamChunk, void, unknown> {
+  const body = { sessionId, message, messagesStreamUrl, streaming: true };
+  const startTime = Date.now();
+  
+  debugLog('api-request', 'agentforce-message', `Streaming: "${message.slice(0, 50)}..."`, body);
+  
   const response = await fetch(getApiUrl('agentforce-message'), {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ sessionId, message, messagesStreamUrl, streaming: true }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const error = await response.json();
+    debugLog('error', 'agentforce-message', `Stream failed: ${error.error}`, error);
     throw new Error(error.error || 'Failed to send message');
   }
+  
+  debugLog('api-response', 'agentforce-message', 'Stream opened', undefined, Date.now() - startTime);
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -122,6 +164,7 @@ export async function* streamAgentMessage(
 
   const decoder = new TextDecoder();
   let buffer = '';
+  let chunkCount = 0;
 
   try {
     while (true) {
@@ -142,6 +185,17 @@ export async function* streamAgentMessage(
 
         try {
           const chunk = JSON.parse(payload) as StreamChunk;
+          chunkCount++;
+          
+          // Log SSE events
+          if (chunk.type === 'sentence') {
+            debugLog('sse-event', 'agentforce', `Sentence #${chunkCount}: "${chunk.text.slice(0, 40)}..."`, chunk);
+          } else if (chunk.type === 'progress') {
+            debugLog('sse-event', 'agentforce', `Progress: ${chunk.text}`, chunk);
+          } else if (chunk.type === 'done') {
+            debugLog('sse-event', 'agentforce', `Stream complete (${chunkCount} chunks)`, undefined, Date.now() - startTime);
+          }
+          
           yield chunk;
           
           if (chunk.type === 'done') {

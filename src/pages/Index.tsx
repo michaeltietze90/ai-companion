@@ -7,6 +7,7 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
+import { DebugTerminal } from "@/components/DebugTerminal/DebugTerminal";
 import { Mic, MicOff, Volume2, VolumeX, Settings, MessageSquare, X, Play, Loader2, Maximize2, Trophy, UserPlus, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -578,6 +579,9 @@ const Index = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      
+      {/* Debug Terminal */}
+      <DebugTerminal />
     </div>
   );
 };

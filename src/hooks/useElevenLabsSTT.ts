@@ -1,6 +1,7 @@
 // ElevenLabs Scribe STT - Direct WebSocket implementation
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useConversationStore } from '@/stores/conversationStore';
+import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 
 // Detect environment
@@ -140,6 +141,7 @@ export function useElevenLabsSTT(
 
       ws.onopen = () => {
         console.log('WebSocket connected to ElevenLabs Scribe');
+        debugLog('stt-event', 'STT', 'WebSocket connected to ElevenLabs Scribe');
         setIsConnected(true);
         setListening(true);
         setIsConnecting(false);
@@ -152,10 +154,10 @@ export function useElevenLabsSTT(
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Scribe message:', data.message_type);
           
           if (data.message_type === 'session_started') {
             console.log('Scribe session started:', data.session_id);
+            debugLog('stt-event', 'STT', `Session started: ${data.session_id}`);
           } else if (data.message_type === 'partial_transcript') {
             if (disabledRef.current) return;
             setPartialTranscript(data.text || '');
@@ -167,10 +169,12 @@ export function useElevenLabsSTT(
               setPartialTranscript('');
               setLastVoiceTranscript(text);
               console.log('Committed transcript:', text);
+              debugLog('stt-event', 'STT', `Committed: "${text.slice(0, 50)}..."`, { text });
               onTranscript(text);
             }
           } else if (data.message_type === 'error') {
             console.error('Scribe error:', data);
+            debugLog('error', 'STT', `Error: ${data.error || 'Unknown'}`, data);
             toast.error(`Speech recognition error: ${data.error || 'Unknown error'}`);
           }
         } catch (e) {
