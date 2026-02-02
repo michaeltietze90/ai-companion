@@ -63,24 +63,27 @@ const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 /**
  * Extract text chunk from SSE data for STREAMING mode.
  * 
- * IMPORTANT: Salesforce sends TWO types of text events:
- * 1. Delta events (data.delta.text) - Streaming chunks as they're generated
- * 2. Final message events (data.message.text with type="Inform") - Complete text at the end
+ * IMPORTANT: Salesforce SSE stream structure:
+ * 1. Delta events (data.delta.text) - Streaming token chunks during generation
+ * 2. Text messages (data.message.type="Text") - May contain streaming text during generation  
+ * 3. Inform messages (data.message.type="Inform") - Final complete message at the end
  * 
- * For streaming, we ONLY want delta events to avoid speaking the same content twice.
+ * To avoid duplicates: We track accumulated text and only emit genuinely new content.
+ * The final "Inform" message often duplicates streamed content, so we skip it.
  */
 function extractStreamingTextChunk(data, accumulatedText) {
   const msg = data?.message;
   const delta = data?.delta;
   
   // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
-  if (msg?.type === 'Inform' || msg?.type === 'Text') {
-    console.log('[Streaming] Skipping final Inform/Text message (already streamed via deltas)');
+  // The "Inform" type is sent at the END with the complete cleaned response
+  if (msg?.type === 'Inform') {
+    console.log('[Streaming] Skipping final Inform message (duplicates streamed content)');
     return null;
   }
   
-  // For streaming mode, ONLY process delta events
-  const chunk = delta?.text ?? delta?.content;
+  // Try to get text from delta first (true streaming), then from Text message
+  const chunk = delta?.text ?? delta?.content ?? (msg?.type === 'Text' ? msg?.text : null);
   
   if (typeof chunk !== 'string' || !chunk) return null;
   
