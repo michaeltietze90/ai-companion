@@ -35,7 +35,12 @@ const ProtoL = () => {
   }, [sendMessage]);
 
   // Use the actual ElevenLabs STT hook for mic control
-  const { isListening, toggleListening, startListening, stopListening } = useElevenLabsSTT(handleVoiceTranscript);
+  const { isListening, toggleListening, startListening, stopListening } = useElevenLabsSTT(
+    handleVoiceTranscript,
+    {
+      disabled: isSpeaking,
+    }
+  );
 
   const handleStart = () => {
     startConversation(videoRef.current);

@@ -115,7 +115,13 @@ const Index = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useElevenLabsSTT(handleVoiceTranscript);
+  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useElevenLabsSTT(
+    handleVoiceTranscript,
+    {
+      // Prevent echo loops: don't transcribe while the avatar is speaking.
+      disabled: isSpeaking || isThinking,
+    }
+  );
 
   const handleStart = () => {
     startConversation(videoRef.current);
