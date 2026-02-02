@@ -5,6 +5,7 @@ import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '
 import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
+import { useVideoCallEscalationStore } from '@/stores/videoCallEscalationStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/lib/richResponseParser';
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
@@ -124,6 +125,7 @@ export function useAvatarConversation() {
   }, [messagesStreamUrl]);
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
+  const { show: showVideoCallEscalation } = useVideoCallEscalationStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
   const { executeActions, applyData } = useStructuredActions();
 
@@ -743,6 +745,12 @@ export function useAvatarConversation() {
         // Start visuals
         if (triggerVisuals.length > 0) {
           startVisuals(triggerVisuals);
+        }
+        
+        // Handle custom overlays
+        if (hardcodedTrigger.customOverlay === 'video-call-escalation') {
+          console.log('[Hardcoded Trigger] Showing video call escalation overlay');
+          showVideoCallEscalation(hardcodedTrigger.customOverlayDuration ?? 0);
         }
         
         // Speak the response directly via HeyGen (only if there's text)

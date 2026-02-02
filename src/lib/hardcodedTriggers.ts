@@ -29,6 +29,10 @@ export interface HardcodedTrigger {
     duration: number;
     position: TriggerPosition;
   };
+  /** Optional custom overlay type */
+  customOverlay?: 'video-call-escalation';
+  /** Duration for custom overlay (ms), 0 = manual close */
+  customOverlayDuration?: number;
 }
 
 /**
@@ -45,7 +49,18 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
       position: 'avatar', // Seamless overlay on avatar
     },
   },
-  // Add more triggers here as needed...
+  {
+    keywords: [
+      'video call', 'videocall', 'video anruf', 'videoanruf',
+      'speak to human', 'speak to a human', 'talk to human', 'talk to a human',
+      'real person', 'echte person', 'echter mensch', 'mit mensch sprechen',
+      'eskalation', 'escalation', 'escalate', 'eskalieren',
+      'kundenberater', 'berater sprechen', 'agent', 'live agent'
+    ],
+    speech: 'Natürlich! Ich verbinde Sie jetzt mit einem unserer Kundenberater.',
+    customOverlay: 'video-call-escalation',
+    customOverlayDuration: 0, // Manual close
+  },
 ];
 
 /**
