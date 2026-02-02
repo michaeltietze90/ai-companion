@@ -759,7 +759,9 @@ export function useAvatarConversation() {
         if (hardcodedTrigger.speech.trim()) {
           setSpeaking(true);
           try {
-            await speakSentenceNoInterrupt(hardcodedTrigger.speech);
+            // Use speakViaProxy (with interrupt) for single-shot hardcoded responses
+            // This prevents potential double-queueing from ASYNC mode
+            await speakViaProxy(hardcodedTrigger.speech);
           } finally {
             setSpeaking(false);
           }
