@@ -233,9 +233,21 @@ router.post('/', async (req, res) => {
               
               const result = extractStreamingTextChunk(data, accumulatedFromAPI);
               if (result) {
-                // Simply concatenate - LLM tokens from Salesforce already include correct spacing.
-                // DO NOT inject extra spaces; that breaks words like "FASTEST-GROWING".
-                textBuffer += result.newText;
+                // Smart space injection: Add space between letter→digit or digit→letter transitions
+                // This fixes "With30" → "With 30" and "monumental70" → "monumental 70"
+                const prev = textBuffer;
+                const next = result.newText;
+                const needsSpace =
+                  prev.length > 0 &&
+                  next.length > 0 &&
+                  !/\s$/.test(prev) &&
+                  !/^\s/.test(next) &&
+                  (
+                    (/[a-zA-Z]$/.test(prev) && /^[0-9]/.test(next)) ||
+                    (/[0-9]$/.test(prev) && /^[a-zA-Z]/.test(next))
+                  );
+
+                textBuffer += (needsSpace ? ' ' : '') + next;
                 accumulatedFromAPI = result.fullChunk;
                 
                 const parts = textBuffer.split(CLAUSE_END_RE);

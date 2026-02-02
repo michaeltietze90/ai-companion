@@ -307,9 +307,24 @@ serve(async (req) => {
                   // Extract and buffer text from DELTA events only (skip final Inform message)
                   const result = extractStreamingTextChunk(data, accumulatedFromAPI);
                   if (result) {
-                    // Simply concatenate - LLM tokens from Salesforce already include correct spacing.
-                    // DO NOT inject extra spaces; that breaks words like "FASTEST-GROWING" into "FAST EST-G ROW ING".
-                    textBuffer += result.newText;
+                    // Smart space injection: Add space between letter→digit or digit→letter transitions
+                    // This fixes "With30" → "With 30" and "monumental70" → "monumental 70"
+                    // But we DON'T inject spaces between letters (to preserve "FASTEST-GROWING")
+                    const prev = textBuffer;
+                    const next = result.newText;
+                    const needsSpace =
+                      prev.length > 0 &&
+                      next.length > 0 &&
+                      !/\s$/.test(prev) &&  // prev doesn't end with space
+                      !/^\s/.test(next) &&  // next doesn't start with space
+                      (
+                        // Letter followed by digit: "With" + "30" → "With 30"
+                        (/[a-zA-Z]$/.test(prev) && /^[0-9]/.test(next)) ||
+                        // Digit followed by letter: "100" + "Billion" → "100 Billion"
+                        (/[0-9]$/.test(prev) && /^[a-zA-Z]/.test(next))
+                      );
+
+                    textBuffer += (needsSpace ? ' ' : '') + next;
                     accumulatedFromAPI = result.fullChunk;
                     
                     // Check for complete clauses (sentences, comma-separated phrases, or dash-separated)
