@@ -11,6 +11,7 @@ import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/li
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
 import { useStructuredActions } from '@/hooks/useStructuredActions';
 import { findHardcodedTrigger } from '@/lib/hardcodedTriggers';
+import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 
 // Demo responses for testing without credentials (with visual examples)
@@ -143,6 +144,7 @@ export function useAvatarConversation() {
       // Set up event listeners
       avatar.on(StreamingEvents.STREAM_READY, (event) => {
         console.log('Stream ready:', event);
+        debugLog('heygen-event', 'HeyGen', 'Stream ready', { hasDetail: !!event.detail });
         if (event.detail && videoElement) {
           mediaStreamRef.current = event.detail;
           videoElement.srcObject = event.detail;
@@ -152,6 +154,7 @@ export function useAvatarConversation() {
 
       avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
         console.log('Avatar started talking');
+        debugLog('heygen-event', 'HeyGen', 'Avatar started talking');
         isSpeakingRef.current = true;
         setSpeaking(true);
         setListening(false); // Stop listening while avatar speaks
@@ -159,6 +162,7 @@ export function useAvatarConversation() {
 
       avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
         console.log('Avatar stopped talking');
+        debugLog('heygen-event', 'HeyGen', 'Avatar stopped talking');
         isSpeakingRef.current = false;
         setSpeaking(false);
         // Resolve any pending speech wait
@@ -619,6 +623,7 @@ export function useAvatarConversation() {
     agentId?: string,
     heygenApiKeyName?: string
   ) => {
+    debugLog('state-change', 'Conversation', 'Starting conversation', { agentId, heygenApiKeyName });
     setConnecting(true);
     setError(null);
     clearVisuals();
@@ -629,6 +634,7 @@ export function useAvatarConversation() {
 
       if (demoMode) {
         // Demo mode - no real connections
+        debugLog('state-change', 'Conversation', 'Demo mode enabled');
         await new Promise(resolve => setTimeout(resolve, 1500));
         setConnected(true);
         setSessionId('demo-session');
@@ -648,10 +654,12 @@ export function useAvatarConversation() {
 
       // 1) Start Agentforce first (so "brain" is always available)
       // Pass agentId override if provided
+      debugLog('state-change', 'Agentforce', 'Starting session...', { agentId });
       const { sessionId: newSessionId, welcomeMessage, messagesStreamUrl } = await startAgentSession(agentId);
       setSessionId(newSessionId);
       setMessagesStreamUrl(messagesStreamUrl);
       setConnected(true);
+      debugLog('state-change', 'Agentforce', 'Session active', { sessionId: newSessionId?.slice(0, 8) });
 
       // Capture welcome message as "Agentforce reply" for debugging
       if (welcomeMessage) setLastAgentforceResponse(welcomeMessage);
@@ -659,9 +667,12 @@ export function useAvatarConversation() {
       // 2) Try to initialize HeyGen video (optional). If it fails, keep Agentforce running.
       if (videoElement) {
         try {
+          debugLog('state-change', 'HeyGen', 'Initializing avatar...');
           await initializeAvatar(videoElement, heygenApiKeyName);
+          debugLog('state-change', 'HeyGen', 'Avatar initialized');
         } catch (avatarError) {
           console.error('[HeyGen] avatar init failed (continuing with Agentforce):', avatarError);
+          debugLog('error', 'HeyGen', `Avatar init failed: ${avatarError}`);
           toast.warning('Avatar is temporarily unavailable; continuing with Agentforce.');
         }
       }
