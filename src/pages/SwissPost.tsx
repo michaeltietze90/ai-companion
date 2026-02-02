@@ -6,7 +6,9 @@ import agentforceLogo from "@/assets/agentforce-logo.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { AvatarOverlay } from "@/components/Overlay/AvatarOverlay";
+import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
+import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,7 @@ const SwissPost = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
+  const { isVisible: isVideoCallVisible, duration: videoCallDuration, hide: hideVideoCall } = useVideoCallEscalationStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
   const updateProfile = useSettingsStore((state) => state.updateProfile);
 
@@ -663,6 +666,13 @@ const SwissPost = () => {
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
         onReconnectAvatar={handleReconnectAvatar}
+      />
+      
+      {/* Video Call Escalation Overlay */}
+      <VideoCallEscalationOverlay
+        isVisible={isVideoCallVisible}
+        onClose={hideVideoCall}
+        duration={videoCallDuration}
       />
     </div>
   );
