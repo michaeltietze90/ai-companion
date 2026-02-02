@@ -141,6 +141,10 @@ router.post('/', async (req, res) => {
       
       let textBuffer = '';
       let accumulatedFromAPI = '';
+      // Guard against providers re-sending the same content (sometimes with different spacing)
+      // which can otherwise cause the frontend to speak the same answer twice.
+      const emittedSentences = new Set();
+      const normalizeSentence = (s) => String(s || '').replace(/\s+/g, ' ').trim();
       
       const reader = sfResponse.body.getReader();
       const decoder = new TextDecoder();
@@ -179,10 +183,11 @@ router.post('/', async (req, res) => {
                 const parts = textBuffer.split(CLAUSE_END_RE);
                 
                 for (let i = 0; i < parts.length - 1; i++) {
-                  const sentence = parts[i].trim();
-                  if (sentence) {
-                    res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
-                  }
+                  const sentence = normalizeSentence(parts[i]);
+                  if (!sentence) continue;
+                  if (emittedSentences.has(sentence)) continue;
+                  emittedSentences.add(sentence);
+                  res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
                 }
                 
                 textBuffer = parts[parts.length - 1];
@@ -193,8 +198,9 @@ router.post('/', async (req, res) => {
           }
         }
         
-        const remaining = textBuffer.replace(/\s+/g, ' ').trim();
-        if (remaining) {
+        const remaining = normalizeSentence(textBuffer);
+        if (remaining && !emittedSentences.has(remaining)) {
+          emittedSentences.add(remaining);
           res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
         }
         
