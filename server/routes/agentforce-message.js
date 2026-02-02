@@ -57,8 +57,10 @@ async function getSalesforceToken() {
 
 const getSfApiHost = () => process.env.SALESFORCE_API_HOST || 'https://api.salesforce.com';
 
-// Clause boundary regex - splits on . ! ? , or " - " for faster TTS streaming
-const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
+// Clause boundary regex - splits on . ! ? or " - " for faster TTS streaming.
+// IMPORTANT: We no longer split on commas because they often appear inside numbers (e.g., "100,000").
+// This prevents mid-number splits like "100" + "000 paid deals".
+const CLAUSE_END_RE = /(?<=[.!?])\s+|\s+-\s+/;
 
 /**
  * Extract text chunk from SSE data for STREAMING mode.

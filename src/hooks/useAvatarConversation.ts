@@ -152,17 +152,19 @@ export function useAvatarConversation() {
         }
       });
 
-      avatar.on(StreamingEvents.AVATAR_START_TALKING, () => {
-        console.log('Avatar started talking');
-        debugLog('heygen-event', 'HeyGen', 'Avatar started talking');
+      avatar.on(StreamingEvents.AVATAR_START_TALKING, (event: any) => {
+        const taskId = event?.detail?.task_id || 'unknown';
+        console.log('Avatar started talking, taskId:', taskId);
+        debugLog('heygen-event', 'HeyGen', `Avatar STARTED talking (task: ${taskId})`, { taskId, event: event?.detail });
         isSpeakingRef.current = true;
         setSpeaking(true);
         setListening(false); // Stop listening while avatar speaks
       });
 
-      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, () => {
-        console.log('Avatar stopped talking');
-        debugLog('heygen-event', 'HeyGen', 'Avatar stopped talking');
+      avatar.on(StreamingEvents.AVATAR_STOP_TALKING, (event: any) => {
+        const taskId = event?.detail?.task_id || 'unknown';
+        console.log('Avatar stopped talking, taskId:', taskId);
+        debugLog('heygen-event', 'HeyGen', `Avatar STOPPED talking (task: ${taskId})`, { taskId, event: event?.detail });
         isSpeakingRef.current = false;
         setSpeaking(false);
         // Resolve any pending speech wait
@@ -509,9 +511,14 @@ export function useAvatarConversation() {
     if (avatarRef.current) {
       try {
         console.log('[HeyGen] Queueing speech (ASYNC):', spokenText.substring(0, 40) + '...');
+        debugLog('heygen-event', 'HeyGen', `Speaking: "${spokenText.substring(0, 60)}${spokenText.length > 60 ? '...' : ''}"`, { 
+          textLength: spokenText.length,
+          fullText: spokenText 
+        });
 
         const avatar = avatarRef.current;
         const dispatch = async () => {
+          debugLog('heygen-event', 'HeyGen', `Dispatching to SDK: "${spokenText.substring(0, 40)}..."`);
           await avatar.speak({
             text: spokenText,
             task_type: TaskType.REPEAT,
