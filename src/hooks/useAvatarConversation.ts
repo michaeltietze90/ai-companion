@@ -225,8 +225,8 @@ export function useAvatarConversation() {
         heygenSessionRef.current = sessionInfo.session_id;
       }
 
-      // Set up keep-alive interval (every 25 seconds) to prevent idle timeout
-      // HeyGen sessions can timeout after ~30s of inactivity
+      // Set up keep-alive interval (every 60 seconds) to prevent idle timeout
+      // Using SDK's dedicated keepAlive() method instead of empty speak()
       if (keepAliveIntervalRef.current) {
         clearInterval(keepAliveIntervalRef.current);
       }
@@ -234,18 +234,15 @@ export function useAvatarConversation() {
         if (avatarRef.current && !isSpeakingRef.current) {
           try {
             console.log('[HeyGen] Sending keep-alive ping');
-            // Use empty string to ping without any vocalization
-            await avatarRef.current.speak({ 
-              text: '', // Empty string - no vocalization
-              task_type: TaskType.REPEAT 
-            });
+            // Use SDK's dedicated keepAlive method - doesn't require text
+            await avatarRef.current.keepAlive();
           } catch (e) {
             console.warn('[HeyGen] Keep-alive failed:', e);
             // If keepalive fails, the session may have expired
             // We don't auto-reconnect here; user will see issues on next speak
           }
         }
-      }, 25000); // Every 25 seconds (before 30s timeout)
+      }, 60000); // Every 60 seconds (SDK default timeout is 120s)
 
       return avatar;
     } catch (error) {
@@ -356,20 +353,17 @@ export function useAvatarConversation() {
         heygenSessionRef.current = sessionInfo.session_id;
       }
       
-      // Restart keep-alive with actual ping
+      // Restart keep-alive with SDK's keepAlive method
       keepAliveIntervalRef.current = setInterval(async () => {
         if (avatarRef.current && !isSpeakingRef.current) {
           try {
             console.log('[HeyGen] Keep-alive ping');
-            await avatarRef.current.speak({ 
-              text: '', // Empty string - no vocalization
-              task_type: TaskType.REPEAT 
-            });
+            await avatarRef.current.keepAlive();
           } catch (e) {
             console.warn('[HeyGen] Keep-alive failed:', e);
           }
         }
-      }, 25000);
+      }, 60000);
       
       console.log('[HeyGen] Avatar reinitialized with emotion:', newEmotion);
       toast.success(`Emotion changed to ${newEmotion}!`);
