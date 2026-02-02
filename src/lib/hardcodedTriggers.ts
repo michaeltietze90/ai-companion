@@ -38,7 +38,7 @@ export interface HardcodedTrigger {
 export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
   {
     keywords: ['backflip', 'back flip', 'rückwärtssalto', 'salto'],
-    speech: 'Sure!',
+    speech: 'Oh yeah, watch this!',
     video: {
       src: backflipVideo,
       duration: 5000,
