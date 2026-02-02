@@ -101,13 +101,17 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
         },
       });
 
-      // Correct WebSocket URL with query parameters
+      // WebSocket URL with query parameters
+      // Note: language_code is intentionally omitted to enable auto-detection
+      // This allows multilingual support (German, French, Italian, English, etc.)
+      // For Swiss Post use case, speakers may switch between languages
       const wsUrl = new URL('wss://api.elevenlabs.io/v1/speech-to-text/realtime');
       wsUrl.searchParams.set('model_id', 'scribe_v2_realtime');
       wsUrl.searchParams.set('token', data.token);
       wsUrl.searchParams.set('audio_format', 'pcm_16000');
       wsUrl.searchParams.set('commit_strategy', 'vad');
       wsUrl.searchParams.set('vad_silence_threshold_secs', '1.0');
+      // language_code omitted = auto-detect (supports 99+ languages)
       
       const ws = new WebSocket(wsUrl.toString());
 
