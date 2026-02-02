@@ -110,7 +110,7 @@ export function useElevenLabsSTT(onTranscript: (text: string) => void) {
       wsUrl.searchParams.set('token', data.token);
       wsUrl.searchParams.set('audio_format', 'pcm_16000');
       wsUrl.searchParams.set('commit_strategy', 'vad');
-      wsUrl.searchParams.set('vad_silence_threshold_secs', '1.0');
+      wsUrl.searchParams.set('vad_silence_threshold_secs', '0.5');
       // language_code omitted = auto-detect (supports 99+ languages)
       
       const ws = new WebSocket(wsUrl.toString());
