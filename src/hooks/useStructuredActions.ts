@@ -16,6 +16,7 @@ export function useStructuredActions() {
     setPrefillData,
     setScore,
     setLeaderboard,
+    setUserRankData,
   } = useQuizOverlayStore();
   
   const { startVisuals } = useVisualOverlayStore();
@@ -102,6 +103,13 @@ export function useStructuredActions() {
             country: string;
             score: number;
           }>;
+          userRank?: number;
+          userEntry?: {
+            firstName: string;
+            lastName: string;
+            country: string;
+            score: number;
+          };
         } | undefined;
         
         if (data?.entries && Array.isArray(data.entries)) {
@@ -114,6 +122,19 @@ export function useStructuredActions() {
             timestamp: Date.now(),
           }));
           setLeaderboard(entries);
+          
+          // If user rank/entry provided, set them separately
+          if (data.userRank && data.userEntry) {
+            const userEntry: LeaderboardEntry = {
+              id: `user_${Date.now()}`,
+              firstName: data.userEntry.firstName || '',
+              lastName: data.userEntry.lastName || '',
+              country: data.userEntry.country || '',
+              score: data.userEntry.score || 0,
+              timestamp: Date.now(),
+            };
+            setUserRankData(data.userRank, userEntry);
+          }
         }
         break;
       }
