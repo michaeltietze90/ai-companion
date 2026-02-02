@@ -803,6 +803,22 @@ export function useAvatarConversation() {
         let fullResponse = '';
         const allVisuals: ParsedResponse['visuals'] = [];
 
+        // Dedupe streamed sentences within a single turn.
+        // Some providers occasionally resend the whole stream (or parts of it) with minor spacing changes.
+        const seenSentenceKeys = new Set<string>();
+        const normalizeSentenceKey = (s: string) =>
+          s
+            .toLowerCase()
+            // normalize spacing
+            .replace(/\s+/g, ' ')
+            // normalize common tokenization quirks (Agent force -> Agentforce)
+            .replace(/\b(agent)\s+(force)\b/g, '$1$2')
+            // normalize digit spacing ("100, 000" -> "100,000"; "202 6" -> "2026")
+            .replace(/(\d)\s+(\d)/g, '$1$2')
+            // normalize punctuation spacing
+            .replace(/\s+([,.;:!?])/g, '$1')
+            .trim();
+
         // With ASYNC TaskMode, HeyGen queues speech internally
         // We can send sentences immediately for true low-latency streaming
         let speechPromises: Promise<void>[] = [];
@@ -812,8 +828,16 @@ export function useAvatarConversation() {
           if (chunk.type === 'progress') {
             setThinking(true, chunk.text);
           } else if (chunk.type === 'sentence') {
-            // Accumulate full response
-            fullResponse += (fullResponse ? ' ' : '') + chunk.text;
+            // Skip duplicate sentences (including minor spacing variations)
+            const rawSentence = chunk.text;
+            const sentenceKey = normalizeSentenceKey(rawSentence);
+            if (!sentenceKey || seenSentenceKeys.has(sentenceKey)) {
+              continue;
+            }
+            seenSentenceKeys.add(sentenceKey);
+
+            // Accumulate full response (deduped)
+            fullResponse += (fullResponse ? ' ' : '') + rawSentence;
 
             // For plain text mode, use rich response parser for visual tags
             if (!useJsonMode) {
