@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
+import { useQuizOverlayStore, type LeaderboardEntry } from '@/stores/quizOverlayStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import type { StructuredAction, StructuredData } from '@/lib/structuredResponseParser';
 import type { VisualCommand, VisualPosition, VisualType } from '@/lib/richResponseParser';
@@ -15,6 +15,7 @@ export function useStructuredActions() {
     hideOverlay, 
     setPrefillData,
     setScore,
+    setLeaderboard,
   } = useQuizOverlayStore();
   
   const { startVisuals } = useVisualOverlayStore();
@@ -89,6 +90,30 @@ export function useStructuredActions() {
             alt: data.alt,
           };
           startVisuals([visual]);
+        }
+        break;
+      }
+      
+      case 'setLeaderboardData': {
+        const data = action.data as {
+          entries?: Array<{
+            firstName: string;
+            lastName: string;
+            country: string;
+            score: number;
+          }>;
+        } | undefined;
+        
+        if (data?.entries && Array.isArray(data.entries)) {
+          const entries: LeaderboardEntry[] = data.entries.map((e, idx) => ({
+            id: `agent_${Date.now()}_${idx}`,
+            firstName: e.firstName || '',
+            lastName: e.lastName || '',
+            country: e.country || '',
+            score: e.score || 0,
+            timestamp: Date.now(),
+          }));
+          setLeaderboard(entries);
         }
         break;
       }

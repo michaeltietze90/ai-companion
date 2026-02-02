@@ -32,7 +32,8 @@ export type ActionType =
   | 'hideOverlay'
   | 'showVisual'
   | 'prefillData'
-  | 'setScore';
+  | 'setScore'
+  | 'setLeaderboardData';
 
 export interface StructuredAction {
   type: ActionType;
