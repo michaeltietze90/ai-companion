@@ -5,7 +5,7 @@
  * without sending to Agentforce. Used for easter eggs and demos.
  */
 
-import backflipVideo from '@/assets/backflip.mp4';
+import backflipVideo from '@/assets/Miguel_Backflip.mp4';
 
 export type TriggerPosition = 
   | 'center' | 'top' | 'bottom' | 'left' | 'right' 
