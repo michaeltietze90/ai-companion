@@ -60,7 +60,58 @@ const getSfApiHost = () => process.env.SALESFORCE_API_HOST || 'https://api.sales
 // Clause boundary regex - splits on . ! ? , or " - " for faster TTS streaming
 const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 
-// Extract text chunk from SSE data - deduplicates against accumulated text
+/**
+ * Extract text chunk from SSE data for STREAMING mode.
+ * 
+ * IMPORTANT: Salesforce sends TWO types of text events:
+ * 1. Delta events (data.delta.text) - Streaming chunks as they're generated
+ * 2. Final message events (data.message.text with type="Inform") - Complete text at the end
+ * 
+ * For streaming, we ONLY want delta events to avoid speaking the same content twice.
+ */
+function extractStreamingTextChunk(data, accumulatedText) {
+  const msg = data?.message;
+  const delta = data?.delta;
+  
+  // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
+  if (msg?.type === 'Inform' || msg?.type === 'Text') {
+    console.log('[Streaming] Skipping final Inform/Text message (already streamed via deltas)');
+    return null;
+  }
+  
+  // For streaming mode, ONLY process delta events
+  const chunk = delta?.text ?? delta?.content;
+  
+  if (typeof chunk !== 'string' || !chunk) return null;
+  
+  if (chunk.startsWith(accumulatedText) && chunk.length > accumulatedText.length) {
+    const newPart = chunk.slice(accumulatedText.length);
+    return { newText: newPart, fullChunk: chunk };
+  }
+  
+  if (accumulatedText.startsWith(chunk)) {
+    return null;
+  }
+  
+  // Overlap dedup
+  const computeOverlap = (acc, incoming) => {
+    const max = Math.min(acc.length, incoming.length);
+    for (let len = max; len > 0; len--) {
+      if (acc.endsWith(incoming.slice(0, len))) return len;
+    }
+    return 0;
+  };
+  
+  const overlap = computeOverlap(accumulatedText, chunk);
+  if (overlap > 0 && chunk.length > overlap) {
+    const newPart = chunk.slice(overlap);
+    return { newText: newPart, fullChunk: accumulatedText + newPart };
+  }
+  
+  return { newText: chunk, fullChunk: accumulatedText + chunk };
+}
+
+// Extract text chunk for NON-STREAMING mode (legacy)
 function extractTextChunk(data, accumulatedText) {
   const msg = data?.message;
   const delta = data?.delta;
@@ -175,7 +226,7 @@ router.post('/', async (req, res) => {
                 continue;
               }
               
-              const result = extractTextChunk(data, accumulatedFromAPI);
+              const result = extractStreamingTextChunk(data, accumulatedFromAPI);
               if (result) {
                 textBuffer += result.newText;
                 accumulatedFromAPI = result.fullChunk;
