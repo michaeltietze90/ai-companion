@@ -6,9 +6,10 @@ import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { parseRichResponse, type ParsedResponse } from '@/lib/richResponseParser';
+import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/lib/richResponseParser';
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
 import { useStructuredActions } from '@/hooks/useStructuredActions';
+import { findHardcodedTrigger } from '@/lib/hardcodedTriggers';
 import { toast } from 'sonner';
 
 // Demo responses for testing without credentials (with visual examples)
@@ -708,6 +709,56 @@ export function useAvatarConversation() {
     clearStreamingSentences(); // Clear previous sentences for fresh display
 
     try {
+      // Check for hardcoded triggers (easter eggs) FIRST - bypass Agentforce entirely
+      const hardcodedTrigger = findHardcodedTrigger(text);
+      if (hardcodedTrigger) {
+        console.log('[Hardcoded Trigger] Matched:', hardcodedTrigger.keywords[0]);
+        
+        // Add assistant message
+        addMessage({ role: 'assistant', content: hardcodedTrigger.speech });
+        setLastAgentforceResponse(hardcodedTrigger.speech);
+        
+        // Build visuals if any
+        const triggerVisuals: VisualCommand[] = [];
+        if (hardcodedTrigger.video) {
+          triggerVisuals.push({
+            id: `trigger_video_${Date.now()}`,
+            type: 'video',
+            src: hardcodedTrigger.video.src,
+            duration: hardcodedTrigger.video.duration,
+            position: hardcodedTrigger.video.position,
+            startOffset: 0,
+          });
+        }
+        if (hardcodedTrigger.image) {
+          triggerVisuals.push({
+            id: `trigger_image_${Date.now()}`,
+            type: 'image',
+            src: hardcodedTrigger.image.src,
+            duration: hardcodedTrigger.image.duration,
+            position: hardcodedTrigger.image.position,
+            startOffset: 0,
+          });
+        }
+        
+        // Start visuals
+        if (triggerVisuals.length > 0) {
+          startVisuals(triggerVisuals);
+        }
+        
+        // Speak the response directly via HeyGen
+        setThinking(false);
+        setSpeaking(true);
+        
+        try {
+          await speakSentenceNoInterrupt(hardcodedTrigger.speech);
+        } finally {
+          setSpeaking(false);
+        }
+        
+        return;
+      }
+      
       if (demoMode) {
         // Demo mode response with rich content support
         await new Promise(resolve => setTimeout(resolve, 1500));

@@ -1,0 +1,62 @@
+/**
+ * Hardcoded Triggers
+ * 
+ * Intercepts specific keywords/phrases and returns preset responses
+ * without sending to Agentforce. Used for easter eggs and demos.
+ */
+
+import backflipVideo from '@/assets/backflip.mp4';
+
+export interface HardcodedTrigger {
+  /** Keywords that trigger this response (case-insensitive, partial match) */
+  keywords: string[];
+  /** What the avatar should say */
+  speech: string;
+  /** Optional video to display */
+  video?: {
+    src: string;
+    duration: number; // ms
+    position: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+  };
+  /** Optional image to display */
+  image?: {
+    src: string;
+    duration: number;
+    position: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+  };
+}
+
+/**
+ * List of hardcoded triggers.
+ * Add new easter eggs here!
+ */
+export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
+  {
+    keywords: ['backflip', 'back flip', 'rückwärtssalto', 'salto'],
+    speech: 'Sure!',
+    video: {
+      src: backflipVideo,
+      duration: 5000,
+      position: 'center',
+    },
+  },
+  // Add more triggers here as needed...
+];
+
+/**
+ * Check if user input matches any hardcoded trigger.
+ * Returns the matching trigger or null.
+ */
+export function findHardcodedTrigger(userInput: string): HardcodedTrigger | null {
+  const normalized = userInput.toLowerCase().trim();
+  
+  for (const trigger of HARDCODED_TRIGGERS) {
+    for (const keyword of trigger.keywords) {
+      if (normalized.includes(keyword.toLowerCase())) {
+        return trigger;
+      }
+    }
+  }
+  
+  return null;
+}
