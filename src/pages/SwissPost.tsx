@@ -5,6 +5,7 @@ import salesforceLogo from "@/assets/salesforce-logo.png";
 import agentforceLogo from "@/assets/agentforce-logo.png";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
+import { AvatarOverlay } from "@/components/Overlay/AvatarOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw, ShieldAlert } from "lucide-react";
@@ -302,6 +303,9 @@ const SwissPost = () => {
                     videoRef={videoRef}
                     isMuted={isMuted}
                   />
+                  
+                  {/* Avatar-positioned overlays (e.g., backflip video) - renders on top of avatar */}
+                  <AvatarOverlay />
                   
                   {/* Confidential watermark overlay */}
                   <AnimatePresence>
