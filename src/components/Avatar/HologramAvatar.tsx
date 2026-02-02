@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { User } from "lucide-react";
 import { RefObject } from "react";
+import { AvatarOverlay } from "@/components/Overlay/AvatarOverlay";
 
 interface HologramAvatarProps {
   isConnected?: boolean;
@@ -145,6 +146,9 @@ const HologramAvatar = ({ isConnected = false, isSpeaking = false, avatarUrl, vi
               background: 'radial-gradient(ellipse at center, transparent 50%, hsl(220 30% 5% / 0.6) 100%)',
             }}
           />
+
+          {/* Avatar-positioned visuals overlay (e.g., backflip video) */}
+          <AvatarOverlay />
         </div>
       </div>
     </div>
