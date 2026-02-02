@@ -798,18 +798,10 @@ export function useAvatarConversation() {
           }
         }
 
-        // Wait for all speech commands to be sent (not for speech to complete)
-        await Promise.all(speechPromises);
-        console.log('[HeyGen] All speech commands sent to queue');
-        
-        // Give HeyGen time to finish speaking the queue
-        // We don't have a reliable way to know when it's done, so we estimate
-        // A rough estimate: ~150ms per character of speech
-        const estimatedSpeechTime = Math.min(fullResponse.length * 50, 30000); // Cap at 30s
-        await new Promise(resolve => setTimeout(resolve, estimatedSpeechTime));
-
-
-        console.log('[HeyGen] all sentences spoken');
+        // Speech commands are dispatched immediately via ASYNC mode as chunks arrive
+        // No need to wait here - HeyGen queues internally and plays in order
+        // This enables true parallel streaming: speaking starts while chunks still arrive
+        console.log('[HeyGen] All speech commands dispatched (ASYNC mode - no blocking wait)');
       };
 
       try {
