@@ -62,28 +62,39 @@ const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 /**
  * Extract text chunk from SSE data for STREAMING mode.
  * 
- * IMPORTANT: Salesforce sends TWO types of text events:
- * 1. Delta events (data.delta.text) - Streaming chunks as they're generated (may have tokenization artifacts)
- * 2. Final message events (data.message.text with type="Inform") - Complete cleaned text at the end
+ * IMPORTANT: Salesforce SSE stream structure:
+ * 1. Delta events (data.delta.text) - Streaming token chunks during generation
+ * 2. Text messages (data.message.type="Text") - May contain streaming text during generation
+ * 3. Inform messages (data.message.type="Inform") - Final complete message at the end
  * 
- * For streaming, we ONLY want delta events to avoid speaking the same content twice.
- * The final "Inform" message is a duplicate and should be skipped.
+ * To avoid duplicates: We track accumulated text and only emit genuinely new content.
+ * The final "Inform" message often duplicates streamed content, so we skip it.
  */
 function extractStreamingTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
   
+  // Log what we're receiving for debugging
+  if (msg?.type) {
+    console.log(`[Streaming] Received message type: ${msg.type}, has text: ${!!msg?.text}`);
+  }
+  if (delta) {
+    console.log(`[Streaming] Received delta, has text: ${!!delta?.text}`);
+  }
+  
   // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
-  // These arrive after all delta events and contain the complete cleaned text
-  if (msg?.type === 'Inform' || msg?.type === 'Text') {
-    console.log('[Streaming] Skipping final Inform/Text message (already streamed via deltas)');
+  // The "Inform" type is sent at the END with the complete cleaned response
+  if (msg?.type === 'Inform') {
+    console.log('[Streaming] Skipping final Inform message (duplicates streamed content)');
     return null;
   }
   
-  // For streaming mode, ONLY process delta events
-  const chunk = delta?.text ?? delta?.content;
+  // Try to get text from delta first (true streaming), then from Text message
+  const chunk = delta?.text ?? delta?.content ?? (msg?.type === 'Text' ? msg?.text : null);
   
   if (typeof chunk !== 'string' || !chunk) return null;
+  
+  console.log(`[Streaming] Processing chunk (${chunk.length} chars): "${chunk.slice(0, 50)}..."`);
 
   // Helper: longest overlap between end(accumulated) and start(incoming)
   // This guards against providers that sometimes resend overlapping prefixes.
