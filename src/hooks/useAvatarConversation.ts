@@ -232,10 +232,9 @@ export function useAvatarConversation() {
         if (avatarRef.current && !isSpeakingRef.current) {
           try {
             console.log('[HeyGen] Sending keep-alive ping');
-            // Send an empty speak task to keep the connection alive
-            // Using REPEAT task type with empty/whitespace text won't produce audio
+            // Use empty string to ping without any vocalization
             await avatarRef.current.speak({ 
-              text: ' ', // Single space - enough to ping without audible output
+              text: '', // Empty string - no vocalization
               task_type: TaskType.REPEAT 
             });
           } catch (e) {
@@ -361,7 +360,7 @@ export function useAvatarConversation() {
           try {
             console.log('[HeyGen] Keep-alive ping');
             await avatarRef.current.speak({ 
-              text: ' ', 
+              text: '', // Empty string - no vocalization
               task_type: TaskType.REPEAT 
             });
           } catch (e) {
@@ -746,14 +745,16 @@ export function useAvatarConversation() {
           startVisuals(triggerVisuals);
         }
         
-        // Speak the response directly via HeyGen
+        // Speak the response directly via HeyGen (only if there's text)
         setThinking(false);
-        setSpeaking(true);
         
-        try {
-          await speakSentenceNoInterrupt(hardcodedTrigger.speech);
-        } finally {
-          setSpeaking(false);
+        if (hardcodedTrigger.speech.trim()) {
+          setSpeaking(true);
+          try {
+            await speakSentenceNoInterrupt(hardcodedTrigger.speech);
+          } finally {
+            setSpeaking(false);
+          }
         }
         
         return;
