@@ -174,6 +174,10 @@ serve(async (req) => {
       const encoder = new TextEncoder();
       let textBuffer = '';
       let accumulatedFromAPI = ''; // Track what Agentforce has sent so far
+        // Guard against providers re-sending the same content (sometimes with different spacing)
+        // which can otherwise cause the frontend to speak the same answer twice.
+        const emittedSentences = new Set<string>();
+        const normalizeSentence = (s: string) => s.replace(/\s+/g, ' ').trim();
       
       const readable = new ReadableStream({
         async start(controller) {
@@ -235,10 +239,16 @@ serve(async (req) => {
                     
                     // Send all complete sentences (all but last part)
                     for (let i = 0; i < parts.length - 1; i++) {
-                      const sentence = parts[i].trim();
-                      if (sentence) {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`));
-                      }
+                       const sentence = normalizeSentence(parts[i]);
+                       if (!sentence) continue;
+
+                       // Deduplicate within a single response stream
+                       if (emittedSentences.has(sentence)) continue;
+                       emittedSentences.add(sentence);
+
+                       controller.enqueue(
+                         encoder.encode(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`)
+                       );
                     }
                     
                     // Keep incomplete sentence in buffer
@@ -251,10 +261,13 @@ serve(async (req) => {
             }
             
             // Send any remaining text as final sentence
-            const remaining = textBuffer.replace(/\s+/g, ' ').trim();
-            if (remaining) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`));
-            }
+             const remaining = normalizeSentence(textBuffer);
+             if (remaining && !emittedSentences.has(remaining)) {
+               emittedSentences.add(remaining);
+               controller.enqueue(
+                 encoder.encode(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`)
+               );
+             }
             
             // Send done marker
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
