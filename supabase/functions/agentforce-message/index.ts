@@ -307,19 +307,9 @@ serve(async (req) => {
                   // Extract and buffer text from DELTA events only (skip final Inform message)
                   const result = extractStreamingTextChunk(data, accumulatedFromAPI);
                   if (result) {
-                    // Avoid word-joining across chunk boundaries (e.g. "Fragen?Ein").
-                    // Only affects the spoken/display buffer; we keep accumulatedFromAPI as raw provider text.
-                    const prev = textBuffer;
-                    const next = result.newText;
-                    const needsSpace =
-                      prev.length > 0 &&
-                      !/\s$/.test(prev) &&
-                      next.length > 0 &&
-                      !/^\s/.test(next) &&
-                      /[\p{L}\p{N}!?.,;:]$/u.test(prev) &&
-                      /^[\p{L}\p{N}]/u.test(next);
-
-                    textBuffer += (needsSpace ? ' ' : '') + next;
+                    // Simply concatenate - LLM tokens from Salesforce already include correct spacing.
+                    // DO NOT inject extra spaces; that breaks words like "FASTEST-GROWING" into "FAST EST-G ROW ING".
+                    textBuffer += result.newText;
                     accumulatedFromAPI = result.fullChunk;
                     
                     // Check for complete clauses (sentences, comma-separated phrases, or dash-separated)
