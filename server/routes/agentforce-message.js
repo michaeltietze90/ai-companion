@@ -233,6 +233,8 @@ router.post('/', async (req, res) => {
               
               const result = extractStreamingTextChunk(data, accumulatedFromAPI);
               if (result) {
+                // Simply concatenate - LLM tokens from Salesforce already include correct spacing.
+                // DO NOT inject extra spaces; that breaks words like "FASTEST-GROWING".
                 textBuffer += result.newText;
                 accumulatedFromAPI = result.fullChunk;
                 
