@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/useAvatarConversation";
 import { useConversationStore } from "@/stores/conversationStore";
-import { useElevenLabsSTT } from "@/hooks/useElevenLabsSTT";
+import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher/ProfileSwitcher";
 import { useSettingsStore, VoiceEmotionType } from "@/stores/settingsStore";
@@ -136,7 +136,7 @@ const Index = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useElevenLabsSTT(
+  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useDeepgramSTT(
     handleVoiceTranscript,
     {
       // Prevent echo loops: don't transcribe while the avatar is speaking.

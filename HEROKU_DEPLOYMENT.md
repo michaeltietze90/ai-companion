@@ -46,7 +46,7 @@ Use the "Deploy to Heroku" button if you have `app.json` configured:
 │  │  │  /dist/*        │  │  /api/heygen-token          │ │  │
 │  │  │                 │  │  /api/heygen-proxy          │ │  │
 │  │  │                 │  │  /api/elevenlabs-tts        │ │  │
-│  │  │                 │  │  /api/elevenlabs-scribe-*   │ │  │
+│  │  │                 │  │  /api/deepgram-token        │ │  │
 │  │  └─────────────────┘  └─────────────────────────────┘ │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -56,7 +56,8 @@ Use the "Deploy to Heroku" button if you have `app.json` configured:
         │           External Services             │
         │  • Salesforce Agentforce API            │
         │  • HeyGen Streaming API                 │
-        │  • ElevenLabs TTS/STT API               │
+        │  • Deepgram Nova STT API                │
+        │  • ElevenLabs TTS API (optional)        │
         └─────────────────────────────────────────┘
 ```
 
@@ -70,7 +71,8 @@ Use the "Deploy to Heroku" button if you have `app.json` configured:
 | `SALESFORCE_AGENT_ID` | Agentforce Agent ID | ✅ |
 | `SALESFORCE_API_HOST` | API host (default: api.salesforce.com) | ❌ |
 | `HEYGEN_API_KEY` | HeyGen API key | ✅ |
-| `ELEVENLABS_API_KEY` | ElevenLabs API key | ❌ |
+| `DEEPGRAM_API_KEY` | Deepgram Nova STT API key | ✅ |
+| `ELEVENLABS_API_KEY` | ElevenLabs API key (optional, for TTS) | ❌ |
 
 ## Database (Heroku Postgres)
 
