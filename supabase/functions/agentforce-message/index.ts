@@ -73,13 +73,22 @@ const CLAUSE_END_RE = /(?<=[.!?,])\s+|\s+-\s+/;
 function extractStreamingTextChunk(data: Record<string, unknown>, accumulatedText: string): { newText: string; fullChunk: string } | null {
   const msg = data?.message as Record<string, unknown> | undefined;
   const delta = data?.delta as Record<string, unknown> | undefined;
+
+  const pickString = (...vals: unknown[]): string | null => {
+    for (const v of vals) {
+      if (typeof v === 'string' && v.trim()) return v;
+    }
+    return null;
+  };
   
-  // Log what we're receiving for debugging
+  // Log what we're receiving for debugging (shape varies: Text, TextChunk, Inform)
   if (msg?.type) {
-    console.log(`[Streaming] Received message type: ${msg.type}, has text: ${!!msg?.text}`);
+    const msgKeys = Object.keys(msg).slice(0, 12).join(',');
+    console.log(`[Streaming] Received message type: ${msg.type}, keys: ${msgKeys}`);
   }
   if (delta) {
-    console.log(`[Streaming] Received delta, has text: ${!!delta?.text}`);
+    const deltaKeys = Object.keys(delta).slice(0, 12).join(',');
+    console.log(`[Streaming] Received delta keys: ${deltaKeys}`);
   }
   
   // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
@@ -89,10 +98,22 @@ function extractStreamingTextChunk(data: Record<string, unknown>, accumulatedTex
     return null;
   }
   
-  // Try to get text from delta first (true streaming), then from Text message
-  const chunk = delta?.text ?? delta?.content ?? (msg?.type === 'Text' ? msg?.text : null);
+  // Try to get text from delta first (true streaming), then from message payloads.
+  // Salesforce can emit:
+  // - message.type = "Text"      with msg.text or msg.message
+  // - message.type = "TextChunk" with msg.message / msg.chunk / msg.content (varies)
+  const messageType = typeof msg?.type === 'string' ? msg.type : '';
+  const chunk = pickString(
+    (delta as any)?.text,
+    (delta as any)?.content,
+    messageType === 'Text' || messageType === 'TextChunk' ? (msg as any)?.text : null,
+    messageType === 'Text' || messageType === 'TextChunk' ? (msg as any)?.message : null,
+    messageType === 'Text' || messageType === 'TextChunk' ? (msg as any)?.chunk : null,
+    messageType === 'Text' || messageType === 'TextChunk' ? (msg as any)?.content : null,
+    (data as any)?.content,
+  );
   
-  if (typeof chunk !== 'string' || !chunk) return null;
+  if (!chunk) return null;
   
   console.log(`[Streaming] Processing chunk (${chunk.length} chars): "${chunk.slice(0, 50)}..."`);
 
