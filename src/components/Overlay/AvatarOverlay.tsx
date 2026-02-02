@@ -56,7 +56,7 @@ export function AvatarOverlay() {
       {localVisuals.map(visual => (
         <motion.div
           key={visual.id}
-          className="absolute inset-0 z-50 pointer-events-none"
+          className="absolute inset-0 z-[5] pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: visual.isVisible ? 1 : 0 }}
           exit={{ opacity: 0 }}
