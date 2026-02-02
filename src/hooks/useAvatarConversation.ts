@@ -40,6 +40,11 @@ export function useAvatarConversation() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const tokenRef = useRef<string | null>(null);
   const heygenSessionRef = useRef<string | null>(null);
+  // Agentforce session refs (avoid stale closures after reconnects)
+  const agentforceSessionIdRef = useRef<string | null>(null);
+  const agentforceMessagesStreamUrlRef = useRef<string | null>(null);
+  // Track which agent we started with so session recovery targets the same agent.
+  const agentforceAgentIdRef = useRef<string | null>(null);
   const demoIndexRef = useRef(0);
   const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Ensures we dispatch speech requests to HeyGen in strict order.
@@ -107,6 +112,15 @@ export function useAvatarConversation() {
     addMessage,
     reset,
   } = useConversationStore();
+
+  // Keep refs in sync with store values.
+  useEffect(() => {
+    agentforceSessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  useEffect(() => {
+    agentforceMessagesStreamUrlRef.current = messagesStreamUrl;
+  }, [messagesStreamUrl]);
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
@@ -614,6 +628,9 @@ export function useAvatarConversation() {
     clearVisuals();
 
     try {
+      // Remember current agent target for reconnects.
+      agentforceAgentIdRef.current = agentId ?? null;
+
       if (demoMode) {
         // Demo mode - no real connections
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -709,7 +726,12 @@ export function useAvatarConversation() {
         return;
       }
 
-      if (!sessionId) {
+      // IMPORTANT: always read the latest session from refs (not the closure)
+      // so we never send against an old session after a reconnect.
+      const activeSessionId = agentforceSessionIdRef.current;
+      const activeStreamUrl = agentforceMessagesStreamUrlRef.current;
+
+      if (!activeSessionId) {
         throw new Error('No active Agentforce session (sessionId missing)');
       }
 
@@ -819,7 +841,7 @@ export function useAvatarConversation() {
       };
 
       try {
-        await runStreamingTurn(sessionId, messagesStreamUrl);
+        await runStreamingTurn(activeSessionId, activeStreamUrl);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[Agentforce] Error during message:', msg);
@@ -830,7 +852,8 @@ export function useAvatarConversation() {
           toast.info('Session expired, reconnecting...');
 
           try {
-            const { sessionId: newSessionId, welcomeMessage: _welcome, messagesStreamUrl: newStreamUrl } = await startAgentSession();
+            const agentIdForRecovery = agentforceAgentIdRef.current ?? undefined;
+            const { sessionId: newSessionId, welcomeMessage: _welcome, messagesStreamUrl: newStreamUrl } = await startAgentSession(agentIdForRecovery);
             console.log('[Agentforce] New session created:', newSessionId);
             setSessionId(newSessionId);
             setMessagesStreamUrl(newStreamUrl);
