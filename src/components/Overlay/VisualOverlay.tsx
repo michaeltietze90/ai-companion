@@ -56,13 +56,14 @@ export function VisualOverlay({ visuals, onVisualComplete, onAllComplete }: Visu
     return hideTimeout;
   }, [onVisualComplete]);
 
-  // Process incoming visuals
+  // Process incoming visuals (skip avatar-positioned ones - handled by AvatarOverlay)
   useEffect(() => {
-    if (!visuals.length) return;
+    const nonAvatarVisuals = visuals.filter(v => v.position !== 'avatar');
+    if (!nonAvatarVisuals.length) return;
 
     const timeouts: NodeJS.Timeout[] = [];
 
-    visuals.forEach(visual => {
+    nonAvatarVisuals.forEach(visual => {
       if (visual.startOffset > 0) {
         // Delayed start
         const startTimeout = setTimeout(() => {
