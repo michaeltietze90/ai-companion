@@ -73,6 +73,16 @@ function extractTextChunk(data: Record<string, unknown>, accumulatedText: string
     data?.content;
   
   if (typeof chunk !== 'string' || !chunk) return null;
+
+  // Helper: longest overlap between end(accumulated) and start(incoming)
+  // This guards against providers that sometimes resend overlapping prefixes.
+  const computeOverlap = (acc: string, incoming: string): number => {
+    const max = Math.min(acc.length, incoming.length);
+    for (let len = max; len > 0; len--) {
+      if (acc.endsWith(incoming.slice(0, len))) return len;
+    }
+    return 0;
+  };
   
   // If this chunk is an extension of what we've accumulated, return only the NEW part
   if (chunk.startsWith(accumulatedText) && chunk.length > accumulatedText.length) {
@@ -85,6 +95,17 @@ function extractTextChunk(data: Record<string, unknown>, accumulatedText: string
   if (accumulatedText.startsWith(chunk)) {
     console.log('[Dedup] Skipping - already have this or longer:', chunk.substring(0, 50));
     return null;
+  }
+
+  // Overlap dedup: if incoming begins with a suffix of accumulated, only append the non-overlapping part.
+  // Example:
+  // accumulated: "Hello world"
+  // incoming:    "world and more"  -> append " and more"
+  const overlap = computeOverlap(accumulatedText, chunk);
+  if (overlap > 0 && chunk.length > overlap) {
+    const newPart = chunk.slice(overlap);
+    console.log('[Dedup] Overlap detected, extracting new part:', newPart.substring(0, 50));
+    return { newText: newPart, fullChunk: accumulatedText + newPart };
   }
   
   // This is genuinely new text to append
@@ -194,7 +215,19 @@ serve(async (req) => {
                   // Extract and buffer text (deduplicating against what we've accumulated)
                   const result = extractTextChunk(data, accumulatedFromAPI);
                   if (result) {
-                    textBuffer += result.newText;
+                    // Avoid word-joining across chunk boundaries (e.g. "Fragen?Ein").
+                    // Only affects the spoken/display buffer; we keep accumulatedFromAPI as raw provider text.
+                    const prev = textBuffer;
+                    const next = result.newText;
+                    const needsSpace =
+                      prev.length > 0 &&
+                      !/\s$/.test(prev) &&
+                      next.length > 0 &&
+                      !/^\s/.test(next) &&
+                      /[\p{L}\p{N}!?.,;:]$/u.test(prev) &&
+                      /^[\p{L}\p{N}]/u.test(next);
+
+                    textBuffer += (needsSpace ? ' ' : '') + next;
                     accumulatedFromAPI = result.fullChunk;
                     
                     // Check for complete clauses (sentences, comma-separated phrases, or dash-separated)
