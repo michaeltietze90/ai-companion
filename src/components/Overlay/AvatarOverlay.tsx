@@ -15,19 +15,29 @@ interface ActiveVisual extends VisualCommand {
 export function AvatarOverlay() {
   const { activeVisuals: storeVisuals } = useVisualOverlayStore();
   const [localVisuals, setLocalVisuals] = useState<ActiveVisual[]>([]);
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
 
   // Filter only avatar-positioned visuals
   const avatarVisuals = storeVisuals.filter(v => v.position === 'avatar');
 
+  // Create a stable key from current avatar visual IDs
+  const avatarVisualIds = avatarVisuals.map(v => v.id).join(',');
+
   // Track and manage avatar visuals lifecycle
   useEffect(() => {
     if (avatarVisuals.length === 0) {
-      setLocalVisuals([]);
       return;
     }
 
-    // Add new visuals
+    // Process each new visual
     avatarVisuals.forEach(visual => {
+      // Skip if already processed
+      if (processedIds.has(visual.id)) return;
+      
+      // Mark as processed
+      setProcessedIds(prev => new Set([...prev, visual.id]));
+      
+      // Add to local visuals
       setLocalVisuals(prev => {
         if (prev.find(v => v.id === visual.id)) return prev;
         return [...prev, { ...visual, isVisible: true }];
@@ -42,12 +52,16 @@ export function AvatarOverlay() {
         // Remove after fade out
         setTimeout(() => {
           setLocalVisuals(prev => prev.filter(v => v.id !== visual.id));
+          // Clean up processed ID after removal
+          setProcessedIds(prev => {
+            const next = new Set(prev);
+            next.delete(visual.id);
+            return next;
+          });
         }, 200);
       }, visual.duration);
-
-      return () => clearTimeout(hideTimeout);
     });
-  }, [avatarVisuals.length]);
+  }, [avatarVisualIds, processedIds]);
 
   if (localVisuals.length === 0) return null;
 
