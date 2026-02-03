@@ -31,6 +31,8 @@ interface QuizOverlayState {
   userRank: number | null;
   /** Prefilled data from Agentforce */
   prefillData: PrefillData | null;
+  /** Callback for when Start is pressed (e.g., reconnect avatar) */
+  onStartCallback: (() => void) | null;
 
   // Actions
   showNameEntry: (score: number, prefill?: PrefillData) => void;
@@ -42,6 +44,10 @@ interface QuizOverlayState {
   setPrefillData: (data: PrefillData) => void;
   setScore: (score: number) => void;
   resetQuiz: () => void;
+  /** Register a callback to be called when Start is pressed */
+  setOnStartCallback: (callback: (() => void) | null) => void;
+  /** Trigger the start action (calls callback + resets quiz) */
+  triggerStart: () => void;
 }
 
 // Demo leaderboard data
@@ -60,6 +66,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   leaderboard: demoLeaderboard,
   userRank: null,
   prefillData: null,
+  onStartCallback: null,
 
   showNameEntry: (score, prefill) => {
     set({
@@ -134,6 +141,26 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
       userRank: null,
       prefillData: null,
     });
+  },
+
+  setOnStartCallback: (callback) => {
+    set({ onStartCallback: callback });
+  },
+
+  triggerStart: () => {
+    const { onStartCallback } = get();
+    // Reset the overlay first
+    set({
+      currentOverlay: 'none',
+      currentScore: 0,
+      userEntry: null,
+      userRank: null,
+      prefillData: null,
+    });
+    // Then call the callback (e.g., reconnect avatar)
+    if (onStartCallback) {
+      onStartCallback();
+    }
   },
 }));
 

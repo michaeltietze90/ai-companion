@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
@@ -69,7 +69,7 @@ const Index = () => {
   } = useConversationStore();
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { showNameEntry, showLeaderboard, setLeaderboard, setUserRankData } = useQuizOverlayStore();
+  const { showNameEntry, showLeaderboard, setLeaderboard, setUserRankData, setOnStartCallback } = useQuizOverlayStore();
   
   // Test leaderboard with user at rank 20
   const handleTestLeaderboard = useCallback(() => {
@@ -144,9 +144,15 @@ const Index = () => {
     }
   );
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     startConversation(videoRef.current);
-  };
+  }, [startConversation]);
+
+  // Register the start callback for the leaderboard overlay
+  useEffect(() => {
+    setOnStartCallback(handleStart);
+    return () => setOnStartCallback(null);
+  }, [handleStart, setOnStartCallback]);
 
   const handleSendText = (e: React.FormEvent) => {
     e.preventDefault();

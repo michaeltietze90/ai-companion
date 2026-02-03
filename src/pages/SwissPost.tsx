@@ -10,6 +10,7 @@ import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscala
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
+import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Loader2, Eye, EyeOff, RefreshCw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ const SwissPost = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { isVisible: isVideoCallVisible, duration: videoCallDuration, hide: hideVideoCall } = useVideoCallEscalationStore();
+  const { setOnStartCallback } = useQuizOverlayStore();
   const getActiveProfile = useSettingsStore((state) => state.getActiveProfile);
   const updateProfile = useSettingsStore((state) => state.updateProfile);
 
@@ -109,6 +111,12 @@ const SwissPost = () => {
       }, 500);
     }
   }, [endConversation, startConversation]);
+
+  // Register the restart callback for the leaderboard overlay "Start" button
+  useEffect(() => {
+    setOnStartCallback(handleRestart);
+    return () => setOnStartCallback(null);
+  }, [handleRestart, setOnStartCallback]);
 
   const handleSendText = (e: React.FormEvent) => {
     e.preventDefault();
