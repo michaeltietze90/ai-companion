@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
@@ -45,88 +46,95 @@ export function NameEntryOverlay() {
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="pointer-events-auto w-full"
+        className="pointer-events-auto w-full max-w-md mx-auto"
         initial={{ y: 20, opacity: 0, scale: 0.98 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 20, opacity: 0, scale: 0.98 }}
         transition={{ type: 'spring', damping: 28, stiffness: 350 }}
       >
-        {/* Card with Agentforce purple gradient */}
-        <div className="relative rounded-2xl overflow-hidden">
-          {/* Glow effect - purple/magenta */}
+        {/* Card */}
+        <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+          {/* Header - Blue gradient matching leaderboard */}
           <div 
-            className="absolute -inset-2 blur-2xl opacity-40"
+            className="relative px-5 py-4"
             style={{
-              background: 'linear-gradient(135deg, hsl(280 70% 55% / 0.5) 0%, hsl(310 80% 50% / 0.4) 100%)',
+              background: 'linear-gradient(135deg, #4BA3E3 0%, #2B7FC3 100%)',
             }}
-          />
-          
-          {/* Card body */}
-          <div className="relative bg-[hsl(220_30%_8%/0.92)] backdrop-blur-xl border border-[hsl(280_70%_55%/0.3)] rounded-2xl overflow-hidden">
-            {/* Top gradient accent */}
-            <div className="h-1 w-full gradient-agentforce-wave" />
+          >
+            {/* Close button */}
+            <button
+              onClick={hideOverlay}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
             
-            <div className="p-5">
-              {/* Header */}
-              <div className="text-center mb-4">
-                <div 
-                  className="text-xs font-semibold tracking-[0.2em] uppercase mb-1"
-                  style={{ color: 'hsl(310 80% 70%)' }}
-                >
-                  Quiz Complete
-                </div>
-                <div className="text-2xl font-bold text-foreground">
-                  <span className="text-gradient-agentforce">{currentScore}</span>
-                  <span className="text-muted-foreground text-base ml-1.5 font-normal">pts</span>
-                </div>
+            <h2 className="text-lg font-bold text-white">Quiz Complete!</h2>
+            <p className="text-white/80 text-sm">Enter your details to save your score</p>
+          </div>
+          
+          {/* Body - White background */}
+          <div className="bg-white p-5">
+            {/* Score display */}
+            <div className="text-center mb-5 pb-4 border-b border-slate-100">
+              <div className="text-xs font-semibold tracking-[0.15em] uppercase text-slate-400 mb-1">
+                Your Score
               </div>
+              <div className="text-3xl font-bold text-cyan-600">
+                {currentScore.toLocaleString()}
+                <span className="text-slate-400 text-base ml-1.5 font-normal">pts</span>
+              </div>
+            </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <Input
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First name"
-                    className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.firstName ? 'border-destructive/50' : ''}`}
+                    className={`h-11 bg-slate-50 border-slate-200 focus:border-cyan-400 focus:ring-cyan-400/20 rounded-xl placeholder:text-slate-400 ${errors.firstName ? 'border-red-300 bg-red-50/50' : ''}`}
                   />
+                </div>
+                <div>
                   <Input
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last name"
-                    className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.lastName ? 'border-destructive/50' : ''}`}
+                    className={`h-11 bg-slate-50 border-slate-200 focus:border-cyan-400 focus:ring-cyan-400/20 rounded-xl placeholder:text-slate-400 ${errors.lastName ? 'border-red-300 bg-red-50/50' : ''}`}
                   />
                 </div>
-                
-                <Input
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Country"
-                  className={`h-11 bg-[hsl(220_30%_12%/0.8)] border-[hsl(280_50%_40%/0.3)] focus:border-[hsl(280_70%_55%/0.6)] rounded-xl placeholder:text-muted-foreground/50 ${errors.country ? 'border-destructive/50' : ''}`}
-                />
+              </div>
+              
+              <Input
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="Country"
+                className={`h-11 bg-slate-50 border-slate-200 focus:border-cyan-400 focus:ring-cyan-400/20 rounded-xl placeholder:text-slate-400 ${errors.country ? 'border-red-300 bg-red-50/50' : ''}`}
+              />
 
-                <div className="flex gap-3 pt-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={hideOverlay}
-                    className="flex-1 h-11 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1 h-11 text-white font-medium rounded-xl shadow-lg disabled:opacity-50"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
-                    }}
-                  >
-                    {isLoading ? 'Saving...' : 'Submit'}
-                  </Button>
-                </div>
-              </form>
-            </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={hideOverlay}
+                  className="flex-1 h-11 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 h-11 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+                  style={{
+                    background: 'linear-gradient(135deg, #4BA3E3 0%, #2B7FC3 100%)',
+                  }}
+                >
+                  {isLoading ? 'Saving...' : 'Submit'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </motion.div>
