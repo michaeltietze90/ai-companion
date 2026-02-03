@@ -77,13 +77,17 @@ function LeaderboardRow({
 }
 
 export function LeaderboardOverlay() {
-  const { leaderboard, userEntry, userRank, resetQuiz } = useQuizOverlayStore();
+  const { leaderboard, userEntry, userRank, resetQuiz, triggerStart } = useQuizOverlayStore();
   
   // Show user separately only if they're ranked 7th or lower (not in top 6)
   const showUserSeparately = userRank !== null && userRank > 6;
 
   const handleClose = () => {
     resetQuiz();
+  };
+
+  const handleStart = () => {
+    triggerStart();
   };
 
   return (
@@ -179,7 +183,7 @@ export function LeaderboardOverlay() {
               
               {/* Start Button */}
               <button
-                onClick={handleClose}
+                onClick={handleStart}
                 className="w-full py-3 rounded-xl text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: 'linear-gradient(135deg, #4BA3E3 0%, #2B7FC3 100%)',
