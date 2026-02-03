@@ -126,7 +126,7 @@ export function useDeepgramSTT(
         },
       });
 
-      // Build WebSocket URL with parameters
+      // Build WebSocket URL with parameters and API key
       // Using Nova-2 model with auto language detection for multilingual support
       const wsUrl = new URL('wss://api.deepgram.com/v1/listen');
       wsUrl.searchParams.set('model', 'nova-2');
@@ -138,9 +138,11 @@ export function useDeepgramSTT(
       wsUrl.searchParams.set('smart_format', 'true');
       // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
       wsUrl.searchParams.set('detect_language', 'true');
+      // Pass API key as query parameter (most reliable for WebSocket auth)
+      wsUrl.searchParams.set('token', data.apiKey);
       
-      // Create WebSocket with authorization header via protocol
-      const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
+      // Create WebSocket connection
+      const ws = new WebSocket(wsUrl.toString());
 
       // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
