@@ -138,11 +138,10 @@ export function useDeepgramSTT(
       wsUrl.searchParams.set('smart_format', 'true');
       // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
       wsUrl.searchParams.set('detect_language', 'true');
-      // Pass API key as query parameter (most reliable for WebSocket auth)
-      wsUrl.searchParams.set('token', data.apiKey);
       
-      // Create WebSocket connection
-      const ws = new WebSocket(wsUrl.toString());
+      // Create WebSocket with authorization via Sec-WebSocket-Protocol header
+      // Format: ['token', 'YOUR_API_KEY'] - Deepgram expects this exact format
+      const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
 
       // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
