@@ -126,9 +126,9 @@ const Index = () => {
       await endConversation();
       // Small delay to ensure clean shutdown
       await new Promise(resolve => setTimeout(resolve, 500));
-      await startConversation(videoRef.current);
+      await startConversation(videoRef.current, activeProfile?.salesforceAgentId || undefined);
     }
-  }, [isConnected, endConversation, startConversation]);
+  }, [isConnected, endConversation, startConversation, activeProfile?.salesforceAgentId]);
 
   // Handle voice transcript - send to agent
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -145,8 +145,9 @@ const Index = () => {
   );
 
   const handleStart = useCallback(() => {
-    startConversation(videoRef.current);
-  }, [startConversation]);
+    // Pass the active profile's agent ID
+    startConversation(videoRef.current, activeProfile?.salesforceAgentId || undefined);
+  }, [startConversation, activeProfile?.salesforceAgentId]);
 
   // Register the start callback for the leaderboard overlay
   useEffect(() => {
