@@ -102,11 +102,11 @@ export function LeaderboardOverlay() {
       >
         {/* Card */}
         <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-          {/* Header - Purple gradient */}
+          {/* Header - Blue gradient like reference */}
           <div 
             className="relative px-5 py-4"
             style={{
-              background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
+              background: 'linear-gradient(135deg, #4BA3E3 0%, #2B7FC3 100%)',
             }}
           >
             {/* Close button */}
