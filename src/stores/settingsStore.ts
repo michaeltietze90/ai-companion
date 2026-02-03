@@ -159,6 +159,19 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'agentforce-settings',
+      // Migrate existing localStorage to include new built-in profiles
+      migrate: (persistedState: unknown) => {
+        const state = persistedState as { profiles?: Profile[] };
+        if (state?.profiles) {
+          // Add Talk to Miguel profile if it doesn't exist
+          const hasTalkToMiguel = state.profiles.some(p => p.id === 'talk-to-miguel');
+          if (!hasTalkToMiguel) {
+            state.profiles.push(talkToMiguelProfile);
+          }
+        }
+        return state;
+      },
+      version: 1,
     }
   )
 );
