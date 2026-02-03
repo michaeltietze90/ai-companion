@@ -111,10 +111,18 @@ const defaultProfile: Profile = {
   responseMode: 'text',
 };
 
+const talkToMiguelProfile: Profile = {
+  ...defaultProfile,
+  id: 'talk-to-miguel',
+  name: 'Talk to Miguel',
+  salesforceAgentId: '0XxKZ000000yfD20AI',
+  responseMode: 'json',
+};
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      profiles: [defaultProfile],
+      profiles: [defaultProfile, talkToMiguelProfile],
       activeProfileId: 'default',
       publicAvatars: [],
 
