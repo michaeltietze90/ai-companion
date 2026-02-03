@@ -175,7 +175,18 @@ export function LeaderboardOverlay() {
             
             {/* Footer */}
             <div className="py-3 px-4 text-center border-t border-slate-100">
-              <p className="text-xs text-slate-400">Updated every 24 hours • Keep climbing!</p>
+              <p className="text-xs text-slate-400 mb-3">Updated every 24 hours • Keep climbing!</p>
+              
+              {/* Start Button */}
+              <button
+                onClick={handleClose}
+                className="w-full py-3 rounded-xl text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, #4BA3E3 0%, #2B7FC3 100%)',
+                }}
+              >
+                Start
+              </button>
             </div>
           </div>
         </div>
