@@ -82,9 +82,12 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   },
 
   showLeaderboard: () => {
-    // Fetch fresh data when showing leaderboard
-    get().fetchLeaderboard();
+    // Show overlay first, then fetch in background if needed
     set({ currentOverlay: 'leaderboard' });
+    // Only fetch if we have no data yet
+    if (get().leaderboard.length === 0) {
+      get().fetchLeaderboard();
+    }
   },
 
   hideOverlay: () => {
