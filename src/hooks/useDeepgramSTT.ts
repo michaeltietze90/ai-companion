@@ -138,10 +138,16 @@ export function useDeepgramSTT(
       wsUrl.searchParams.set('smart_format', 'true');
       // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
       wsUrl.searchParams.set('detect_language', 'true');
+
+      // Some environments / proxies are picky about WebSocket auth.
+      // Deepgram documents browser auth via Sec-WebSocket-Protocol (subprotocol), but in practice
+      // sending the token as a query param can help in certain hosted previews.
+      wsUrl.searchParams.set('token', data.apiKey);
       
       // Create WebSocket with authorization via Sec-WebSocket-Protocol header
       // Format: ['token', 'YOUR_API_KEY'] - Deepgram expects this exact format
       const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
+      ws.binaryType = 'arraybuffer';
 
       // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
@@ -209,14 +215,18 @@ export function useDeepgramSTT(
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('Deepgram WebSocket error:', error);
         toast.error('Speech recognition connection error');
         cleanup();
         setIsConnecting(false);
       };
 
       ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
+        console.log('Deepgram WebSocket closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        });
         cleanup();
       };
 
