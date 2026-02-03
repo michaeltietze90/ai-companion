@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
 
 export function NameEntryOverlay() {
-  const { currentScore, prefillData, submitEntry, hideOverlay } = useQuizOverlayStore();
+  const { currentScore, prefillData, submitEntry, hideOverlay, isLoading } = useQuizOverlayStore();
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -30,10 +30,10 @@ export function NameEntryOverlay() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      submitEntry(firstName.trim(), lastName.trim(), country.trim());
+      await submitEntry(firstName.trim(), lastName.trim(), country.trim());
     }
   };
 
@@ -116,12 +116,13 @@ export function NameEntryOverlay() {
                   </Button>
                   <Button
                     type="submit"
-                    className="flex-1 h-11 text-white font-medium rounded-xl shadow-lg"
+                    disabled={isLoading}
+                    className="flex-1 h-11 text-white font-medium rounded-xl shadow-lg disabled:opacity-50"
                     style={{
                       background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
                     }}
                   >
-                    Submit
+                    {isLoading ? 'Saving...' : 'Submit'}
                   </Button>
                 </div>
               </form>
