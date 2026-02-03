@@ -77,7 +77,7 @@ function LeaderboardRow({
 }
 
 export function LeaderboardOverlay() {
-  const { leaderboard, userEntry, userRank, resetQuiz, triggerStart } = useQuizOverlayStore();
+  const { leaderboard, userEntry, userRank, resetQuiz, triggerStart, isLoading } = useQuizOverlayStore();
   
   // Show user separately only if they're ranked 7th or lower (not in top 6)
   const showUserSeparately = userRank !== null && userRank > 6;
@@ -136,15 +136,32 @@ export function LeaderboardOverlay() {
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.map((entry, index) => (
-                  <LeaderboardRow
-                    key={entry.id}
-                    entry={entry}
-                    rank={index + 1}
-                    isCurrentUser={userEntry?.id === entry.id}
-                    animationDelay={0.1 + index * 0.05}
-                  />
-                ))}
+                {isLoading && leaderboard.length === 0 ? (
+                  // Loading skeleton
+                  [...Array(5)].map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="border-b border-slate-100 last:border-b-0">
+                      <td className="py-3 px-4">
+                        <div className="w-7 h-7 rounded-full bg-slate-200 animate-pulse mx-auto" />
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-24" />
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-12 ml-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  leaderboard.map((entry, index) => (
+                    <LeaderboardRow
+                      key={entry.id}
+                      entry={entry}
+                      rank={index + 1}
+                      isCurrentUser={userEntry?.id === entry.id}
+                      animationDelay={0.1 + index * 0.05}
+                    />
+                  ))
+                )}
               </tbody>
             </table>
 
