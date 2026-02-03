@@ -1,12 +1,19 @@
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronDown, X } from 'lucide-react';
 import { useQuizOverlayStore, LeaderboardEntry } from '@/stores/quizOverlayStore';
 
-// Rank display with medals
-const getRankDisplay = (rank: number) => {
-  const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
-  return medals[rank] || String(rank);
+// Rank badge colors
+const getRankBadgeStyle = (rank: number): { bg: string; text: string } => {
+  switch (rank) {
+    case 1:
+      return { bg: 'bg-amber-400', text: 'text-white' };
+    case 2:
+      return { bg: 'bg-slate-400', text: 'text-white' };
+    case 3:
+      return { bg: 'bg-orange-400', text: 'text-white' };
+    default:
+      return { bg: 'bg-slate-200', text: 'text-slate-600' };
+  }
 };
 
 function LeaderboardRow({ 
@@ -20,60 +27,59 @@ function LeaderboardRow({
   isCurrentUser: boolean;
   animationDelay: number;
 }) {
+  const badgeStyle = getRankBadgeStyle(rank);
+  
   return (
-    <motion.div
-      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all
-        ${isCurrentUser 
-          ? 'bg-[hsl(280_70%_55%/0.15)] border border-[hsl(280_70%_55%/0.4)]' 
-          : 'bg-white/5 border border-transparent'
-        }
-      `}
+    <motion.tr
+      className={`border-b border-slate-100 last:border-b-0 ${
+        rank === 1 ? 'bg-amber-50/80' : isCurrentUser ? 'bg-purple-50/80' : 'bg-white'
+      }`}
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: animationDelay, duration: 0.15 }}
     >
       {/* Rank */}
-      <div className="w-8 text-center flex-shrink-0">
-        {rank <= 3 ? (
-          <span className="text-lg">{getRankDisplay(rank)}</span>
-        ) : (
-          <span className="text-muted-foreground font-medium text-sm">{rank}</span>
-        )}
-      </div>
+      <td className="py-3 px-4">
+        <div className="flex items-center justify-center">
+          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${badgeStyle.bg} ${badgeStyle.text}`}>
+            {rank}
+          </span>
+        </div>
+      </td>
 
       {/* Name */}
-      <div className="flex-1 min-w-0 flex items-center gap-2">
-        <span className={`truncate font-medium ${isCurrentUser ? 'text-[hsl(310_80%_70%)]' : 'text-foreground'}`}>
-          {entry.firstName} {entry.lastName.charAt(0)}.
-        </span>
-        {isCurrentUser && (
-          <motion.span
-            className="px-1.5 py-0.5 rounded text-[10px] text-white font-semibold leading-none"
-            style={{ background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)' }}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: animationDelay + 0.1, type: 'spring' }}
-          >
-            YOU
-          </motion.span>
-        )}
-      </div>
-
-      {/* Country */}
-      <span className="text-xs text-muted-foreground hidden sm:block">{entry.country}</span>
+      <td className="py-3 px-2">
+        <div className="flex items-center gap-2">
+          <span className={`truncate font-medium text-slate-800 ${isCurrentUser ? 'text-purple-700' : ''}`}>
+            {entry.firstName} {entry.lastName.charAt(0)}.
+          </span>
+          {isCurrentUser && (
+            <motion.span
+              className="px-1.5 py-0.5 rounded text-[10px] text-white font-semibold leading-none bg-gradient-to-r from-purple-500 to-pink-500"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: animationDelay + 0.1, type: 'spring' }}
+            >
+              YOU
+            </motion.span>
+          )}
+        </div>
+      </td>
 
       {/* Score */}
-      <div className={`font-bold tabular-nums ${isCurrentUser ? 'text-[hsl(310_80%_70%)]' : 'text-foreground'}`}>
-        {entry.score}
-      </div>
-    </motion.div>
+      <td className="py-3 px-4 text-right">
+        <span className={`font-bold tabular-nums ${isCurrentUser ? 'text-purple-600' : 'text-cyan-600'}`}>
+          {entry.score.toLocaleString()}
+        </span>
+      </td>
+    </motion.tr>
   );
 }
 
 export function LeaderboardOverlay() {
   const { leaderboard, userEntry, userRank, resetQuiz } = useQuizOverlayStore();
   
-  // Show user separately only if they're ranked 7th or lower (not in top 5 or 6)
+  // Show user separately only if they're ranked 7th or lower (not in top 6)
   const showUserSeparately = userRank !== null && userRank > 6;
 
   const handleClose = () => {
@@ -88,40 +94,44 @@ export function LeaderboardOverlay() {
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="pointer-events-auto w-full"
+        className="pointer-events-auto w-full max-w-md mx-auto"
         initial={{ y: 20, opacity: 0, scale: 0.98 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 20, opacity: 0, scale: 0.98 }}
         transition={{ type: 'spring', damping: 28, stiffness: 350 }}
       >
-        {/* Card with Agentforce purple gradient */}
-        <div className="relative rounded-2xl overflow-hidden">
-          {/* Glow effect */}
+        {/* Card */}
+        <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+          {/* Header - Purple gradient */}
           <div 
-            className="absolute -inset-2 blur-2xl opacity-40"
+            className="relative px-5 py-4"
             style={{
-              background: 'linear-gradient(135deg, hsl(280 70% 55% / 0.5) 0%, hsl(310 80% 50% / 0.4) 100%)',
+              background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
             }}
-          />
-          
-          {/* Card body */}
-          <div className="relative bg-[hsl(220_30%_8%/0.92)] backdrop-blur-xl border border-[hsl(280_70%_55%/0.3)] rounded-2xl overflow-hidden">
-            {/* Top gradient accent */}
-            <div className="h-1 w-full gradient-agentforce-wave" />
+          >
+            {/* Close button */}
+            <button
+              onClick={handleClose}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
             
-            <div className="p-5">
-              {/* Header */}
-              <div className="text-center mb-4">
-                <div 
-                  className="text-xs font-semibold tracking-[0.2em] uppercase"
-                  style={{ color: 'hsl(310 80% 70%)' }}
-                >
-                  Leaderboard
-                </div>
-              </div>
-
-              {/* Leaderboard List */}
-              <div className="space-y-1.5 mb-4">
+            <h2 className="text-lg font-bold text-white">Leaderboard</h2>
+            <p className="text-white/80 text-sm">Top performers this week</p>
+          </div>
+          
+          {/* Table body */}
+          <div className="bg-white">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="py-2.5 px-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">Rank</th>
+                  <th className="py-2.5 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                  <th className="py-2.5 px-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-20">Score</th>
+                </tr>
+              </thead>
+              <tbody>
                 {leaderboard.map((entry, index) => (
                   <LeaderboardRow
                     key={entry.id}
@@ -131,43 +141,41 @@ export function LeaderboardOverlay() {
                     animationDelay={0.1 + index * 0.05}
                   />
                 ))}
+              </tbody>
+            </table>
 
-                {/* User's rank if outside top 6 */}
-                {userEntry && showUserSeparately && userRank && (
-                  <>
-                    <motion.div
-                      className="flex items-center justify-center py-2"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.35 }}
-                    >
-                      <div className="flex items-center gap-2 text-muted-foreground/50">
-                        <div className="w-12 h-px bg-[hsl(280_70%_55%/0.2)]" />
-                        <ChevronDown className="w-4 h-4" />
-                        <div className="w-12 h-px bg-[hsl(280_70%_55%/0.2)]" />
-                      </div>
-                    </motion.div>
+            {/* User's rank if outside top 6 */}
+            {userEntry && showUserSeparately && userRank && (
+              <>
+                <motion.div
+                  className="flex items-center justify-center py-2 bg-white"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <div className="w-12 h-px bg-slate-200" />
+                    <ChevronDown className="w-4 h-4" />
+                    <div className="w-12 h-px bg-slate-200" />
+                  </div>
+                </motion.div>
 
+                <table className="w-full">
+                  <tbody>
                     <LeaderboardRow
                       entry={userEntry}
                       rank={userRank}
                       isCurrentUser={true}
                       animationDelay={0.4}
                     />
-                  </>
-                )}
-              </div>
-
-              {/* Close Button */}
-              <Button
-                onClick={handleClose}
-                className="w-full h-11 text-white font-medium rounded-xl shadow-lg"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(280 70% 55%) 0%, hsl(310 80% 50%) 100%)',
-                }}
-              >
-                Close
-              </Button>
+                  </tbody>
+                </table>
+              </>
+            )}
+            
+            {/* Footer */}
+            <div className="py-3 px-4 text-center border-t border-slate-100">
+              <p className="text-xs text-slate-400">Updated every 24 hours • Keep climbing!</p>
             </div>
           </div>
         </div>
