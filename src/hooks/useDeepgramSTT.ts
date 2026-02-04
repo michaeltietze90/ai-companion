@@ -37,7 +37,11 @@ interface DeepgramConnection {
   audioContext: AudioContext | null;
   processor: ScriptProcessorNode | null;
   keepAliveInterval: NodeJS.Timeout | null;
+  silenceCheckInterval: NodeJS.Timeout | null;
 }
+
+// VAD threshold - audio RMS below this = silence
+const VAD_SILENCE_THRESHOLD = 0.01;
 
 type UseDeepgramSTTOptions = {
   /**
@@ -66,6 +70,7 @@ export function useDeepgramSTT(
   const finalBufferRef = useRef<string>('');
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commitDelayMsRef = useRef<number>(options?.commitDelayMs ?? 900);
+  const lastVoiceActivityRef = useRef<number>(Date.now()); // Track last voice detection
   const { setListening, setLastVoiceTranscript } = useConversationStore();
 
   useEffect(() => {
@@ -113,6 +118,9 @@ export function useDeepgramSTT(
     if (conn) {
       if (conn.keepAliveInterval) {
         clearInterval(conn.keepAliveInterval);
+      }
+      if (conn.silenceCheckInterval) {
+        clearInterval(conn.silenceCheckInterval);
       }
       if (conn.processor) {
         conn.processor.disconnect();
@@ -227,24 +235,12 @@ export function useDeepgramSTT(
 
         const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
         
-        // We ignore is_final entirely. Instead we accumulate ALL text and only
-        // commit after 900ms of silence (no transcript events at all).
-        
+        // Only accumulate text - NO commit scheduling here!
+        // Commits are driven purely by VAD silence detection in the audio processor
         if (transcript) {
-          // Append to buffer (treat every transcript as accumulating text)
           finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
-          
-          // Show the accumulated buffer as partial (live feedback)
           setPartialTranscript(finalBufferRef.current);
         }
-        
-        // Reset the commit timer on ANY transcript event (even empty ones)
-        // This ensures we only commit after true silence
-        if (commitTimerRef.current) {
-          clearTimeout(commitTimerRef.current);
-          commitTimerRef.current = null;
-        }
-        scheduleCommit();
       });
 
       liveClient.on(LiveTranscriptionEvents.Metadata, (data) => {
@@ -264,17 +260,30 @@ export function useDeepgramSTT(
         cleanup();
       });
 
-      // Set up audio processing
+      // Set up audio processing with VAD (Voice Activity Detection)
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const source = audioContext.createMediaStreamSource(mediaStream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-      // Send audio data to Deepgram SDK
+      // Send audio data to Deepgram SDK + track voice activity
       processor.onaudioprocess = (e) => {
         // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
         if (disabledRef.current) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Calculate RMS (volume level) for VAD
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+        
+        // If voice detected, update last activity timestamp
+        if (rms > VAD_SILENCE_THRESHOLD) {
+          lastVoiceActivityRef.current = Date.now();
+        }
+
         // Convert to 16-bit PCM
         const pcmData = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
@@ -293,12 +302,26 @@ export function useDeepgramSTT(
       source.connect(processor);
       processor.connect(audioContext.destination);
 
+      // Interval to check for silence and commit when 900ms of silence detected
+      const silenceCheckInterval = setInterval(() => {
+        if (disabledRef.current) return;
+        
+        const silenceDuration = Date.now() - lastVoiceActivityRef.current;
+        const hasBufferedText = finalBufferRef.current.trim().length > 0;
+        
+        if (hasBufferedText && silenceDuration >= commitDelayMsRef.current) {
+          console.log(`[VAD] ${silenceDuration}ms silence detected, committing transcript`);
+          commitBufferedTranscript();
+        }
+      }, 100); // Check every 100ms
+
       connectionRef.current = {
         liveClient,
         mediaStream,
         audioContext,
         processor,
         keepAliveInterval,
+        silenceCheckInterval,
       };
 
     } catch (error) {
