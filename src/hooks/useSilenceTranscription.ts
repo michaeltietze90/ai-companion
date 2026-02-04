@@ -33,7 +33,7 @@ type UseSilenceTranscriptionOptions = {
    */
   disabled?: boolean;
 
-  /** Commit once we detect at least this much silence (ms). Default: 900 */
+  /** Commit once we detect at least this much silence (ms). Default: 500 */
   silenceMs?: number;
 
   /**
@@ -92,7 +92,7 @@ export function useSilenceTranscription(
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
-    silenceMsRef.current = options?.silenceMs ?? 900;
+    silenceMsRef.current = options?.silenceMs ?? 500;
     silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? 0.004;
     maxRecordMsRef.current = options?.maxRecordMs ?? 20_000;
 
