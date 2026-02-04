@@ -12,8 +12,6 @@ import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -74,8 +72,6 @@ const ChatAvatarMain = () => {
   const {
     messages,
     thinkingMessage,
-    demoMode,
-    setDemoMode,
     error,
     sessionId,
     lastVoiceTranscript,
@@ -199,16 +195,6 @@ const ChatAvatarMain = () => {
             </Link>
           </div>
 
-          {/* Demo Mode Toggle */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 backdrop-blur-sm">
-            <Switch
-              id="demo-mode"
-              checked={demoMode}
-              onCheckedChange={setDemoMode}
-              disabled={isConnected}
-            />
-            <Label htmlFor="demo-mode" className="text-muted-foreground text-sm">Demo</Label>
-          </div>
           
           <Button
             variant="ghost"
@@ -243,13 +229,13 @@ const ChatAvatarMain = () => {
         >
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-amber-400' : 'bg-blue-500'} animate-pulse`} />
           <span className="text-sm text-muted-foreground">
-            {isConnecting ? 'Connecting...' : isConnected ? (demoMode ? 'Demo Mode' : 'Connected') : 'Ready'}
+            {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Ready'}
           </span>
         </motion.div>
       </div>
 
       {/* Debug panel */}
-      {isConnected && !demoMode && (
+      {isConnected && (
         <div className="hidden lg:flex absolute top-20 right-4 bottom-24 w-72 z-20 flex-col gap-2 overflow-hidden">
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
             <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>

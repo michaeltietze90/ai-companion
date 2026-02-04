@@ -14,14 +14,6 @@ import { findHardcodedTrigger } from '@/lib/hardcodedTriggers';
 import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 
-// Demo responses for testing without credentials (with visual examples)
-const DEMO_RESPONSES = [
-  "Hello! I'm your AI assistant. How can I help you today?",
-  'That\'s a great question! Let me show you our product. <visual type="image" src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400" duration="4000" position="right"/> This is one of our bestsellers!',
-  "I understand. Based on what you've told me, I'd recommend checking out our latest offerings.",
-  'Here\'s our special offer <break time="500ms"/> currently available for you. <visual type="image" src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" duration="5000" position="center"/>',
-  "Thank you for your interest! I'm here to help with any questions.",
-];
 // Fixed avatar and voice IDs from Proto
 const MIGUEL_AVATAR_ID = '26c21d9041654675aa0c2eb479c7d341';
 
@@ -48,7 +40,6 @@ export function useAvatarConversation() {
   const agentforceMessagesStreamUrlRef = useRef<string | null>(null);
   // Track which agent we started with so session recovery targets the same agent.
   const agentforceAgentIdRef = useRef<string | null>(null);
-  const demoIndexRef = useRef(0);
   const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Ensures we dispatch speech requests to HeyGen in strict order.
   // Without this, concurrent ASYNC speak() calls can reach the server out-of-order.
@@ -99,7 +90,6 @@ export function useAvatarConversation() {
     isSpeaking,
     isListening,
     isThinking,
-    demoMode,
     setSessionId,
     setMessagesStreamUrl,
     setConnected,
@@ -645,26 +635,6 @@ export function useAvatarConversation() {
       // Remember current agent target for reconnects.
       agentforceAgentIdRef.current = agentId ?? null;
 
-      if (demoMode) {
-        // Demo mode - no real connections
-        debugLog('state-change', 'Conversation', 'Demo mode enabled');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setConnected(true);
-        setSessionId('demo-session');
-        demoIndexRef.current = 0;
-
-        const welcomeRaw = DEMO_RESPONSES[0];
-        const parsed = parseRichResponse(welcomeRaw);
-        addMessage({ role: 'assistant', content: parsed.displayText });
-        
-        if (parsed.hasRichContent) {
-          startVisuals(parsed.visuals);
-        }
-        
-        toast.success('Demo mode connected!');
-        return;
-      }
-
       // 1) Start Agentforce first (so "brain" is always available)
       // Pass agentId override if provided
       debugLog('state-change', 'Agentforce', 'Starting session...', { agentId });
@@ -717,7 +687,7 @@ export function useAvatarConversation() {
     } finally {
       setConnecting(false);
     }
-  }, [demoMode, initializeAvatar, speakViaProxy, clearVisuals, startVisuals, setConnecting, setConnected, setSessionId, setError, addMessage, setLastAgentforceResponse]);
+  }, [initializeAvatar, speakViaProxy, clearVisuals, startVisuals, setConnecting, setConnected, setSessionId, setError, addMessage, setLastAgentforceResponse]);
 
   // Send message to agent
   const sendMessage = useCallback(async (text: string) => {
@@ -785,24 +755,6 @@ export function useAvatarConversation() {
           }
         }
         
-        return;
-      }
-      
-      if (demoMode) {
-        // Demo mode response with rich content support
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        demoIndexRef.current = (demoIndexRef.current + 1) % DEMO_RESPONSES.length;
-        const rawResponse = DEMO_RESPONSES[demoIndexRef.current];
-        const parsed = parseRichResponse(rawResponse);
-
-        addMessage({ role: 'assistant', content: parsed.displayText });
-        
-        // Start any visuals
-        if (parsed.hasRichContent) {
-          startVisuals(parsed.visuals);
-        }
-        
-        setThinking(false);
         return;
       }
 
@@ -981,7 +933,7 @@ export function useAvatarConversation() {
     } finally {
       setThinking(false);
     }
-  }, [sessionId, messagesStreamUrl, demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, getActiveProfile, executeActions, applyData]);
+  }, [sessionId, messagesStreamUrl, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, getActiveProfile, executeActions, applyData]);
 
   // End conversation
   const endConversation = useCallback(async () => {
@@ -995,7 +947,7 @@ export function useAvatarConversation() {
         keepAliveIntervalRef.current = null;
       }
       
-      if (sessionId && !demoMode) {
+      if (sessionId) {
         await endAgentSession(sessionId);
       }
 
@@ -1025,7 +977,7 @@ export function useAvatarConversation() {
     } catch (error) {
       console.error('End conversation error:', error);
     }
-  }, [sessionId, demoMode, reset, clearVisuals]);
+  }, [sessionId, reset, clearVisuals]);
 
   // Cleanup on unmount
   useEffect(() => {
