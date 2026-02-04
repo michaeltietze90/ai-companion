@@ -136,7 +136,7 @@ export function useDeepgramSTT(
       
       // Create live transcription connection
       const liveClient = deepgram.listen.live({
-        model: 'nova-2',
+        model: 'nova',
         language: 'en',
         encoding: 'linear16',
         sample_rate: 16000,
@@ -144,6 +144,7 @@ export function useDeepgramSTT(
         interim_results: true,
         endpointing: 300,
         smart_format: true,
+        keywords: ['Agentforce:2', 'Data360:2', 'Agentic Enterprise:2', 'Salesforce:2'],
       });
 
       let keepAliveInterval: NodeJS.Timeout | null = null;
