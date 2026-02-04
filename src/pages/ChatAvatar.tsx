@@ -221,6 +221,61 @@ const ChatAvatarMain = () => {
             isMuted={isMuted}
           />
           <QuizOverlayManager />
+          
+          {/* Control buttons inside avatar - right side */}
+          {isConnected && (
+            <div className="absolute top-1/2 -translate-y-1/2 right-4 z-30 flex flex-col gap-3">
+              {/* Mic toggle */}
+              <Button
+                size="lg"
+                className={`rounded-full w-12 h-12 ${
+                  isListening 
+                    ? 'bg-blue-500 hover:bg-blue-600' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                }`}
+                onClick={toggleListening}
+                disabled={sttConnecting || isThinking}
+              >
+                {sttConnecting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : isListening ? (
+                  <Mic className="w-5 h-5" />
+                ) : (
+                  <MicOff className="w-5 h-5" />
+                )}
+              </Button>
+
+              {/* Mute toggle */}
+              <Button
+                size="lg"
+                variant="ghost"
+                className="rounded-full w-12 h-12 bg-secondary/50 hover:bg-secondary/80"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </Button>
+
+              {/* Interrupt button */}
+              <Button
+                size="lg"
+                className="rounded-full w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={interruptAvatar}
+                disabled={!isSpeaking && !isThinking}
+              >
+                <Hand className="w-5 h-5" />
+              </Button>
+
+              {/* End conversation */}
+              <Button
+                size="lg"
+                variant="destructive"
+                className="rounded-full w-12 h-12"
+                onClick={endConversation}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
         </ProtoMDevice>
       </main>
 
@@ -323,58 +378,6 @@ const ChatAvatarMain = () => {
             </form>
           </div>
 
-          {/* Right side: Control buttons (vertical stack) */}
-          <div className="absolute bottom-1/2 translate-y-1/2 right-4 md:right-6 z-20 flex flex-col gap-3">
-            {/* Mic toggle */}
-            <Button
-              size="lg"
-              className={`rounded-full w-14 h-14 ${
-                isListening 
-                  ? 'bg-blue-500 hover:bg-blue-600' 
-                  : 'bg-secondary hover:bg-secondary/80'
-              }`}
-              onClick={toggleListening}
-              disabled={sttConnecting || isThinking}
-            >
-              {sttConnecting ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : isListening ? (
-                <Mic className="w-6 h-6" />
-              ) : (
-                <MicOff className="w-6 h-6" />
-              )}
-            </Button>
-
-            {/* Mute toggle */}
-            <Button
-              size="lg"
-              variant="ghost"
-              className="rounded-full w-14 h-14 bg-secondary/50 hover:bg-secondary/80"
-              onClick={() => setIsMuted(!isMuted)}
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </Button>
-
-            {/* Interrupt button */}
-            <Button
-              size="lg"
-              className="rounded-full w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white"
-              onClick={interruptAvatar}
-              disabled={!isSpeaking && !isThinking}
-            >
-              <Hand className="w-5 h-5" />
-            </Button>
-
-            {/* End conversation */}
-            <Button
-              size="lg"
-              variant="destructive"
-              className="rounded-full w-14 h-14"
-              onClick={endConversation}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
         </>
       )}
 
