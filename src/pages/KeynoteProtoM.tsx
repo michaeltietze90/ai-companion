@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 
 /**
@@ -46,7 +46,7 @@ const KeynoteProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening } = useDeepgramSTT(
+  const { isListening, toggleListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );

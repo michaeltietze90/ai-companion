@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 
@@ -77,7 +77,7 @@ const KeynoteAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useDeepgramSTT(
+  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );

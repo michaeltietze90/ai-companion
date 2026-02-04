@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { usePitchConversationStore } from "@/stores/pitchConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
 
 /**
@@ -46,7 +46,7 @@ const PitchProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening } = useDeepgramSTT(
+  const { isListening, toggleListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
