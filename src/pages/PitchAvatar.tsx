@@ -40,8 +40,8 @@ const PitchAvatarMain = () => {
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Use chat-specific store and settings (reuse chat settings for pitch)
-  const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
+  // Use pitch-specific store and settings
+  const voiceSettings = useAppVoiceSettingsStore(state => state.pitch);
   const conversationState = usePitchConversationStore();
 
   const {
@@ -86,6 +86,13 @@ const PitchAvatarMain = () => {
     startConversation(videoRef.current);
   }, [startConversation]);
 
+  const handleReconnectAvatar = useCallback(() => {
+    endConversation();
+    setTimeout(() => {
+      startConversation(videoRef.current);
+    }, 500);
+  }, [endConversation, startConversation]);
+
   useEffect(() => {
     setOnStartCallback(handleStart);
     return () => setOnStartCallback(null);
@@ -102,7 +109,7 @@ const PitchAvatarMain = () => {
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-purple-950/20 via-background to-pink-950/20">
       {/* Video Call Escalation Overlay */}
       <VideoCallEscalationOverlay 
         isVisible={isVideoCallVisible} 
@@ -357,7 +364,8 @@ const PitchAvatarMain = () => {
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
-        onReconnectAvatar={() => {}}
+        onReconnectAvatar={handleReconnectAvatar}
+        appType="pitch"
       />
     </div>
   );

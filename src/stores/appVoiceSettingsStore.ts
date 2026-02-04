@@ -34,13 +34,15 @@ const defaultAppSettings: AppVoiceSettings = {
 interface AppVoiceSettingsState {
   keynote: AppVoiceSettings;
   chat: AppVoiceSettings;
+  pitch: AppVoiceSettings;
   
   updateKeynoteSettings: (updates: Partial<AppVoiceSettings>) => void;
   updateChatSettings: (updates: Partial<AppVoiceSettings>) => void;
+  updatePitchSettings: (updates: Partial<AppVoiceSettings>) => void;
 }
 
 /**
- * Separate voice settings for each app (Keynote vs Chat).
+ * Separate voice settings for each app (Keynote, Chat, Pitch).
  * Persisted to localStorage so settings survive page reloads.
  */
 export const useAppVoiceSettingsStore = create<AppVoiceSettingsState>()(
@@ -48,6 +50,7 @@ export const useAppVoiceSettingsStore = create<AppVoiceSettingsState>()(
     (set) => ({
       keynote: { ...defaultAppSettings },
       chat: { ...defaultAppSettings },
+      pitch: { ...defaultAppSettings },
       
       updateKeynoteSettings: (updates) => set((state) => ({
         keynote: { ...state.keynote, ...updates },
@@ -55,6 +58,10 @@ export const useAppVoiceSettingsStore = create<AppVoiceSettingsState>()(
       
       updateChatSettings: (updates) => set((state) => ({
         chat: { ...state.chat, ...updates },
+      })),
+      
+      updatePitchSettings: (updates) => set((state) => ({
+        pitch: { ...state.pitch, ...updates },
       })),
     }),
     {
