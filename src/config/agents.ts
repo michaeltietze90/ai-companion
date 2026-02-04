@@ -19,20 +19,25 @@ export const KEYNOTE_AGENTS: AgentConfig[] = [
   },
 ];
 
-// Chat App Agents
+// Chat App Agents (single agent per app)
 export const CHAT_AGENTS: AgentConfig[] = [
   {
     id: '0XxKZ000000yfD20AI',
     name: 'Chat with Miguel Agent',
     description: 'Interactive chat agent',
   },
+];
+
+// Pitch Script Agent
+export const PITCH_AGENTS: AgentConfig[] = [
   {
     id: '1bYKZ000000k9eM2AQ',
-    name: 'Script based Chat with Miguel',
-    description: 'Scripted conversation agent',
+    name: 'Pitch Agent Script',
+    description: 'Scripted pitch conversation agent',
   },
 ];
 
 // Default agent IDs for each app
 export const DEFAULT_KEYNOTE_AGENT_ID = KEYNOTE_AGENTS[0].id;
 export const DEFAULT_CHAT_AGENT_ID = CHAT_AGENTS[0].id;
+export const DEFAULT_PITCH_AGENT_ID = PITCH_AGENTS[0].id;

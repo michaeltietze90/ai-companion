@@ -7,10 +7,13 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import KeynoteAvatar from "./pages/KeynoteAvatar";
 import ChatAvatar from "./pages/ChatAvatar";
+import PitchAvatar from "./pages/PitchAvatar";
 import KeynoteProtoM from "./pages/KeynoteProtoM";
 import KeynoteProtoL from "./pages/KeynoteProtoL";
 import ChatProtoM from "./pages/ChatProtoM";
 import ChatProtoL from "./pages/ChatProtoL";
+import PitchProtoM from "./pages/PitchProtoM";
+import PitchProtoL from "./pages/PitchProtoL";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +37,12 @@ const App = () => (
           <Route path="/chat" element={<ChatAvatar />}>
             <Route path="proto-m" element={<ChatProtoM />} />
             <Route path="proto-l" element={<ChatProtoL />} />
+          </Route>
+          
+          {/* Pitch Agent Script Routes */}
+          <Route path="/pitch" element={<PitchAvatar />}>
+            <Route path="proto-m" element={<PitchProtoM />} />
+            <Route path="proto-l" element={<PitchProtoL />} />
           </Route>
           
           {/* Legacy redirects */}
