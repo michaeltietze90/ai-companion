@@ -84,8 +84,11 @@ const ChatAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Chat] Voice transcript:', transcript);
+    // IMPORTANT: useDeepgramSTT currently writes debug info to the legacy (global) store.
+    // Chat uses a scoped store, so we mirror the transcript here so UI/debug panels update.
+    conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
-  }, [sendMessage]);
+  }, [conversationState, sendMessage]);
 
   const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
     handleVoiceTranscript,

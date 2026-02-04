@@ -85,8 +85,11 @@ const KeynoteAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);
+    // IMPORTANT: useDeepgramSTT currently writes debug info to the legacy (global) store.
+    // Keynote uses a scoped store, so we mirror the transcript here so UI/debug panels update.
+    conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
-  }, [sendMessage]);
+  }, [conversationState, sendMessage]);
 
   const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
     handleVoiceTranscript,
