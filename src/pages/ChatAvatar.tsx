@@ -9,7 +9,7 @@ import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -61,6 +61,7 @@ const ChatAvatarMain = () => {
     startConversation,
     sendMessage,
     endConversation,
+    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useChatConversationStore,
     voiceSettings,
@@ -299,36 +300,93 @@ const ChatAvatarMain = () => {
         )}
       </AnimatePresence>
 
-      {/* Controls */}
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
-        {isConnected && (
-          <form onSubmit={handleSendText} className="max-w-lg mx-auto mb-3 md:mb-4 px-2 md:px-0">
-            <div className="flex gap-2">
+      {/* Controls - Left side text input, Right side buttons */}
+      {isConnected && (
+        <>
+          {/* Left side: Text input */}
+          <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
+            <form onSubmit={handleSendText} className="flex flex-col gap-2">
               <Input
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder="Chat with Miguel..."
-                className="bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+                className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
                 disabled={isThinking}
               />
               <Button 
                 type="submit" 
                 disabled={isThinking || !textInput.trim()}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-4 md:px-6"
+                className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
               >
                 Send
               </Button>
-            </div>
-          </form>
-        )}
+            </form>
+          </div>
 
-        <motion.div
-          className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {!isConnected ? (
+          {/* Right side: Control buttons (vertical stack) */}
+          <div className="absolute bottom-1/2 translate-y-1/2 right-4 md:right-6 z-20 flex flex-col gap-3">
+            {/* Mic toggle */}
+            <Button
+              size="lg"
+              className={`rounded-full w-14 h-14 ${
+                isListening 
+                  ? 'bg-blue-500 hover:bg-blue-600' 
+                  : 'bg-secondary hover:bg-secondary/80'
+              }`}
+              onClick={toggleListening}
+              disabled={sttConnecting || isThinking}
+            >
+              {sttConnecting ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : isListening ? (
+                <Mic className="w-6 h-6" />
+              ) : (
+                <MicOff className="w-6 h-6" />
+              )}
+            </Button>
+
+            {/* Mute toggle */}
+            <Button
+              size="lg"
+              variant="ghost"
+              className="rounded-full w-14 h-14 bg-secondary/50 hover:bg-secondary/80"
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </Button>
+
+            {/* Interrupt button */}
+            <Button
+              size="lg"
+              className="rounded-full w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={interruptAvatar}
+              disabled={!isSpeaking && !isThinking}
+            >
+              <Hand className="w-5 h-5" />
+            </Button>
+
+            {/* End conversation */}
+            <Button
+              size="lg"
+              variant="destructive"
+              className="rounded-full w-14 h-14"
+              onClick={endConversation}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Start button (centered at bottom when not connected) */}
+      {!isConnected && (
+        <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
+          <motion.div
+            className="max-w-md mx-auto flex items-center justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <Button
               size="lg"
               className="px-10 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/30 rounded-xl"
@@ -347,48 +405,9 @@ const ChatAvatarMain = () => {
                 </>
               )}
             </Button>
-          ) : (
-            <>
-              <Button
-                size="lg"
-                className={`rounded-full w-14 h-14 ${
-                  isListening 
-                    ? 'bg-blue-500 hover:bg-blue-600' 
-                    : 'bg-secondary hover:bg-secondary/80'
-                }`}
-                onClick={toggleListening}
-                disabled={sttConnecting || isThinking}
-              >
-                {sttConnecting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : isListening ? (
-                  <Mic className="w-6 h-6" />
-                ) : (
-                  <MicOff className="w-6 h-6" />
-                )}
-              </Button>
-
-              <Button
-                size="lg"
-                variant="ghost"
-                className="rounded-full w-12 h-12"
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
-
-              <Button
-                size="lg"
-                variant="destructive"
-                className="rounded-full w-12 h-12"
-                onClick={endConversation}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </>
-          )}
-        </motion.div>
-      </footer>
+          </motion.div>
+        </footer>
+      )}
 
       {/* Settings Modal */}
       <SettingsModal 

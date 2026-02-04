@@ -512,6 +512,45 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     }
   }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation]);
 
+  // Interrupt avatar speech and clear queue
+  const interruptAvatar = useCallback(async () => {
+    debugLog('state-change', 'Conversation', 'Interrupting avatar speech');
+    
+    // Reset the dispatch queue to prevent pending sentences from playing
+    heygenDispatchQueueRef.current = Promise.resolve();
+    
+    // Interrupt via SDK
+    if (avatarRef.current) {
+      try {
+        await avatarRef.current.interrupt();
+      } catch (e) {
+        console.warn('[HeyGen] SDK interrupt error:', e);
+      }
+    }
+    
+    // Fallback: interrupt via proxy
+    if (tokenRef.current && heygenSessionRef.current) {
+      try {
+        await interruptSpeaking(tokenRef.current, heygenSessionRef.current);
+      } catch (e) {
+        console.warn('[HeyGen] Proxy interrupt error:', e);
+      }
+    }
+    
+    // Clear speaking state
+    isSpeakingRef.current = false;
+    setSpeaking(false);
+    setThinking(false);
+    
+    // Resolve any pending speech promise
+    if (speechResolveRef.current) {
+      speechResolveRef.current();
+      speechResolveRef.current = null;
+    }
+    
+    toast.info('Interrupted');
+  }, [setSpeaking, setThinking]);
+
   // End conversation
   const endConversation = useCallback(async () => {
     try {
@@ -577,6 +616,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     startConversation,
     sendMessage,
     endConversation,
+    interruptAvatar,
     setListening,
   };
 }
