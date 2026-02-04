@@ -140,11 +140,6 @@ export function useDeepgramSTT(
       // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
       wsUrl.searchParams.set('detect_language', 'true');
 
-      // Some environments / proxies are picky about WebSocket auth.
-      // Deepgram documents browser auth via Sec-WebSocket-Protocol (subprotocol), but in practice
-      // sending the token as a query param can help in certain hosted previews.
-      wsUrl.searchParams.set('token', data.apiKey);
-      
       // Create WebSocket with authorization via Sec-WebSocket-Protocol header
       // Format: ['token', 'YOUR_API_KEY'] - Deepgram expects this exact format
       const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
