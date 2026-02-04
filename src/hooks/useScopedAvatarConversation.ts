@@ -60,6 +60,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const isSpeakingRef = useRef(false);
   const elevenLabsAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastElevenLabsToastAtRef = useRef<number>(0);
+  const isProcessingMessageRef = useRef(false); // Guard against concurrent messages
 
   // Use scoped store
   const {
@@ -348,6 +349,13 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   // Send message
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
+    
+    // Prevent concurrent messages (causes 423 "Locked" errors from Salesforce)
+    if (isProcessingMessageRef.current) {
+      console.warn('[sendMessage] Skipping - already processing a message');
+      return;
+    }
+    isProcessingMessageRef.current = true;
 
     addMessage({ role: 'user', content: text });
     setThinking(true, 'Thinking...');
@@ -517,6 +525,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       toast.error(errorMessage);
     } finally {
       setThinking(false);
+      isProcessingMessageRef.current = false; // Allow new messages
     }
   }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation]);
 
