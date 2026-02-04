@@ -143,10 +143,9 @@ export function useDeepgramSTT(
         sample_rate: 16000,
         channels: 1,
         interim_results: true,
-        endpointing: 500, // Slightly longer for better accuracy
+        endpointing: 300, // Keep fast 300ms for low latency
         smart_format: true,
         punctuate: true,
-        utterance_end_ms: 1000, // Wait for natural pause before finalizing
       });
 
       let keepAliveInterval: NodeJS.Timeout | null = null;
