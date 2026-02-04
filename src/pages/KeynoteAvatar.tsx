@@ -12,16 +12,9 @@ import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
-import { useScopedAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/useScopedAvatarConversation";
+import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
@@ -46,12 +39,10 @@ const KeynoteAvatarMain = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
-  const [selectedAgentId, setSelectedAgentId] = useState(DEFAULT_KEYNOTE_AGENT_ID);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Use keynote-specific store and settings
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
-  const updateVoiceSettings = useAppVoiceSettingsStore(state => state.updateKeynoteSettings);
   const conversationState = useKeynoteConversationStore();
 
   const {
@@ -65,7 +56,7 @@ const KeynoteAvatarMain = () => {
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
-    defaultAgentId: selectedAgentId,
+    defaultAgentId: DEFAULT_KEYNOTE_AGENT_ID,
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: true,
   });
@@ -97,8 +88,8 @@ const KeynoteAvatarMain = () => {
   );
 
   const handleStart = useCallback(() => {
-    startConversation(videoRef.current, selectedAgentId);
-  }, [startConversation, selectedAgentId]);
+    startConversation(videoRef.current);
+  }, [startConversation]);
 
   useEffect(() => {
     setOnStartCallback(handleStart);
@@ -112,10 +103,6 @@ const KeynoteAvatarMain = () => {
       setTextInput('');
     }
   };
-
-  const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
-    updateVoiceSettings({ heygenVoice: voice });
-  }, [updateVoiceSettings]);
 
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
@@ -147,43 +134,21 @@ const KeynoteAvatarMain = () => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Agent Selector */}
-          <Select
-            value={selectedAgentId}
-            onValueChange={setSelectedAgentId}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-48 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KEYNOTE_AGENTS.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {/* Voice Selector */}
-          <Select
-            value={voiceSettings.heygenVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Fullscreen Links */}
+          <div className="hidden xl:flex items-center gap-1">
+            <Link to="/keynote/proto-m">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                <Maximize2 className="w-3 h-3 mr-1" />
+                Proto M
+              </Button>
+            </Link>
+            <Link to="/keynote/proto-l">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                <Maximize2 className="w-3 h-3 mr-1" />
+                Proto L
+              </Button>
+            </Link>
+          </div>
           <div className="hidden xl:flex items-center gap-1">
             <Link to="/keynote/proto-m">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">

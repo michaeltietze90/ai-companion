@@ -12,16 +12,9 @@ import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useChatConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
-import { useScopedAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/useScopedAvatarConversation";
+import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
@@ -49,7 +42,6 @@ const ChatAvatarMain = () => {
 
   // Use chat-specific store and settings
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
-  const updateVoiceSettings = useAppVoiceSettingsStore(state => state.updateChatSettings);
   const conversationState = useChatConversationStore();
 
   const {
@@ -112,10 +104,6 @@ const ChatAvatarMain = () => {
     }
   };
 
-  const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
-    updateVoiceSettings({ heygenVoice: voice });
-  }, [updateVoiceSettings]);
-
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
@@ -146,42 +134,6 @@ const ChatAvatarMain = () => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Voice Selector */}
-          <Select
-            value={voiceSettings.heygenVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {/* Voice Selector */}
-          <Select
-            value={voiceSettings.heygenVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Fullscreen Links */}
           <div className="hidden xl:flex items-center gap-1">
             <Link to="/chat/proto-m">
