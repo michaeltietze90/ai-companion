@@ -9,7 +9,7 @@ import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
@@ -27,7 +27,6 @@ const KeynoteAvatar = () => {
   const location = useLocation();
   const isMainPage = location.pathname === '/keynote' || location.pathname === '/keynote/';
   
-  // If on a subpage (proto-m or proto-l), render outlet
   if (!isMainPage) {
     return <Outlet />;
   }
@@ -53,6 +52,7 @@ const KeynoteAvatarMain = () => {
     startConversation,
     sendMessage,
     endConversation,
+    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
@@ -62,13 +62,10 @@ const KeynoteAvatarMain = () => {
   });
 
   const {
-    messages,
     thinkingMessage,
     error,
-    sessionId,
     lastVoiceTranscript,
     streamingSentences,
-    lastSpokenText,
   } = conversationState;
 
   const { activeVisuals } = useVisualOverlayStore();
@@ -76,8 +73,6 @@ const KeynoteAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);
-    // IMPORTANT: useDeepgramSTT currently writes debug info to the legacy (global) store.
-    // Keynote uses a scoped store, so we mirror the transcript here so UI/debug panels update.
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
@@ -90,6 +85,13 @@ const KeynoteAvatarMain = () => {
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
   }, [startConversation]);
+
+  const handleReconnectAvatar = useCallback(() => {
+    endConversation();
+    setTimeout(() => {
+      startConversation(videoRef.current);
+    }, 500);
+  }, [endConversation, startConversation]);
 
   useEffect(() => {
     setOnStartCallback(handleStart);
@@ -107,7 +109,7 @@ const KeynoteAvatarMain = () => {
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-orange-950/20 via-background to-amber-950/20">
       {/* Video Call Escalation Overlay */}
       <VideoCallEscalationOverlay 
         isVisible={isVideoCallVisible} 
@@ -149,22 +151,7 @@ const KeynoteAvatarMain = () => {
               </Button>
             </Link>
           </div>
-          <div className="hidden xl:flex items-center gap-1">
-            <Link to="/keynote/proto-m">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
-                <Maximize2 className="w-3 h-3 mr-1" />
-                Proto M
-              </Button>
-            </Link>
-            <Link to="/keynote/proto-l">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
-                <Maximize2 className="w-3 h-3 mr-1" />
-                Proto L
-              </Button>
-            </Link>
-          </div>
 
-          
           <Button
             variant="ghost"
             size="icon"
@@ -186,6 +173,61 @@ const KeynoteAvatarMain = () => {
             isMuted={isMuted}
           />
           <QuizOverlayManager />
+          
+          {/* Control buttons inside avatar - right side */}
+          {isConnected && (
+            <div className="absolute top-1/2 -translate-y-1/2 right-4 z-30 flex flex-col gap-3">
+              {/* Mic toggle */}
+              <Button
+                size="lg"
+                className={`rounded-full w-12 h-12 ${
+                  isListening 
+                    ? 'bg-primary hover:bg-primary/90' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                }`}
+                onClick={toggleListening}
+                disabled={sttConnecting || isThinking}
+              >
+                {sttConnecting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : isListening ? (
+                  <Mic className="w-5 h-5" />
+                ) : (
+                  <MicOff className="w-5 h-5" />
+                )}
+              </Button>
+
+              {/* Mute toggle */}
+              <Button
+                size="lg"
+                variant="ghost"
+                className="rounded-full w-12 h-12 bg-secondary/50 hover:bg-secondary/80"
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </Button>
+
+              {/* Interrupt button */}
+              <Button
+                size="lg"
+                className="rounded-full w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={interruptAvatar}
+                disabled={!isSpeaking && !isThinking}
+              >
+                <Hand className="w-5 h-5" />
+              </Button>
+
+              {/* End conversation */}
+              <Button
+                size="lg"
+                variant="destructive"
+                className="rounded-full w-12 h-12"
+                onClick={endConversation}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+          )}
         </ProtoMDevice>
       </main>
 
@@ -265,36 +307,37 @@ const KeynoteAvatarMain = () => {
         )}
       </AnimatePresence>
 
-      {/* Controls */}
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
-        {isConnected && (
-          <form onSubmit={handleSendText} className="max-w-lg mx-auto mb-3 md:mb-4 px-2 md:px-0">
-            <div className="flex gap-2">
-              <Input
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Ask me anything..."
-                className="bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
-                disabled={isThinking}
-              />
-              <Button 
-                type="submit" 
-                disabled={isThinking || !textInput.trim()}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-4 md:px-6"
-              >
-                Send
-              </Button>
-            </div>
+      {/* Controls - Left side text input */}
+      {isConnected && (
+        <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
+          <form onSubmit={handleSendText} className="flex flex-col gap-2">
+            <Input
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Ask me anything..."
+              className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+              disabled={isThinking}
+            />
+            <Button 
+              type="submit" 
+              disabled={isThinking || !textInput.trim()}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+            >
+              Send
+            </Button>
           </form>
-        )}
+        </div>
+      )}
 
-        <motion.div
-          className="max-w-md mx-auto flex items-center justify-center gap-3 md:gap-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {!isConnected ? (
+      {/* Start button (centered at bottom when not connected) */}
+      {!isConnected && (
+        <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
+          <motion.div
+            className="max-w-md mx-auto flex items-center justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <Button
               size="lg"
               className="px-10 py-6 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg shadow-primary/30 rounded-xl"
@@ -313,54 +356,16 @@ const KeynoteAvatarMain = () => {
                 </>
               )}
             </Button>
-          ) : (
-            <>
-              <Button
-                size="lg"
-                className={`rounded-full w-14 h-14 ${
-                  isListening 
-                    ? 'bg-primary hover:bg-primary/90' 
-                    : 'bg-secondary hover:bg-secondary/80'
-                }`}
-                onClick={toggleListening}
-                disabled={sttConnecting || isThinking}
-              >
-                {sttConnecting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : isListening ? (
-                  <Mic className="w-6 h-6" />
-                ) : (
-                  <MicOff className="w-6 h-6" />
-                )}
-              </Button>
-
-              <Button
-                size="lg"
-                variant="ghost"
-                className="rounded-full w-12 h-12"
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
-
-              <Button
-                size="lg"
-                variant="destructive"
-                className="rounded-full w-12 h-12"
-                onClick={endConversation}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </>
-          )}
-        </motion.div>
-      </footer>
+          </motion.div>
+        </footer>
+      )}
 
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
-        onReconnectAvatar={() => {}}
+        onReconnectAvatar={handleReconnectAvatar}
+        appType="keynote"
       />
     </div>
   );

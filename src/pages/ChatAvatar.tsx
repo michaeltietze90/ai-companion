@@ -21,7 +21,7 @@ import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 
 /**
  * Chat with Miguel Avatar - Main Page
- * Uses Chat with Miguel Agent or Script based Chat
+ * Uses Chat with Miguel Agent
  */
 const ChatAvatar = () => {
   const location = useLocation();
@@ -62,13 +62,10 @@ const ChatAvatarMain = () => {
   });
 
   const {
-    messages,
     thinkingMessage,
     error,
-    sessionId,
     lastVoiceTranscript,
     streamingSentences,
-    lastSpokenText,
   } = conversationState;
 
   const { activeVisuals } = useVisualOverlayStore();
@@ -76,8 +73,6 @@ const ChatAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Chat] Voice transcript:', transcript);
-    // IMPORTANT: useDeepgramSTT currently writes debug info to the legacy (global) store.
-    // Chat uses a scoped store, so we mirror the transcript here so UI/debug panels update.
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
@@ -90,6 +85,13 @@ const ChatAvatarMain = () => {
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
   }, [startConversation]);
+
+  const handleReconnectAvatar = useCallback(() => {
+    endConversation();
+    setTimeout(() => {
+      startConversation(videoRef.current);
+    }, 500);
+  }, [endConversation, startConversation]);
 
   useEffect(() => {
     setOnStartCallback(handleStart);
@@ -107,7 +109,7 @@ const ChatAvatarMain = () => {
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-950/20 via-background to-cyan-950/20">
       {/* Video Call Escalation Overlay */}
       <VideoCallEscalationOverlay 
         isVisible={isVideoCallVisible} 
@@ -150,7 +152,6 @@ const ChatAvatarMain = () => {
             </Link>
           </div>
 
-          
           <Button
             variant="ghost"
             size="icon"
@@ -306,30 +307,26 @@ const ChatAvatarMain = () => {
         )}
       </AnimatePresence>
 
-      {/* Controls - Left side text input, Right side buttons */}
+      {/* Controls - Left side text input */}
       {isConnected && (
-        <>
-          {/* Left side: Text input */}
-          <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
-            <form onSubmit={handleSendText} className="flex flex-col gap-2">
-              <Input
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Chat with Miguel..."
-                className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
-                disabled={isThinking}
-              />
-              <Button 
-                type="submit" 
-                disabled={isThinking || !textInput.trim()}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
-              >
-                Send
-              </Button>
-            </form>
-          </div>
-
-        </>
+        <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
+          <form onSubmit={handleSendText} className="flex flex-col gap-2">
+            <Input
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Chat with Miguel..."
+              className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+              disabled={isThinking}
+            />
+            <Button 
+              type="submit" 
+              disabled={isThinking || !textInput.trim()}
+              className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
+            >
+              Send
+            </Button>
+          </form>
+        </div>
       )}
 
       {/* Start button (centered at bottom when not connected) */}
@@ -367,7 +364,8 @@ const ChatAvatarMain = () => {
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
-        onReconnectAvatar={() => {}}
+        onReconnectAvatar={handleReconnectAvatar}
+        appType="chat"
       />
     </div>
   );
