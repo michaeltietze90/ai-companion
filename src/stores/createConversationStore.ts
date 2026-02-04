@@ -18,7 +18,6 @@ export interface ConversationState {
   isThinking: boolean;
   thinkingMessage: string;
   error: string | null;
-  demoMode: boolean;
 
   // Debug / observability
   lastVoiceTranscript: string;
@@ -37,7 +36,6 @@ export interface ConversationState {
   setListening: (listening: boolean) => void;
   setThinking: (thinking: boolean, message?: string) => void;
   setError: (error: string | null) => void;
-  setDemoMode: (demo: boolean) => void;
   setLastVoiceTranscript: (text: string) => void;
   setLastAgentforceResponse: (text: string) => void;
   setLastSpokenText: (text: string) => void;
@@ -59,7 +57,6 @@ const createConversationSlice: StateCreator<ConversationState> = (set) => ({
   isThinking: false,
   thinkingMessage: '',
   error: null,
-  demoMode: false,
 
   lastVoiceTranscript: '',
   lastAgentforceResponse: '',
@@ -74,7 +71,6 @@ const createConversationSlice: StateCreator<ConversationState> = (set) => ({
   setListening: (isListening) => set({ isListening }),
   setThinking: (isThinking, thinkingMessage = '') => set({ isThinking, thinkingMessage }),
   setError: (error) => set({ error }),
-  setDemoMode: (demoMode) => set({ demoMode }),
 
   setLastVoiceTranscript: (lastVoiceTranscript) => set({ lastVoiceTranscript }),
   setLastAgentforceResponse: (lastAgentforceResponse) => set({ lastAgentforceResponse }),

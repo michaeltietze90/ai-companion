@@ -15,14 +15,7 @@ import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 import type { StoreApi, UseBoundStore } from 'zustand';
 
-// Demo responses for testing without credentials
-const DEMO_RESPONSES = [
-  "Hello! I'm your AI assistant. How can I help you today?",
-  'That\'s a great question! Let me show you our product. <visual type="image" src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400" duration="4000" position="right"/> This is one of our bestsellers!',
-  "I understand. Based on what you've told me, I'd recommend checking out our latest offerings.",
-  'Here\'s our special offer <break time="500ms"/> currently available for you. <visual type="image" src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" duration="5000" position="center"/>',
-  "Thank you for your interest! I'm here to help with any questions.",
-];
+// Demo responses removed - using live Agentforce only
 
 const MIGUEL_AVATAR_ID = '26c21d9041654675aa0c2eb479c7d341';
 const VALID_AVATAR_IDS = new Set([MIGUEL_AVATAR_ID]);
@@ -61,7 +54,6 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const agentforceSessionIdRef = useRef<string | null>(null);
   const agentforceMessagesStreamUrlRef = useRef<string | null>(null);
   const agentforceAgentIdRef = useRef<string | null>(null);
-  const demoIndexRef = useRef(0);
   const keepAliveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heygenDispatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   const speechResolveRef = useRef<(() => void) | null>(null);
@@ -78,7 +70,6 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     isSpeaking,
     isListening,
     isThinking,
-    demoMode,
     setSessionId,
     setMessagesStreamUrl,
     setConnected,
@@ -310,24 +301,6 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     try {
       agentforceAgentIdRef.current = targetAgentId;
 
-      if (demoMode) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setConnected(true);
-        setSessionId('demo-session');
-        demoIndexRef.current = 0;
-
-        const welcomeRaw = DEMO_RESPONSES[0];
-        const parsed = parseRichResponse(welcomeRaw);
-        addMessage({ role: 'assistant', content: parsed.displayText });
-        
-        if (parsed.hasRichContent) {
-          startVisuals(parsed.visuals);
-        }
-        
-        toast.success('Demo mode connected!');
-        return;
-      }
-
       // Start Agentforce session
       const { sessionId: newSessionId, welcomeMessage, messagesStreamUrl: newStreamUrl } = await startAgentSession(targetAgentId);
       setSessionId(newSessionId);
@@ -370,7 +343,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     } finally {
       setConnecting(false);
     }
-  }, [demoMode, initializeAvatar, speakViaProxy, clearVisuals, startVisuals, setConnecting, setConnected, setSessionId, setMessagesStreamUrl, setError, addMessage, setLastAgentforceResponse, defaultAgentId]);
+  }, [initializeAvatar, speakViaProxy, clearVisuals, startVisuals, setConnecting, setConnected, setSessionId, setMessagesStreamUrl, setError, addMessage, setLastAgentforceResponse, defaultAgentId]);
 
   // Send message
   const sendMessage = useCallback(async (text: string) => {
@@ -431,21 +404,6 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
         return;
       }
 
-      if (demoMode) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        demoIndexRef.current = (demoIndexRef.current + 1) % DEMO_RESPONSES.length;
-        const rawResponse = DEMO_RESPONSES[demoIndexRef.current];
-        const parsed = parseRichResponse(rawResponse);
-
-        addMessage({ role: 'assistant', content: parsed.displayText });
-        
-        if (parsed.hasRichContent) {
-          startVisuals(parsed.visuals);
-        }
-        
-        setThinking(false);
-        return;
-      }
 
       const activeSessionId = agentforceSessionIdRef.current;
       const activeStreamUrl = agentforceMessagesStreamUrlRef.current;
@@ -552,7 +510,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     } finally {
       setThinking(false);
     }
-  }, [demoMode, speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation]);
+  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation]);
 
   // End conversation
   const endConversation = useCallback(async () => {
@@ -564,7 +522,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
         keepAliveIntervalRef.current = null;
       }
       
-      if (sessionId && !demoMode) {
+      if (sessionId) {
         await endAgentSession(sessionId);
       }
 
@@ -593,7 +551,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     } catch (error) {
       console.error('End conversation error:', error);
     }
-  }, [sessionId, demoMode, reset, clearVisuals]);
+  }, [sessionId, reset, clearVisuals]);
 
   // Cleanup
   useEffect(() => {
