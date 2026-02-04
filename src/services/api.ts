@@ -150,9 +150,19 @@ export async function* streamAgentMessage(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    debugLog('error', 'agentforce-message', `Stream failed: ${error.error}`, error);
-    throw new Error(error.error || 'Failed to send message');
+    let errorMessage = `Edge function returned ${response.status}`;
+    try {
+      const error = await response.json();
+      debugLog('error', 'agentforce-message', `Stream failed: ${error.error}`, error);
+      // Include status code in error message so recovery logic can detect 404s
+      errorMessage = `${errorMessage}: ${error.error || 'Error'}, ${JSON.stringify(error)}`;
+    } catch {
+      // Response wasn't JSON
+      const text = await response.text().catch(() => 'Unknown error');
+      debugLog('error', 'agentforce-message', `Stream failed (non-JSON): ${text}`);
+      errorMessage = `${errorMessage}: ${text}`;
+    }
+    throw new Error(errorMessage);
   }
   
   debugLog('api-response', 'agentforce-message', 'Stream opened', undefined, Date.now() - startTime);
