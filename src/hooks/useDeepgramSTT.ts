@@ -227,15 +227,25 @@ export function useDeepgramSTT(
 
         const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
         
+        // Cancel any pending commit on ANY transcript event (interim or final)
+        // This ensures we only commit after true silence (no events for commitDelayMs)
+        if (commitTimerRef.current) {
+          clearTimeout(commitTimerRef.current);
+          commitTimerRef.current = null;
+        }
+        
         if (transcript) {
           if (data.is_final) {
-            // Buffer final chunks and only commit after a short silence window.
+            // Buffer final chunks
             finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
-            scheduleCommit();
           } else {
-            // Interim/partial transcript
+            // Interim/partial transcript - show in UI
             setPartialTranscript(transcript);
           }
+          
+          // Always schedule a commit after any transcript activity
+          // It will only fire if no new transcripts arrive for commitDelayMs
+          scheduleCommit();
         }
       });
 
