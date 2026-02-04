@@ -77,7 +77,7 @@ const KeynoteAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
+  const { toggleListening, isListening, isConnecting: sttConnecting, partialTranscript } = useDeepgramSTT(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
@@ -248,6 +248,17 @@ const KeynoteAvatarMain = () => {
       {/* Debug panel */}
       {isConnected && (
         <div className="hidden lg:flex absolute top-20 right-4 bottom-24 w-72 z-20 flex-col gap-2 overflow-hidden">
+          {/* Live speech buffer */}
+          <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
+            <p className="text-xs text-muted-foreground font-medium mb-1">
+              Live Buffer {isListening && <span className="text-primary animate-pulse">●</span>}
+            </p>
+            <p className="text-sm text-foreground/70 italic min-h-[1.5rem]">
+              {partialTranscript || (isListening ? 'Listening...' : '—')}
+            </p>
+          </div>
+
+          {/* Committed transcript */}
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
             <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>
             <p className="text-sm text-foreground line-clamp-3">{lastVoiceTranscript || '—'}</p>
