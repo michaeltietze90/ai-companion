@@ -227,26 +227,24 @@ export function useDeepgramSTT(
 
         const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
         
-        // Cancel any pending commit on ANY transcript event (interim or final)
-        // This ensures we only commit after true silence (no events for commitDelayMs)
+        // We ignore is_final entirely. Instead we accumulate ALL text and only
+        // commit after 900ms of silence (no transcript events at all).
+        
+        if (transcript) {
+          // Append to buffer (treat every transcript as accumulating text)
+          finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
+          
+          // Show the accumulated buffer as partial (live feedback)
+          setPartialTranscript(finalBufferRef.current);
+        }
+        
+        // Reset the commit timer on ANY transcript event (even empty ones)
+        // This ensures we only commit after true silence
         if (commitTimerRef.current) {
           clearTimeout(commitTimerRef.current);
           commitTimerRef.current = null;
         }
-        
-        if (transcript) {
-          if (data.is_final) {
-            // Buffer final chunks
-            finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
-          } else {
-            // Interim/partial transcript - show in UI
-            setPartialTranscript(transcript);
-          }
-          
-          // Always schedule a commit after any transcript activity
-          // It will only fire if no new transcripts arrive for commitDelayMs
-          scheduleCommit();
-        }
+        scheduleCommit();
       });
 
       liveClient.on(LiveTranscriptionEvents.Metadata, (data) => {
