@@ -2,13 +2,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
-import AgentforceTest from "./pages/AgentforceTest";
-import ProtoM from "./pages/ProtoM";
-import ProtoL from "./pages/ProtoL";
-import SwissPost from "./pages/SwissPost";
+import KeynoteAvatar from "./pages/KeynoteAvatar";
+import ChatAvatar from "./pages/ChatAvatar";
+import KeynoteProtoM from "./pages/KeynoteProtoM";
+import KeynoteProtoL from "./pages/KeynoteProtoL";
+import ChatProtoM from "./pages/ChatProtoM";
+import ChatProtoL from "./pages/ChatProtoL";
 
 const queryClient = new QueryClient();
 
@@ -19,11 +21,25 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/proto-m" element={<ProtoM />} />
-          <Route path="/proto-l" element={<ProtoL />} />
-          <Route path="/swiss-post" element={<SwissPost />} />
-          <Route path="/agentforce-test" element={<AgentforceTest />} />
+          {/* Home - App Selection */}
+          <Route path="/" element={<Home />} />
+          
+          {/* Keynote Avatar Routes */}
+          <Route path="/keynote" element={<KeynoteAvatar />}>
+            <Route path="proto-m" element={<KeynoteProtoM />} />
+            <Route path="proto-l" element={<KeynoteProtoL />} />
+          </Route>
+          
+          {/* Chat Avatar Routes */}
+          <Route path="/chat" element={<ChatAvatar />}>
+            <Route path="proto-m" element={<ChatProtoM />} />
+            <Route path="proto-l" element={<ChatProtoL />} />
+          </Route>
+          
+          {/* Legacy redirects */}
+          <Route path="/proto-m" element={<Navigate to="/keynote/proto-m" replace />} />
+          <Route path="/proto-l" element={<Navigate to="/keynote/proto-l" replace />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

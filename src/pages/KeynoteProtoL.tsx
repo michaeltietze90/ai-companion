@@ -1,51 +1,59 @@
-import { useState, useRef, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
+import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
+import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAvatarConversation } from "@/hooks/useAvatarConversation";
-import { useConversationStore } from "@/stores/conversationStore";
+import { useKeynoteConversationStore } from "@/stores/createConversationStore";
+import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
+import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 
 /**
- * Proto L Fullscreen Page
+ * Keynote Proto L Fullscreen Page
  * Resolution: 2160x3840 (9:16 portrait, 4K)
- * Minimal UI - just avatar with mic mute/unmute control
  */
-const ProtoL = () => {
+const KeynoteProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
+  const conversationState = useKeynoteConversationStore();
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
+    isThinking,
     startConversation,
     sendMessage,
-  } = useAvatarConversation();
+  } = useScopedAvatarConversation({
+    store: useKeynoteConversationStore,
+    voiceSettings,
+    defaultAgentId: DEFAULT_KEYNOTE_AGENT_ID,
+    availableAgents: KEYNOTE_AGENTS,
+    useJsonMode: true,
+  });
 
-  const { demoMode } = useConversationStore();
   const { activeVisuals } = useVisualOverlayStore();
+  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
-  // Handle voice transcript from STT
   const handleVoiceTranscript = useCallback((transcript: string) => {
-    console.log('[ProtoL] Voice transcript:', transcript);
+    console.log('[KeynoteProtoL] Voice transcript:', transcript);
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Use Deepgram Nova STT hook for mic control
-  const { isListening, toggleListening, startListening, stopListening } = useDeepgramSTT(
+  const { isListening, toggleListening } = useDeepgramSTT(
     handleVoiceTranscript,
-    {
-      disabled: isSpeaking,
-    }
+    { disabled: isSpeaking || isThinking }
   );
 
   const handleStart = () => {
     startConversation(videoRef.current);
   };
-
 
   return (
     <div 
@@ -57,10 +65,9 @@ const ProtoL = () => {
         transformOrigin: 'top left',
       }}
     >
-      {/* Visual Overlay Layer */}
+      <VideoCallEscalationOverlay isVisible={isVideoCallVisible} onClose={hideVideoCall} duration={videoCallDuration} />
       <VisualOverlay visuals={activeVisuals} />
 
-      {/* Avatar - Full Screen */}
       <main className="absolute inset-0 z-10">
         <HologramAvatar 
           isConnected={isConnected} 
@@ -69,7 +76,6 @@ const ProtoL = () => {
         />
       </main>
 
-      {/* Mic Mute Button - Middle Right */}
       {isConnected && (
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
@@ -82,7 +88,7 @@ const ProtoL = () => {
             variant="ghost"
             className={`w-28 h-28 rounded-full ${
               isListening 
-                ? 'bg-blue-500 hover:bg-blue-600' 
+                ? 'bg-primary hover:bg-primary/90' 
                 : 'bg-gray-600 hover:bg-gray-500'
             }`}
             onClick={toggleListening}
@@ -96,7 +102,6 @@ const ProtoL = () => {
         </motion.div>
       )}
 
-      {/* Status Indicator - only when not connected */}
       {!isConnected && (
         <div className="absolute top-64 left-1/2 -translate-x-1/2 z-20">
           <motion.div
@@ -106,13 +111,12 @@ const ProtoL = () => {
           >
             <div className={`w-6 h-6 rounded-full ${isConnecting ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
             <span className="text-2xl text-muted-foreground">
-              {isConnecting ? 'Connecting...' : 'Ready'}
+              {isConnecting ? 'Connecting...' : 'Keynote Ready'}
             </span>
           </motion.div>
         </div>
       )}
 
-      {/* Minimal Controls - Start button only */}
       <footer className="absolute bottom-0 left-0 right-0 z-20 p-16">
         <motion.div
           className="flex items-center justify-center gap-12"
@@ -135,7 +139,7 @@ const ProtoL = () => {
               ) : (
                 <>
                   <Play className="w-10 h-10 mr-6" />
-                  Start
+                  Start Keynote
                 </>
               )}
             </Button>
@@ -143,7 +147,6 @@ const ProtoL = () => {
         </motion.div>
       </footer>
       
-      {/* Scale script for responsive display */}
       <style>{`
         :root {
           --proto-scale: min(calc(100vw / 2160), calc(100vh / 3840));
@@ -153,4 +156,4 @@ const ProtoL = () => {
   );
 };
 
-export default ProtoL;
+export default KeynoteProtoL;
