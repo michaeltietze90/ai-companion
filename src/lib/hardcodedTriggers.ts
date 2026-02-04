@@ -41,25 +41,13 @@ export interface HardcodedTrigger {
  */
 export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
   {
-    keywords: ['backflip', 'back flip', 'rückwärtssalto', 'salto'],
+    keywords: ['backflip', 'back flip', 'salto'],
     speech: '', // Silent - just play the video
     video: {
       src: backflipVideo,
       duration: 5000,
       position: 'avatar', // Seamless overlay on avatar
     },
-  },
-  {
-    keywords: [
-      'video call', 'videocall',
-      'speak to human', 'speak to a human', 'talk to human', 'talk to a human',
-      'real person',
-      'escalation', 'escalate',
-      'live agent'
-    ],
-    speech: 'Of course! Let me connect you with one of our representatives.',
-    customOverlay: 'video-call-escalation',
-    customOverlayDuration: 0, // Manual close
   },
 ];
 
