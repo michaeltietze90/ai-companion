@@ -17,6 +17,7 @@ import heygenProxyRouter from './routes/heygen-proxy.js';
 import elevenlabsTtsRouter from './routes/elevenlabs-tts.js';
 import elevenlabsScribeTokenRouter from './routes/elevenlabs-scribe-token.js';
 import deepgramTokenRouter from './routes/deepgram-token.js';
+import deepgramTranscribeRouter from './routes/deepgram-transcribe.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,7 @@ app.use('/api/heygen-proxy', heygenProxyRouter);
 app.use('/api/elevenlabs-tts', elevenlabsTtsRouter);
 app.use('/api/elevenlabs-scribe-token', elevenlabsScribeTokenRouter);
 app.use('/api/deepgram-token', deepgramTokenRouter);
+app.use('/api/deepgram-transcribe', deepgramTranscribeRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

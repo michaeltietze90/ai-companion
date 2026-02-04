@@ -1,0 +1,340 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+
+// Detect environment (Lovable Cloud vs local Express)
+const BACKEND_URL = import.meta.env.VITE_SUPABASE_URL;
+const BACKEND_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const isCloudBackend = Boolean(BACKEND_URL && BACKEND_KEY);
+
+const getTranscribeUrl = () => {
+  if (isCloudBackend) return `${BACKEND_URL}/functions/v1/deepgram-transcribe`;
+  return "/api/deepgram-transcribe";
+};
+
+const getBackendHeaders = () => {
+  // For Lovable Cloud functions, include apikey/authorization.
+  if (isCloudBackend) {
+    return {
+      "Content-Type": "application/json",
+      apikey: BACKEND_KEY,
+      Authorization: `Bearer ${BACKEND_KEY}`,
+    } as const;
+  }
+
+  return {
+    "Content-Type": "application/json",
+  } as const;
+};
+
+type UseSilenceTranscriptionOptions = {
+  /**
+   * When true, stop recording (and discard any buffered audio).
+   * Use this while the avatar is speaking to prevent echo loops.
+   */
+  disabled?: boolean;
+
+  /** Commit once we detect at least this much silence (ms). Default: 900 */
+  silenceMs?: number;
+
+  /**
+   * RMS threshold below which we consider it silence.
+   * Default tuned for typical echo-cancelled mic input.
+   */
+  silenceRmsThreshold?: number;
+
+  /** Max recording length (ms). Default: 20s */
+  maxRecordMs?: number;
+};
+
+type RecorderState = {
+  stream: MediaStream;
+  recorder: MediaRecorder;
+  audioContext: AudioContext;
+  analyser: AnalyserNode;
+  source: MediaStreamAudioSourceNode;
+  chunks: Blob[];
+  rafId: number | null;
+  stopRequested: boolean;
+};
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const arrayBuffer = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(arrayBuffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const sub = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...sub);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Simple voice input:
+ * 1) record microphone
+ * 2) detect 900ms silence
+ * 3) send audio to backend for transcription
+ */
+export function useSilenceTranscription(
+  onTranscript: (text: string) => void,
+  options?: UseSilenceTranscriptionOptions
+) {
+  const [isListening, setIsListening] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [partialTranscript, setPartialTranscript] = useState(""); // kept for compatibility (no live STT)
+
+  const stateRef = useRef<RecorderState | null>(null);
+  const disabledRef = useRef(Boolean(options?.disabled));
+
+  const silenceMsRef = useRef(options?.silenceMs ?? 900);
+  const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? 0.004);
+  const maxRecordMsRef = useRef(options?.maxRecordMs ?? 20_000);
+
+  useEffect(() => {
+    disabledRef.current = Boolean(options?.disabled);
+    silenceMsRef.current = options?.silenceMs ?? 900;
+    silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? 0.004;
+    maxRecordMsRef.current = options?.maxRecordMs ?? 20_000;
+
+    // If disabled while recording, stop immediately and discard.
+    if (disabledRef.current && stateRef.current) {
+      void stopListening(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options?.disabled, options?.silenceMs, options?.silenceRmsThreshold, options?.maxRecordMs]);
+
+  const cleanup = useCallback(async (discard: boolean) => {
+    const s = stateRef.current;
+    stateRef.current = null;
+    setIsListening(false);
+    setPartialTranscript("");
+
+    if (!s) return;
+
+    try {
+      if (s.rafId) cancelAnimationFrame(s.rafId);
+    } catch {
+      // ignore
+    }
+
+    try {
+      s.source.disconnect();
+      s.analyser.disconnect();
+    } catch {
+      // ignore
+    }
+
+    try {
+      await s.audioContext.close();
+    } catch {
+      // ignore
+    }
+
+    try {
+      s.stream.getTracks().forEach((t) => t.stop());
+    } catch {
+      // ignore
+    }
+
+    if (discard) {
+      s.chunks.length = 0;
+    }
+  }, []);
+
+  const transcribe = useCallback(
+    async (blob: Blob) => {
+      const audioBase64 = await blobToBase64(blob);
+      const res = await fetch(getTranscribeUrl(), {
+        method: "POST",
+        headers: getBackendHeaders(),
+        body: JSON.stringify({
+          audioBase64,
+          mimeType: blob.type || "audio/webm",
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || `Transcription failed (${res.status})`);
+      }
+      const data = await res.json();
+      const text = String(data?.text ?? "").trim();
+      return text;
+    },
+    [
+      // no deps
+    ]
+  );
+
+  const startListening = useCallback(async () => {
+    if (disabledRef.current) return;
+    if (stateRef.current || isConnecting) return;
+
+    setIsConnecting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+      ];
+      const chosenMime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m));
+      const recorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } : undefined);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      const startedAt = Date.now();
+      let hasSpoken = false;
+      let silenceStartedAt: number | null = null;
+
+      const timeDomain = new Float32Array(analyser.fftSize);
+      const tick = () => {
+        const s = stateRef.current;
+        if (!s) return;
+        if (disabledRef.current) {
+          s.stopRequested = true;
+          try {
+            s.recorder.stop();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+
+        analyser.getFloatTimeDomainData(timeDomain);
+        let sum = 0;
+        for (let i = 0; i < timeDomain.length; i++) sum += timeDomain[i] * timeDomain[i];
+        const rms = Math.sqrt(sum / timeDomain.length);
+
+        if (rms > silenceRmsThresholdRef.current) {
+          hasSpoken = true;
+          silenceStartedAt = null;
+        } else if (hasSpoken) {
+          silenceStartedAt ??= Date.now();
+          const silenceFor = Date.now() - silenceStartedAt;
+          if (silenceFor >= silenceMsRef.current) {
+            s.stopRequested = true;
+            try {
+              s.recorder.stop();
+            } catch {
+              // ignore
+            }
+            return;
+          }
+        }
+
+        if (Date.now() - startedAt >= maxRecordMsRef.current) {
+          s.stopRequested = true;
+          try {
+            s.recorder.stop();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+
+        s.rafId = requestAnimationFrame(tick);
+      };
+
+      stateRef.current = {
+        stream,
+        recorder,
+        audioContext,
+        analyser,
+        source,
+        chunks,
+        rafId: null,
+        stopRequested: false,
+      };
+
+      recorder.onstop = async () => {
+        const s = stateRef.current;
+        // We set stateRef.current=null in cleanup, so snapshot chunks now.
+        const recordedChunks = chunks.slice();
+        const discard = disabledRef.current;
+
+        await cleanup(discard);
+        if (discard) return;
+
+        const blob = new Blob(recordedChunks, { type: chosenMime?.split(";")[0] || "audio/webm" });
+        if (blob.size < 1024) return; // ignore tiny recordings
+
+        try {
+          const text = await transcribe(blob);
+          if (!text) return;
+          onTranscript(text);
+        } catch (e) {
+          console.error("Transcription failed:", e);
+          toast.error("Transcription failed");
+        }
+      };
+
+      recorder.start(250);
+      setIsListening(true);
+      setIsConnecting(false);
+      tick();
+    } catch (e) {
+      console.error("Failed to start recording:", e);
+      toast.error("Failed to access microphone");
+      setIsConnecting(false);
+      await cleanup(true);
+    }
+  }, [cleanup, isConnecting, onTranscript, transcribe]);
+
+  const stopListening = useCallback(
+    async (discard = false) => {
+      const s = stateRef.current;
+      if (!s) {
+        setIsListening(false);
+        return;
+      }
+
+      try {
+        s.stopRequested = true;
+        s.recorder.stop();
+      } catch {
+        await cleanup(discard);
+      }
+    },
+    [cleanup]
+  );
+
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      void stopListening(false);
+    } else {
+      void startListening();
+    }
+  }, [isListening, startListening, stopListening]);
+
+  useEffect(() => {
+    return () => {
+      void stopListening(true);
+    };
+  }, [stopListening]);
+
+  return {
+    isListening,
+    isConnecting,
+    partialTranscript,
+    startListening,
+    stopListening,
+    toggleListening,
+  };
+}

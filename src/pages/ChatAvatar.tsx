@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useChatConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 
@@ -77,7 +77,7 @@ const ChatAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
+  const { toggleListening, isListening, isConnecting: sttConnecting } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
