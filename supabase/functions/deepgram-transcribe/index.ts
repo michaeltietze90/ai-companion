@@ -36,6 +36,11 @@ serve(async (req) => {
     url.searchParams.set("language", "en");
     url.searchParams.set("smart_format", "true");
     url.searchParams.set("punctuate", "true");
+    // Keyword boosting for domain-specific terms
+    url.searchParams.append("keywords", "Agentforce:2");
+    url.searchParams.append("keywords", "Data360:2");
+    url.searchParams.append("keywords", "Agentic Enterprise:2");
+    url.searchParams.append("keywords", "Salesforce:2");
 
     const dgRes = await fetch(url.toString(), {
       method: "POST",
