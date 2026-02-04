@@ -378,35 +378,33 @@ const ChatAvatarMain = () => {
         </>
       )}
 
-      {/* Start button (centered at bottom when not connected) */}
+      {/* Start button (right side, overlaying avatar) */}
       {!isConnected && (
-        <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
-          <motion.div
-            className="max-w-md mx-auto flex items-center justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+        <motion.div
+          className="absolute bottom-1/2 translate-y-1/2 right-4 md:right-6 z-20"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Button
+            size="lg"
+            className="px-8 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/30 rounded-xl"
+            onClick={handleStart}
+            disabled={isConnecting}
           >
-            <Button
-              size="lg"
-              className="px-10 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/30 rounded-xl"
-              onClick={handleStart}
-              disabled={isConnecting}
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5 mr-2" />
-                  Start Chat
-                </>
-              )}
-            </Button>
-          </motion.div>
-        </footer>
+            {isConnecting ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Play className="w-5 h-5 mr-2" />
+                Start Chat
+              </>
+            )}
+          </Button>
+        </motion.div>
       )}
 
       {/* Settings Modal */}
