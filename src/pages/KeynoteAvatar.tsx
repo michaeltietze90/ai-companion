@@ -79,7 +79,7 @@ const KeynoteAvatarMain = () => {
 
   const { toggleListening, isListening, isConnecting: sttConnecting } = useDeepgramSTT(
     handleVoiceTranscript,
-    { disabled: isSpeaking || isThinking }
+    { disabled: isSpeaking }
   );
 
   const handleStart = useCallback(() => {
@@ -186,7 +186,7 @@ const KeynoteAvatarMain = () => {
                     : 'bg-secondary hover:bg-secondary/80'
                 }`}
                 onClick={toggleListening}
-                disabled={sttConnecting || isThinking}
+                disabled={sttConnecting}
               >
                 {sttConnecting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
