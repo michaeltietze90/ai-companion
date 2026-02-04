@@ -135,15 +135,18 @@ export function useDeepgramSTT(
       const deepgram = createClient(data.apiKey);
       
       // Create live transcription connection
+      // NOTE: Omit 'language' to enable automatic language detection (en, de, fr, it, etc.)
       const liveClient = deepgram.listen.live({
         model: 'nova-2',
-        language: 'en',
+        detect_language: true,
         encoding: 'linear16',
         sample_rate: 16000,
         channels: 1,
         interim_results: true,
-        endpointing: 300,
+        endpointing: 500, // Slightly longer for better accuracy
         smart_format: true,
+        punctuate: true,
+        utterance_end_ms: 1000, // Wait for natural pause before finalizing
       });
 
       let keepAliveInterval: NodeJS.Timeout | null = null;
