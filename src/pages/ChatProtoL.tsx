@@ -1,10 +1,12 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
+import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
+import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useChatConversationStore } from "@/stores/createConversationStore";
@@ -40,6 +42,7 @@ const ChatProtoL = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
+  const { setOnStartCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[ChatProtoL] Voice transcript:', transcript);
@@ -51,9 +54,14 @@ const ChatProtoL = () => {
     { disabled: isSpeaking }
   );
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     startConversation(videoRef.current);
-  };
+  }, [startConversation]);
+
+  useEffect(() => {
+    setOnStartCallback(handleStart);
+    return () => setOnStartCallback(null);
+  }, [handleStart, setOnStartCallback]);
 
   return (
     <div 
@@ -74,6 +82,7 @@ const ChatProtoL = () => {
           isSpeaking={isSpeaking}
           videoRef={videoRef}
         />
+        <QuizOverlayManager />
       </main>
 
       {isConnected && (
