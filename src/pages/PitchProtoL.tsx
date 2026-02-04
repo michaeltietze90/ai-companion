@@ -48,7 +48,7 @@ const PitchProtoL = () => {
 
   const { isListening, toggleListening } = useDeepgramSTT(
     handleVoiceTranscript,
-    { disabled: isSpeaking || isThinking }
+    { disabled: isSpeaking }
   );
 
   const handleStart = () => {

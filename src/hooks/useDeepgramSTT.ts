@@ -45,6 +45,12 @@ type UseDeepgramSTTOptions = {
    * This prevents the avatar's own voice from being transcribed (echo) while it is speaking.
    */
   disabled?: boolean;
+
+  /**
+   * Debounce window (ms) after the last final transcript chunk before we call onTranscript.
+   * Prevents early commits that can cut users off mid-utterance.
+   */
+  commitDelayMs?: number;
 };
 
 export function useDeepgramSTT(
@@ -57,13 +63,50 @@ export function useDeepgramSTT(
   const connectionRef = useRef<DeepgramConnection | null>(null);
   const lastCommittedRef = useRef<string>('');
   const disabledRef = useRef<boolean>(Boolean(options?.disabled));
+  const finalBufferRef = useRef<string>('');
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commitDelayMsRef = useRef<number>(options?.commitDelayMs ?? 900);
   const { setListening, setLastVoiceTranscript } = useConversationStore();
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
+    commitDelayMsRef.current = options?.commitDelayMs ?? 900;
+
+    // If we disabled STT, clear any pending buffered commit.
+    if (disabledRef.current) {
+      finalBufferRef.current = '';
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current);
+        commitTimerRef.current = null;
+      }
+    }
     // If we just disabled STT, clear any partial text so the UI doesn't look stuck.
     if (disabledRef.current) setPartialTranscript('');
-  }, [options?.disabled]);
+  }, [options?.disabled, options?.commitDelayMs]);
+
+  const commitBufferedTranscript = useCallback(() => {
+    const text = finalBufferRef.current.trim();
+    finalBufferRef.current = '';
+
+    if (!text) return;
+    if (text === lastCommittedRef.current) return;
+
+    lastCommittedRef.current = text;
+    setPartialTranscript('');
+    setLastVoiceTranscript(text);
+    console.log('Committed transcript:', text);
+    debugLog('stt-event', 'STT', `Committed: "${text.slice(0, 50)}..."`, { text });
+    onTranscript(text);
+  }, [onTranscript, setLastVoiceTranscript]);
+
+  const scheduleCommit = useCallback(() => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+    commitTimerRef.current = setTimeout(() => {
+      commitTimerRef.current = null;
+      if (disabledRef.current) return;
+      commitBufferedTranscript();
+    }, commitDelayMsRef.current);
+  }, [commitBufferedTranscript]);
 
   const cleanup = useCallback(() => {
     const conn = connectionRef.current;
@@ -88,6 +131,12 @@ export function useDeepgramSTT(
         }
       }
       connectionRef.current = null;
+    }
+
+    finalBufferRef.current = '';
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
     }
     setIsConnected(false);
     setPartialTranscript('');
@@ -180,15 +229,9 @@ export function useDeepgramSTT(
         
         if (transcript) {
           if (data.is_final) {
-            // Committed/final transcript
-            if (transcript !== lastCommittedRef.current) {
-              lastCommittedRef.current = transcript;
-              setPartialTranscript('');
-              setLastVoiceTranscript(transcript);
-              console.log('Committed transcript:', transcript);
-              debugLog('stt-event', 'STT', `Committed: "${transcript.slice(0, 50)}..."`, { text: transcript });
-              onTranscript(transcript);
-            }
+            // Buffer final chunks and only commit after a short silence window.
+            finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
+            scheduleCommit();
           } else {
             // Interim/partial transcript
             setPartialTranscript(transcript);
