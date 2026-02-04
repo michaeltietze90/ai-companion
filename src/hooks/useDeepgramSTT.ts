@@ -41,7 +41,8 @@ interface DeepgramConnection {
 }
 
 // VAD threshold - audio RMS below this = silence
-const VAD_SILENCE_THRESHOLD = 0.01;
+// Lowered to avoid false "silence" commits for quiet speakers / noise suppression.
+const VAD_SILENCE_THRESHOLD = 0.004;
 
 type UseDeepgramSTTOptions = {
   /**
@@ -235,11 +236,15 @@ export function useDeepgramSTT(
 
         const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
         
-        // Only accumulate text - NO commit scheduling here!
-        // Commits are driven purely by VAD silence detection in the audio processor
+        // Treat transcript updates as "voice activity" to avoid false early commits
+        // when RMS temporarily drops (noise suppression / quiet speakers).
         if (transcript) {
-          finalBufferRef.current = `${finalBufferRef.current} ${transcript}`.trim();
-          setPartialTranscript(finalBufferRef.current);
+          lastVoiceActivityRef.current = Date.now();
+
+          // Deepgram interim transcripts are typically "full so far" snapshots.
+          // Keep the latest snapshot instead of concatenating (prevents duplicates).
+          finalBufferRef.current = transcript;
+          setPartialTranscript(transcript);
         }
       });
 
