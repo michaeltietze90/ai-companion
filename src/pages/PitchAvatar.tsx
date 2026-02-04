@@ -12,45 +12,37 @@ import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useChatConversationStore } from "@/stores/createConversationStore";
+import { usePitchConversationStore } from "@/stores/pitchConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
-import { useScopedAvatarConversation, HEYGEN_VOICES, HeyGenVoiceKey } from "@/hooks/useScopedAvatarConversation";
+import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
-import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
+import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
 
 /**
- * Chat with Miguel Avatar - Main Page
- * Uses Chat with Miguel Agent or Script based Chat
+ * Pitch Agent Script - Main Page
+ * Uses Script based Chat with Miguel Agent
  */
-const ChatAvatar = () => {
+const PitchAvatar = () => {
   const location = useLocation();
-  const isMainPage = location.pathname === '/chat' || location.pathname === '/chat/';
+  const isMainPage = location.pathname === '/pitch' || location.pathname === '/pitch/';
   
   if (!isMainPage) {
     return <Outlet />;
   }
 
-  return <ChatAvatarMain />;
+  return <PitchAvatarMain />;
 };
 
-const ChatAvatarMain = () => {
+const PitchAvatarMain = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Use chat-specific store and settings
+  // Use chat-specific store and settings (reuse chat settings for pitch)
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
-  const updateVoiceSettings = useAppVoiceSettingsStore(state => state.updateChatSettings);
-  const conversationState = useChatConversationStore();
+  const conversationState = usePitchConversationStore();
 
   const {
     isConnected,
@@ -62,30 +54,25 @@ const ChatAvatarMain = () => {
     endConversation,
     interruptAvatar,
   } = useScopedAvatarConversation({
-    store: useChatConversationStore,
+    store: usePitchConversationStore,
     voiceSettings,
-    defaultAgentId: DEFAULT_CHAT_AGENT_ID,
-    availableAgents: CHAT_AGENTS,
+    defaultAgentId: DEFAULT_PITCH_AGENT_ID,
+    availableAgents: PITCH_AGENTS,
     useJsonMode: true,
   });
 
   const {
-    messages,
     thinkingMessage,
     error,
-    sessionId,
     lastVoiceTranscript,
     streamingSentences,
-    lastSpokenText,
   } = conversationState;
 
   const { activeVisuals } = useVisualOverlayStore();
   const { setOnStartCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
-    console.log('[Chat] Voice transcript:', transcript);
-    // IMPORTANT: useDeepgramSTT currently writes debug info to the legacy (global) store.
-    // Chat uses a scoped store, so we mirror the transcript here so UI/debug panels update.
+    console.log('[Pitch] Voice transcript:', transcript);
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
@@ -112,10 +99,6 @@ const ChatAvatarMain = () => {
     }
   };
 
-  const handleVoiceChange = useCallback((voice: HeyGenVoiceKey) => {
-    updateVoiceSettings({ heygenVoice: voice });
-  }, [updateVoiceSettings]);
-
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
@@ -134,63 +117,27 @@ const ChatAvatarMain = () => {
       <header className="absolute top-0 left-0 right-0 z-20 p-4 md:p-5 flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-3">
           <motion.div
-            className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20"
             whileHover={{ scale: 1.05 }}
           >
-            <span className="text-white font-bold text-base md:text-lg">C</span>
+            <span className="text-white font-bold text-base md:text-lg">P</span>
           </motion.div>
           <div className="hidden sm:block">
-            <span className="text-foreground font-semibold">Chat with Miguel Avatar</span>
-            <span className="text-muted-foreground text-sm block">Interactive Chat Agent</span>
+            <span className="text-foreground font-semibold">Pitch Agent Script</span>
+            <span className="text-muted-foreground text-sm block">Scripted Conversation Agent</span>
           </div>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Voice Selector */}
-          <Select
-            value={voiceSettings.heygenVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {/* Voice Selector */}
-          <Select
-            value={voiceSettings.heygenVoice}
-            onValueChange={(value) => handleVoiceChange(value as HeyGenVoiceKey)}
-            disabled={isConnected}
-          >
-            <SelectTrigger className="hidden lg:flex w-40 h-9 bg-secondary/50 backdrop-blur-sm border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(HEYGEN_VOICES).map(([key, voice]) => (
-                <SelectItem key={key} value={key}>
-                  🎙️ {voice.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           {/* Fullscreen Links */}
           <div className="hidden xl:flex items-center gap-1">
-            <Link to="/chat/proto-m">
+            <Link to="/pitch/proto-m">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                 <Maximize2 className="w-3 h-3 mr-1" />
                 Proto M
               </Button>
             </Link>
-            <Link to="/chat/proto-l">
+            <Link to="/pitch/proto-l">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                 <Maximize2 className="w-3 h-3 mr-1" />
                 Proto L
@@ -198,7 +145,6 @@ const ChatAvatarMain = () => {
             </Link>
           </div>
 
-          
           <Button
             variant="ghost"
             size="icon"
@@ -229,7 +175,7 @@ const ChatAvatarMain = () => {
                 size="lg"
                 className={`rounded-full w-12 h-12 ${
                   isListening 
-                    ? 'bg-blue-500 hover:bg-blue-600' 
+                    ? 'bg-purple-500 hover:bg-purple-600' 
                     : 'bg-secondary hover:bg-secondary/80'
                 }`}
                 onClick={toggleListening}
@@ -285,7 +231,7 @@ const ChatAvatarMain = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-amber-400' : 'bg-blue-500'} animate-pulse`} />
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-amber-400' : 'bg-purple-500'} animate-pulse`} />
           <span className="text-sm text-muted-foreground">
             {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Ready'}
           </span>
@@ -309,7 +255,7 @@ const ChatAvatarMain = () => {
                 streamingSentences.map((sentence, idx) => (
                   <div 
                     key={idx} 
-                    className="text-xs text-foreground p-2 rounded-lg bg-blue-500/10 border-l-2 border-blue-500"
+                    className="text-xs text-foreground p-2 rounded-lg bg-purple-500/10 border-l-2 border-purple-500"
                   >
                     <span className="text-muted-foreground mr-1">{idx + 1}.</span>
                     {sentence}
@@ -330,9 +276,9 @@ const ChatAvatarMain = () => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
           >
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 backdrop-blur-md border border-blue-500/30">
-              <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-              <span className="text-sm text-blue-500">{thinkingMessage || 'Thinking...'}</span>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 backdrop-blur-md border border-purple-500/30">
+              <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
+              <span className="text-sm text-purple-500">{thinkingMessage || 'Thinking...'}</span>
             </div>
           </motion.div>
         )}
@@ -354,30 +300,26 @@ const ChatAvatarMain = () => {
         )}
       </AnimatePresence>
 
-      {/* Controls - Left side text input, Right side buttons */}
+      {/* Controls - Left side text input */}
       {isConnected && (
-        <>
-          {/* Left side: Text input */}
-          <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
-            <form onSubmit={handleSendText} className="flex flex-col gap-2">
-              <Input
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Chat with Miguel..."
-                className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
-                disabled={isThinking}
-              />
-              <Button 
-                type="submit" 
-                disabled={isThinking || !textInput.trim()}
-                className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
-              >
-                Send
-              </Button>
-            </form>
-          </div>
-
-        </>
+        <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
+          <form onSubmit={handleSendText} className="flex flex-col gap-2">
+            <Input
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Chat with Miguel..."
+              className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+              disabled={isThinking}
+            />
+            <Button 
+              type="submit" 
+              disabled={isThinking || !textInput.trim()}
+              className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl"
+            >
+              Send
+            </Button>
+          </form>
+        </div>
       )}
 
       {/* Start button (centered at bottom when not connected) */}
@@ -391,7 +333,7 @@ const ChatAvatarMain = () => {
           >
             <Button
               size="lg"
-              className="px-10 py-6 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/30 rounded-xl"
+              className="px-10 py-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/30 rounded-xl"
               onClick={handleStart}
               disabled={isConnecting}
             >
@@ -403,7 +345,7 @@ const ChatAvatarMain = () => {
               ) : (
                 <>
                   <Play className="w-5 h-5 mr-2" />
-                  Start Chat
+                  Start Pitch
                 </>
               )}
             </Button>
@@ -421,4 +363,4 @@ const ChatAvatarMain = () => {
   );
 };
 
-export default ChatAvatar;
+export default PitchAvatar;
