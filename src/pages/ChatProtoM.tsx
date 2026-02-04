@@ -1,51 +1,59 @@
-import { useState, useRef, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
+import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
+import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAvatarConversation } from "@/hooks/useAvatarConversation";
-import { useConversationStore } from "@/stores/conversationStore";
+import { useChatConversationStore } from "@/stores/createConversationStore";
+import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
+import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramSTT } from "@/hooks/useDeepgramSTT";
+import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 
 /**
- * Proto M Fullscreen Page
+ * Chat Proto M Fullscreen Page
  * Resolution: 1080x1920 (9:16 portrait)
- * Minimal UI - just avatar with mic mute/unmute control
  */
-const ProtoM = () => {
+const ChatProtoM = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
+  const conversationState = useChatConversationStore();
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
+    isThinking,
     startConversation,
     sendMessage,
-  } = useAvatarConversation();
+  } = useScopedAvatarConversation({
+    store: useChatConversationStore,
+    voiceSettings,
+    defaultAgentId: DEFAULT_CHAT_AGENT_ID,
+    availableAgents: CHAT_AGENTS,
+    useJsonMode: true,
+  });
 
-  const { demoMode } = useConversationStore();
   const { activeVisuals } = useVisualOverlayStore();
+  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
-  // Handle voice transcript from STT
   const handleVoiceTranscript = useCallback((transcript: string) => {
-    console.log('[ProtoM] Voice transcript:', transcript);
+    console.log('[ChatProtoM] Voice transcript:', transcript);
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Use Deepgram Nova STT hook for mic control
-  const { isListening, toggleListening, startListening, stopListening } = useDeepgramSTT(
+  const { isListening, toggleListening } = useDeepgramSTT(
     handleVoiceTranscript,
-    {
-      disabled: isSpeaking,
-    }
+    { disabled: isSpeaking || isThinking }
   );
 
   const handleStart = () => {
     startConversation(videoRef.current);
   };
-
 
   return (
     <div 
@@ -57,10 +65,9 @@ const ProtoM = () => {
         transformOrigin: 'top left',
       }}
     >
-      {/* Visual Overlay Layer */}
+      <VideoCallEscalationOverlay isVisible={isVideoCallVisible} onClose={hideVideoCall} duration={videoCallDuration} />
       <VisualOverlay visuals={activeVisuals} />
 
-      {/* Avatar - Full Screen */}
       <main className="absolute inset-0 z-10">
         <HologramAvatar 
           isConnected={isConnected} 
@@ -69,7 +76,6 @@ const ProtoM = () => {
         />
       </main>
 
-      {/* Mic Mute Button - Top Right */}
       {isConnected && (
         <motion.div
           className="absolute top-8 right-8 z-30"
@@ -96,7 +102,6 @@ const ProtoM = () => {
         </motion.div>
       )}
 
-      {/* Status Indicator - only when not connected */}
       {!isConnected && (
         <div className="absolute top-32 left-1/2 -translate-x-1/2 z-20">
           <motion.div
@@ -104,15 +109,14 @@ const ProtoM = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className={`w-3 h-3 rounded-full ${isConnecting ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
+            <div className={`w-3 h-3 rounded-full ${isConnecting ? 'bg-amber-400' : 'bg-blue-500'} animate-pulse`} />
             <span className="text-base text-muted-foreground">
-              {isConnecting ? 'Connecting...' : 'Ready'}
+              {isConnecting ? 'Connecting...' : 'Chat Ready'}
             </span>
           </motion.div>
         </div>
       )}
 
-      {/* Minimal Controls - Start button only */}
       <footer className="absolute bottom-0 left-0 right-0 z-20 p-8">
         <motion.div
           className="flex items-center justify-center gap-6"
@@ -123,7 +127,7 @@ const ProtoM = () => {
           {!isConnected && (
             <Button
               size="lg"
-              className="px-16 py-8 text-xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg shadow-primary/30 rounded-2xl"
+              className="px-16 py-8 text-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/30 rounded-2xl"
               onClick={handleStart}
               disabled={isConnecting}
             >
@@ -135,7 +139,7 @@ const ProtoM = () => {
               ) : (
                 <>
                   <Play className="w-6 h-6 mr-3" />
-                  Start
+                  Start Chat
                 </>
               )}
             </Button>
@@ -143,7 +147,6 @@ const ProtoM = () => {
         </motion.div>
       </footer>
       
-      {/* Scale script for responsive display */}
       <style>{`
         :root {
           --proto-scale: min(calc(100vw / 1080), calc(100vh / 1920));
@@ -153,4 +156,4 @@ const ProtoM = () => {
   );
 };
 
-export default ProtoM;
+export default ChatProtoM;
