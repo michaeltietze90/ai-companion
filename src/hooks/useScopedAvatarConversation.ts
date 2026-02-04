@@ -478,6 +478,14 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
             addMessage({ role: 'assistant', content: finalParsed.displayText });
           }
         }
+
+        // Wait for all speech to complete before returning
+        // This ensures lip-sync stays synchronized with the text
+        if (speechPromises.length > 0) {
+          await Promise.all(speechPromises);
+        }
+        // Also wait for the HeyGen dispatch queue to drain
+        await heygenDispatchQueueRef.current;
       };
 
       try {
