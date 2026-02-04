@@ -1,8 +1,9 @@
-// Deepgram Nova STT - Real-time WebSocket implementation
+// Deepgram Nova STT - Real-time WebSocket implementation using Deepgram SDK
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useConversationStore } from '@/stores/conversationStore';
 import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
+import { createClient, LiveTranscriptionEvents, type LiveClient } from '@deepgram/sdk';
 
 // Detect environment
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -31,7 +32,7 @@ const getHeaders = () => {
 };
 
 interface DeepgramConnection {
-  ws: WebSocket;
+  liveClient: LiveClient;
   mediaStream: MediaStream | null;
   audioContext: AudioContext | null;
   processor: ScriptProcessorNode | null;
@@ -79,10 +80,12 @@ export function useDeepgramSTT(
       if (conn.mediaStream) {
         conn.mediaStream.getTracks().forEach(track => track.stop());
       }
-      if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
-        // Send close message to Deepgram
-        conn.ws.send(JSON.stringify({ type: 'CloseStream' }));
-        conn.ws.close();
+      if (conn.liveClient) {
+        try {
+          conn.liveClient.requestClose();
+        } catch (e) {
+          console.error('Error closing Deepgram client:', e);
+        }
       }
       connectionRef.current = null;
     }
@@ -116,7 +119,8 @@ export function useDeepgramSTT(
         throw new Error('Failed to get speech recognition API key');
       }
 
-      console.log('Got Deepgram API key, connecting...');
+      console.log('Got Deepgram API key, connecting via SDK...');
+      debugLog('stt-event', 'STT', 'Got API key, connecting via Deepgram SDK');
 
       // Request microphone access
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -127,166 +131,117 @@ export function useDeepgramSTT(
         },
       });
 
-      // Build WebSocket URL with parameters
-      // Using Nova-2 model with auto language detection for multilingual support
-      const baseWsUrl = new URL('wss://api.deepgram.com/v1/listen');
-      baseWsUrl.searchParams.set('model', 'nova-2');
-      baseWsUrl.searchParams.set('encoding', 'linear16');
-      baseWsUrl.searchParams.set('sample_rate', '16000');
-      baseWsUrl.searchParams.set('channels', '1');
-      baseWsUrl.searchParams.set('interim_results', 'true');
-      baseWsUrl.searchParams.set('endpointing', '300'); // 300ms silence for VAD
-      baseWsUrl.searchParams.set('smart_format', 'true');
-      // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
-      baseWsUrl.searchParams.set('detect_language', 'true');
+      // Create Deepgram client using SDK
+      const deepgram = createClient(data.apiKey);
+      
+      // Create live transcription connection
+      const liveClient = deepgram.listen.live({
+        model: 'nova-2',
+        language: 'en',
+        encoding: 'linear16',
+        sample_rate: 16000,
+        channels: 1,
+        interim_results: true,
+        endpointing: 300,
+        smart_format: true,
+      });
 
-      // WebSocket auth can be finicky across environments.
-      // Preferred: browser auth via Sec-WebSocket-Protocol (subprotocol).
-      // Fallback: token query param (some hosted previews/proxies only work with this).
-      const makeWs = (mode: 'subprotocol' | 'query') => {
-        const wsUrl = new URL(baseWsUrl.toString());
-        if (mode === 'query') {
-          wsUrl.searchParams.set('token', data.apiKey);
+      let keepAliveInterval: NodeJS.Timeout | null = null;
+
+      // Set up event handlers
+      liveClient.on(LiveTranscriptionEvents.Open, () => {
+        console.log('Deepgram SDK connection opened');
+        debugLog('stt-event', 'STT', 'Deepgram SDK connection opened');
+        setIsConnected(true);
+        setListening(true);
+        setIsConnecting(false);
+
+        // Send KeepAlive messages every 8 seconds to prevent timeout
+        keepAliveInterval = setInterval(() => {
+          try {
+            liveClient.keepAlive();
+          } catch (e) {
+            console.error('KeepAlive error:', e);
+          }
+        }, 8000);
+
+        // Update the connection ref with the interval
+        if (connectionRef.current) {
+          connectionRef.current.keepAliveInterval = keepAliveInterval;
         }
-        const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
-        return ws;
-      };
+      });
 
-      debugLog('stt-event', 'STT', 'Connecting to Deepgram WebSocket (attempt 1: subprotocol)');
-      let ws = makeWs('subprotocol');
-      ws.binaryType = 'arraybuffer';
+      liveClient.on(LiveTranscriptionEvents.Transcript, (data) => {
+        if (disabledRef.current) return;
+
+        const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
+        
+        if (transcript) {
+          if (data.is_final) {
+            // Committed/final transcript
+            if (transcript !== lastCommittedRef.current) {
+              lastCommittedRef.current = transcript;
+              setPartialTranscript('');
+              setLastVoiceTranscript(transcript);
+              console.log('Committed transcript:', transcript);
+              debugLog('stt-event', 'STT', `Committed: "${transcript.slice(0, 50)}..."`, { text: transcript });
+              onTranscript(transcript);
+            }
+          } else {
+            // Interim/partial transcript
+            setPartialTranscript(transcript);
+          }
+        }
+      });
+
+      liveClient.on(LiveTranscriptionEvents.Metadata, (data) => {
+        console.log('Deepgram metadata:', data);
+        debugLog('stt-event', 'STT', `Session metadata received`, data);
+      });
+
+      liveClient.on(LiveTranscriptionEvents.Error, (error) => {
+        console.error('Deepgram SDK error:', error);
+        debugLog('error', 'STT', `SDK Error: ${error.message || 'Unknown'}`, error);
+        toast.error(`Speech recognition error: ${error.message || 'Unknown error'}`);
+      });
+
+      liveClient.on(LiveTranscriptionEvents.Close, () => {
+        console.log('Deepgram SDK connection closed');
+        debugLog('stt-event', 'STT', 'SDK connection closed');
+        cleanup();
+      });
 
       // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const source = audioContext.createMediaStreamSource(mediaStream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-      let keepAliveInterval: NodeJS.Timeout | null = null;
-
-      let didOpen = false;
-      let hasRetried = false;
-
-      const attachHandlers = () => {
-        ws.onopen = () => {
-        console.log('WebSocket connected to Deepgram Nova');
-        debugLog('stt-event', 'STT', 'WebSocket connected to Deepgram Nova');
-        didOpen = true;
-        setIsConnected(true);
-        setListening(true);
-        setIsConnecting(false);
-        
-        // Start processing audio
-        source.connect(processor);
-        processor.connect(audioContext.destination);
-
-        // Send KeepAlive messages every 8 seconds to prevent timeout
-        keepAliveInterval = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'KeepAlive' }));
-          }
-        }, 8000);
-        };
-
-        ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          // Handle different message types
-          if (data.type === 'Metadata') {
-            console.log('Deepgram session started:', data.request_id);
-            debugLog('stt-event', 'STT', `Session started: ${data.request_id}`);
-          } else if (data.channel?.alternatives?.[0]) {
-            if (disabledRef.current) return;
-            
-            const transcript = data.channel.alternatives[0].transcript?.trim();
-            
-            if (transcript) {
-              if (data.is_final) {
-                // Committed/final transcript
-                if (transcript !== lastCommittedRef.current) {
-                  lastCommittedRef.current = transcript;
-                  setPartialTranscript('');
-                  setLastVoiceTranscript(transcript);
-                  console.log('Committed transcript:', transcript);
-                  debugLog('stt-event', 'STT', `Committed: \"${transcript.slice(0, 50)}...\"`, { text: transcript });
-                  onTranscript(transcript);
-                }
-              } else {
-                // Interim/partial transcript
-                setPartialTranscript(transcript);
-              }
-            }
-          } else if (data.type === 'Error') {
-            console.error('Deepgram error:', data);
-            debugLog('error', 'STT', `Error: ${data.message || 'Unknown'}`, data);
-            toast.error(`Speech recognition error: ${data.message || 'Unknown error'}`);
-          }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e);
-        }
-        };
-
-        ws.onerror = (error) => {
-        console.error('Deepgram WebSocket error:', error);
-        toast.error('Speech recognition connection error');
-        // Note: cleanup is triggered from onclose as well; avoid double-cleaning.
-      };
-
-        ws.onclose = (event) => {
-        console.log('Deepgram WebSocket closed:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-        });
-        debugLog(
-          'stt-event',
-          'STT',
-          `WebSocket closed (code=${event.code}, clean=${event.wasClean})${event.reason ? `: ${event.reason}` : ''}`
-        );
-
-        // If the connection never opened, immediately retry once with query param auth.
-        if (!didOpen && !hasRetried) {
-          hasRetried = true;
-          try {
-            debugLog('stt-event', 'STT', 'Retrying Deepgram WebSocket (attempt 2: token query param)');
-            ws = makeWs('query');
-            ws.binaryType = 'arraybuffer';
-            attachHandlers();
-            // Important: processor.onaudioprocess already checks ws.readyState; it will use the latest ws ref.
-            return;
-          } catch (e) {
-            debugLog('error', 'STT', 'Failed to retry Deepgram WebSocket', e);
-          }
-        }
-
-        cleanup();
-      };
-
-      };
-
-      attachHandlers();
-
-      // Send audio data as raw binary (Deepgram accepts raw PCM)
+      // Send audio data to Deepgram SDK
       processor.onaudioprocess = (e) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
-          if (disabledRef.current) return;
+        // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
+        if (disabledRef.current) return;
 
-          const inputData = e.inputBuffer.getChannelData(0);
-          // Convert to 16-bit PCM
-          const pcmData = new Int16Array(inputData.length);
-          for (let i = 0; i < inputData.length; i++) {
-            const s = Math.max(-1, Math.min(1, inputData[i]));
-            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          }
-          
-          // Send raw binary PCM data (Deepgram accepts ArrayBuffer directly)
-          ws.send(pcmData.buffer);
+        const inputData = e.inputBuffer.getChannelData(0);
+        // Convert to 16-bit PCM
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        
+        // Send to Deepgram via SDK
+        try {
+          liveClient.send(pcmData.buffer);
+        } catch (e) {
+          // Connection might be closed
         }
       };
+
+      source.connect(processor);
+      processor.connect(audioContext.destination);
 
       connectionRef.current = {
-        ws,
+        liveClient,
         mediaStream,
         audioContext,
         processor,
