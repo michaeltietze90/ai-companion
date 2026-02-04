@@ -142,7 +142,7 @@ export function useDeepgramSTT(
         sample_rate: 16000,
         channels: 1,
         interim_results: true,
-        endpointing: 300,
+        endpointing: 800, // Increased from 300ms to prevent premature commits
         smart_format: true,
         keywords: ['Agentforce:2', 'Data360:2', 'Agentic Enterprise:2', 'Salesforce:2'],
       });
