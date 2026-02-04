@@ -127,22 +127,33 @@ export function useDeepgramSTT(
         },
       });
 
-      // Build WebSocket URL with parameters and API key
+      // Build WebSocket URL with parameters
       // Using Nova-2 model with auto language detection for multilingual support
-      const wsUrl = new URL('wss://api.deepgram.com/v1/listen');
-      wsUrl.searchParams.set('model', 'nova-2');
-      wsUrl.searchParams.set('encoding', 'linear16');
-      wsUrl.searchParams.set('sample_rate', '16000');
-      wsUrl.searchParams.set('channels', '1');
-      wsUrl.searchParams.set('interim_results', 'true');
-      wsUrl.searchParams.set('endpointing', '300'); // 300ms silence for VAD
-      wsUrl.searchParams.set('smart_format', 'true');
+      const baseWsUrl = new URL('wss://api.deepgram.com/v1/listen');
+      baseWsUrl.searchParams.set('model', 'nova-2');
+      baseWsUrl.searchParams.set('encoding', 'linear16');
+      baseWsUrl.searchParams.set('sample_rate', '16000');
+      baseWsUrl.searchParams.set('channels', '1');
+      baseWsUrl.searchParams.set('interim_results', 'true');
+      baseWsUrl.searchParams.set('endpointing', '300'); // 300ms silence for VAD
+      baseWsUrl.searchParams.set('smart_format', 'true');
       // detect_language=true enables auto language detection (German, French, Italian, English, etc.)
-      wsUrl.searchParams.set('detect_language', 'true');
+      baseWsUrl.searchParams.set('detect_language', 'true');
 
-      // Create WebSocket with authorization via Sec-WebSocket-Protocol header
-      // Format: ['token', 'YOUR_API_KEY'] - Deepgram expects this exact format
-      const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
+      // WebSocket auth can be finicky across environments.
+      // Preferred: browser auth via Sec-WebSocket-Protocol (subprotocol).
+      // Fallback: token query param (some hosted previews/proxies only work with this).
+      const makeWs = (mode: 'subprotocol' | 'query') => {
+        const wsUrl = new URL(baseWsUrl.toString());
+        if (mode === 'query') {
+          wsUrl.searchParams.set('token', data.apiKey);
+        }
+        const ws = new WebSocket(wsUrl.toString(), ['token', data.apiKey]);
+        return ws;
+      };
+
+      debugLog('stt-event', 'STT', 'Connecting to Deepgram WebSocket (attempt 1: subprotocol)');
+      let ws = makeWs('subprotocol');
       ws.binaryType = 'arraybuffer';
 
       // Set up audio processing
@@ -152,9 +163,14 @@ export function useDeepgramSTT(
 
       let keepAliveInterval: NodeJS.Timeout | null = null;
 
-      ws.onopen = () => {
+      let didOpen = false;
+      let hasRetried = false;
+
+      const attachHandlers = () => {
+        ws.onopen = () => {
         console.log('WebSocket connected to Deepgram Nova');
         debugLog('stt-event', 'STT', 'WebSocket connected to Deepgram Nova');
+        didOpen = true;
         setIsConnected(true);
         setListening(true);
         setIsConnecting(false);
@@ -169,9 +185,9 @@ export function useDeepgramSTT(
             ws.send(JSON.stringify({ type: 'KeepAlive' }));
           }
         }, 8000);
-      };
+        };
 
-      ws.onmessage = (event) => {
+        ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
@@ -208,23 +224,47 @@ export function useDeepgramSTT(
         } catch (e) {
           console.error('Failed to parse WebSocket message:', e);
         }
-      };
+        };
 
-      ws.onerror = (error) => {
+        ws.onerror = (error) => {
         console.error('Deepgram WebSocket error:', error);
         toast.error('Speech recognition connection error');
-        cleanup();
-        setIsConnecting(false);
+        // Note: cleanup is triggered from onclose as well; avoid double-cleaning.
       };
 
-      ws.onclose = (event) => {
+        ws.onclose = (event) => {
         console.log('Deepgram WebSocket closed:', {
           code: event.code,
           reason: event.reason,
           wasClean: event.wasClean,
         });
+        debugLog(
+          'stt-event',
+          'STT',
+          `WebSocket closed (code=${event.code}, clean=${event.wasClean})${event.reason ? `: ${event.reason}` : ''}`
+        );
+
+        // If the connection never opened, immediately retry once with query param auth.
+        if (!didOpen && !hasRetried) {
+          hasRetried = true;
+          try {
+            debugLog('stt-event', 'STT', 'Retrying Deepgram WebSocket (attempt 2: token query param)');
+            ws = makeWs('query');
+            ws.binaryType = 'arraybuffer';
+            attachHandlers();
+            // Important: processor.onaudioprocess already checks ws.readyState; it will use the latest ws ref.
+            return;
+          } catch (e) {
+            debugLog('error', 'STT', 'Failed to retry Deepgram WebSocket', e);
+          }
+        }
+
         cleanup();
       };
+
+      };
+
+      attachHandlers();
 
       // Send audio data as raw binary (Deepgram accepts raw PCM)
       processor.onaudioprocess = (e) => {
