@@ -51,13 +51,13 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
   },
   {
     keywords: [
-      'video call', 'videocall', 'video anruf', 'videoanruf',
+      'video call', 'videocall',
       'speak to human', 'speak to a human', 'talk to human', 'talk to a human',
-      'real person', 'echte person', 'echter mensch', 'mit mensch sprechen',
-      'eskalation', 'escalation', 'escalate', 'eskalieren',
-      'kundenberater', 'berater sprechen', 'agent', 'live agent'
+      'real person',
+      'escalation', 'escalate',
+      'live agent'
     ],
-    speech: 'Natürlich! Ich verbinde Sie jetzt mit einem unserer Kundenberater.',
+    speech: 'Of course! Let me connect you with one of our representatives.',
     customOverlay: 'video-call-escalation',
     customOverlayDuration: 0, // Manual close
   },
