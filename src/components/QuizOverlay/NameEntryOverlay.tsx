@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
 
 export function NameEntryOverlay() {
-  const { currentScore, prefillData, submitEntry, hideOverlay, isLoading } = useQuizOverlayStore();
+  const { currentScore, prefillData, submitEntry, hideOverlay, isLoading, notifyDataEdit } = useQuizOverlayStore();
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -34,6 +34,8 @@ export function NameEntryOverlay() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      // Notify Agentforce if data was edited (before saving)
+      notifyDataEdit(firstName.trim(), lastName.trim(), country.trim());
       await submitEntry(firstName.trim(), lastName.trim(), country.trim());
     }
   };

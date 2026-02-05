@@ -34,6 +34,8 @@ interface QuizOverlayState {
   prefillData: PrefillData | null;
   /** Callback for when Start is pressed (e.g., reconnect avatar) */
   onStartCallback: (() => void) | null;
+  /** Callback for when user submits edited name entry (sends message to Agentforce) */
+  onNameSubmitCallback: ((message: string) => void) | null;
   /** Loading state for DB operations */
   isLoading: boolean;
 
@@ -48,7 +50,10 @@ interface QuizOverlayState {
   setScore: (score: number) => void;
   resetQuiz: () => void;
   setOnStartCallback: (callback: (() => void) | null) => void;
+  setOnNameSubmitCallback: (callback: ((message: string) => void) | null) => void;
   triggerStart: () => void;
+  /** Notify Agentforce about edited data */
+  notifyDataEdit: (firstName: string, lastName: string, country: string) => void;
   /** Fetch leaderboard from database */
   fetchLeaderboard: () => Promise<void>;
 }
@@ -71,6 +76,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   userRank: null,
   prefillData: null,
   onStartCallback: null,
+  onNameSubmitCallback: null,
   isLoading: false,
 
   showNameEntry: (score, prefill) => {
@@ -164,6 +170,28 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
 
   setOnStartCallback: (callback) => {
     set({ onStartCallback: callback });
+  },
+
+  setOnNameSubmitCallback: (callback) => {
+    set({ onNameSubmitCallback: callback });
+  },
+
+  notifyDataEdit: (firstName, lastName, country) => {
+    const { onNameSubmitCallback, prefillData } = get();
+    
+    // Check if data was actually edited from prefill
+    const wasEdited = prefillData && (
+      (prefillData.firstName && firstName !== prefillData.firstName) ||
+      (prefillData.lastName && lastName !== prefillData.lastName) ||
+      (prefillData.country && country !== prefillData.country)
+    );
+    
+    if (wasEdited && onNameSubmitCallback) {
+      // Build a message to send back to Agentforce
+      const message = `My name is ${firstName} ${lastName} and I am from ${country}.`;
+      console.log('[QuizStore] Notifying Agentforce of edited data:', message);
+      onNameSubmitCallback(message);
+    }
   },
 
   triggerStart: () => {

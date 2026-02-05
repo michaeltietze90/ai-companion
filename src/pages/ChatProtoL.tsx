@@ -42,7 +42,7 @@ const ChatProtoL = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
-  const { setOnStartCallback } = useQuizOverlayStore();
+  const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[ChatProtoL] Voice transcript:', transcript);
@@ -62,6 +62,12 @@ const ChatProtoL = () => {
     setOnStartCallback(handleStart);
     return () => setOnStartCallback(null);
   }, [handleStart, setOnStartCallback]);
+
+  // Register callback to send message when user edits their name entry
+  useEffect(() => {
+    setOnNameSubmitCallback(sendMessage);
+    return () => setOnNameSubmitCallback(null);
+  }, [sendMessage, setOnNameSubmitCallback]);
 
   return (
     <div 
