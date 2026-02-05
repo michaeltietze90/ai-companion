@@ -38,11 +38,12 @@ export function CountdownOverlay() {
         pulse: false,
       };
     }
+    // Salesforce Blue theme
     return {
-      gradient: 'from-cyan-400 via-blue-500 to-indigo-600',
-      glow: 'rgba(6, 182, 212, 0.5)',
-      ring: '#06b6d4',
-      text: 'text-cyan-100',
+      gradient: 'from-[#1B96FF] via-[#0176D3] to-[#032D60]',
+      glow: 'rgba(1, 118, 211, 0.5)',
+      ring: '#0176D3',
+      text: 'text-[#B4E0FA]',
       pulse: false,
     };
   };
