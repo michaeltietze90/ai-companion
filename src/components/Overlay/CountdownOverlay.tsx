@@ -92,22 +92,6 @@ export function CountdownOverlay() {
                   filter: `drop-shadow(0 0 6px ${theme.ring})`,
                 }}
               />
-              
-              {/* Glowing dot at progress end */}
-              <motion.circle
-                cx="60"
-                cy="6"
-                r="6"
-                fill={theme.ring}
-                style={{
-                  filter: `drop-shadow(0 0 8px ${theme.ring})`,
-                  transformOrigin: '60px 60px',
-                }}
-                animate={{ 
-                  rotate: 360 * (1 - progress),
-                }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-              />
             </svg>
             
             {/* Number */}
