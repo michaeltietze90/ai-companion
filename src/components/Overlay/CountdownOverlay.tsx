@@ -80,18 +80,9 @@ export function CountdownOverlay() {
             transition={{ duration: 0.5, repeat: Infinity }}
           />
           
-          {/* Main container */}
+          {/* Main container - transparent */}
           <div 
             className="relative w-32 h-32 rounded-full"
-            style={{
-              background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8))',
-              boxShadow: `
-                0 0 40px ${theme.glow},
-                inset 0 2px 4px rgba(255,255,255,0.1),
-                inset 0 -2px 4px rgba(0,0,0,0.3)
-              `,
-              backdropFilter: 'blur(12px)',
-            }}
           >
             {/* Animated ring track */}
             <svg 
@@ -162,20 +153,8 @@ export function CountdownOverlay() {
                   {timeDisplay}
                 </span>
               </motion.div>
-              
-              {/* Label */}
-              <span className={`text-[10px] font-medium uppercase tracking-[0.2em] ${theme.text} opacity-70 mt-1`}>
-                {minutes > 0 ? 'remaining' : 'seconds'}
-              </span>
             </div>
             
-            {/* Decorative inner ring */}
-            <div 
-              className="absolute inset-3 rounded-full border border-white/5"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05), transparent)',
-              }}
-            />
             
             {/* Critical time pulse ring */}
             {theme.pulse && (
