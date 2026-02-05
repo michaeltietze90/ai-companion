@@ -51,13 +51,14 @@ export function CountdownOverlay() {
       {isVisible && (
         <motion.div
           className="absolute top-[8%] left-[8%] z-40 pointer-events-none"
+          style={{ background: 'transparent' }}
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           transition={{ type: 'spring', damping: 15, stiffness: 200 }}
         >
-          {/* Main container */}
-          <div className="relative w-32 h-32">
+          {/* Main container - fully transparent */}
+          <div className="relative w-32 h-32" style={{ background: 'transparent' }}>
             {/* Animated ring */}
             <svg 
               className="absolute inset-0 w-full h-full -rotate-90"
