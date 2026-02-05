@@ -8,6 +8,7 @@ import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscala
 import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
+import { useCountdownStore } from "@/stores/countdownStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { TestMessageSender } from "@/components/TestPanel/TestMessageSender";
@@ -72,6 +73,7 @@ const PitchAvatarMain = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { setOnStartCallback } = useQuizOverlayStore();
+  const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Pitch] Voice transcript:', transcript);
@@ -79,10 +81,16 @@ const PitchAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting } = useSilenceTranscription(
+  const { toggleListening, isListening, isConnecting: sttConnecting, forceCommit } = useSilenceTranscription(
     handleVoiceTranscript,
-    { disabled: isSpeaking }
+    { disabled: isSpeaking, countdownActive }
   );
+
+  // Wire up countdown expiry to force-commit the STT
+  useEffect(() => {
+    setOnExpireCallback(forceCommit);
+    return () => setOnExpireCallback(null);
+  }, [forceCommit, setOnExpireCallback]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);

@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
+import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
+import { useCountdownStore } from "@/stores/countdownStore";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,7 @@ const PitchProtoM = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
+  const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -49,10 +52,16 @@ const PitchProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening } = useSilenceTranscription(
+  const { isListening, toggleListening, forceCommit } = useSilenceTranscription(
     handleVoiceTranscript,
-    { disabled: isSpeaking }
+    { disabled: isSpeaking, countdownActive }
   );
+
+  // Wire up countdown expiry to force-commit the STT
+  useEffect(() => {
+    setOnExpireCallback(forceCommit);
+    return () => setOnExpireCallback(null);
+  }, [forceCommit, setOnExpireCallback]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
@@ -89,6 +98,7 @@ const PitchProtoM = () => {
           videoRef={videoRef}
         />
         <QuizOverlayManager />
+        <CountdownOverlay />
       </main>
 
       {isConnected && (

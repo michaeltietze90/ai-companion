@@ -44,6 +44,12 @@ type UseSilenceTranscriptionOptions = {
 
   /** Max recording length (ms). Default: 20s */
   maxRecordMs?: number;
+
+  /**
+   * When true (countdown mode), use longer silence threshold (3s).
+   * Also enables force commit on countdown expiry.
+   */
+  countdownActive?: boolean;
 };
 
 type RecorderState = {
@@ -69,10 +75,15 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
+// Silence threshold in countdown mode (3 seconds)
+const COUNTDOWN_SILENCE_MS = 3000;
+// Normal silence threshold
+const NORMAL_SILENCE_MS = 500;
+
 /**
  * Simple voice input:
  * 1) record microphone
- * 2) detect 900ms silence
+ * 2) detect silence (500ms normally, 3s in countdown mode)
  * 3) send audio to backend for transcription
  */
 export function useSilenceTranscription(
@@ -85,14 +96,20 @@ export function useSilenceTranscription(
 
   const stateRef = useRef<RecorderState | null>(null);
   const disabledRef = useRef(Boolean(options?.disabled));
+  const countdownActiveRef = useRef(Boolean(options?.countdownActive));
 
-  const silenceMsRef = useRef(options?.silenceMs ?? 900);
+  // Use 3s silence in countdown mode, otherwise normal threshold
+  const getEffectiveSilenceMs = () => 
+    countdownActiveRef.current ? COUNTDOWN_SILENCE_MS : (options?.silenceMs ?? NORMAL_SILENCE_MS);
+
+  const silenceMsRef = useRef(getEffectiveSilenceMs());
   const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? 0.004);
   const maxRecordMsRef = useRef(options?.maxRecordMs ?? 20_000);
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
-    silenceMsRef.current = options?.silenceMs ?? 500;
+    countdownActiveRef.current = Boolean(options?.countdownActive);
+    silenceMsRef.current = getEffectiveSilenceMs();
     silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? 0.004;
     maxRecordMsRef.current = options?.maxRecordMs ?? 20_000;
 
@@ -323,6 +340,18 @@ export function useSilenceTranscription(
     }
   }, [isListening, startListening, stopListening]);
 
+  /**
+   * Force commit - used when countdown expires.
+   * Immediately stops recording and sends whatever was captured.
+   */
+  const forceCommit = useCallback(() => {
+    console.log('[STT] Force commit triggered (countdown expired)');
+    if (stateRef.current) {
+      // Stop recording - this will trigger onstop which transcribes
+      void stopListening(false);
+    }
+  }, [stopListening]);
+
   useEffect(() => {
     return () => {
       void stopListening(true);
@@ -336,5 +365,6 @@ export function useSilenceTranscription(
     startListening,
     stopListening,
     toggleListening,
+    forceCommit,
   };
 }
