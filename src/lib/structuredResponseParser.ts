@@ -35,7 +35,9 @@ export type ActionType =
   | 'setScore'
   | 'setLeaderboardData'
   | 'countdown'
-  | 'stopCountdown';
+  | 'stopCountdown'
+  | 'score'
+  | 'hideScore';
 
 export interface StructuredAction {
   type: ActionType;
