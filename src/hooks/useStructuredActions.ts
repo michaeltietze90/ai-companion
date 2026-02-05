@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQuizOverlayStore, type LeaderboardEntry } from '@/stores/quizOverlayStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
+import { useCountdownStore } from '@/stores/countdownStore';
 import type { StructuredAction, StructuredData } from '@/lib/structuredResponseParser';
 import type { VisualCommand, VisualPosition, VisualType } from '@/lib/richResponseParser';
 
@@ -20,6 +21,7 @@ export function useStructuredActions() {
   } = useQuizOverlayStore();
   
   const { startVisuals } = useVisualOverlayStore();
+  const { startCountdown, stopCountdown } = useCountdownStore();
 
   /**
    * Execute a single action
@@ -139,10 +141,22 @@ export function useStructuredActions() {
         break;
       }
       
+      case 'countdown': {
+        const data = action.data as { seconds?: number } | undefined;
+        const seconds = data?.seconds ?? 60;
+        startCountdown(seconds);
+        break;
+      }
+      
+      case 'stopCountdown': {
+        stopCountdown();
+        break;
+      }
+      
       default:
         console.warn('[StructuredActions] Unknown action type:', action.type);
     }
-  }, [showNameEntry, showLeaderboard, hideOverlay, setPrefillData, setScore, startVisuals]);
+  }, [showNameEntry, showLeaderboard, hideOverlay, setPrefillData, setScore, startVisuals, setLeaderboard, setUserRankData, startCountdown, stopCountdown]);
 
   /**
    * Execute multiple actions in sequence

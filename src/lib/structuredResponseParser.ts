@@ -33,7 +33,9 @@ export type ActionType =
   | 'showVisual'
   | 'prefillData'
   | 'setScore'
-  | 'setLeaderboardData';
+  | 'setLeaderboardData'
+  | 'countdown'
+  | 'stopCountdown';
 
 export interface StructuredAction {
   type: ActionType;
