@@ -83,6 +83,27 @@ const PRESET_MESSAGES = [
       actions: [{ type: 'hideOverlay' }],
     },
   },
+  {
+    name: 'Show Score (85)',
+    json: {
+      response: "Great job! Here's your score.",
+      actions: [{ type: 'score', data: { value: 85 } }],
+    },
+  },
+  {
+    name: 'Show Score (45)',
+    json: {
+      response: "Here's how you did.",
+      actions: [{ type: 'score', data: { value: 45 } }],
+    },
+  },
+  {
+    name: 'Hide Score',
+    json: {
+      response: "Hiding the score now.",
+      actions: [{ type: 'hideScore' }],
+    },
+  },
 ];
 
 interface TestMessageSenderProps {
