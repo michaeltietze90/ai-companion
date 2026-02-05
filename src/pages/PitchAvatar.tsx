@@ -5,10 +5,12 @@ import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
+import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
+import { TestMessageSender } from "@/components/TestPanel/TestMessageSender";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +121,9 @@ const PitchAvatarMain = () => {
       
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />
+      
+      {/* Countdown Timer Overlay */}
+      <CountdownOverlay />
 
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 md:p-5 flex items-center justify-between">
@@ -367,6 +372,9 @@ const PitchAvatarMain = () => {
         onReconnectAvatar={handleReconnectAvatar}
         appType="pitch"
       />
+      
+      {/* Test Message Sender Panel */}
+      <TestMessageSender />
     </div>
   );
 };
