@@ -187,8 +187,8 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
     );
     
     if (wasEdited && onNameSubmitCallback) {
-      // Build a message to send back to Agentforce
-      const message = `My name is ${firstName} ${lastName} and I am from ${country}.`;
+       // Build a corrective message to send back to Agentforce
+       const message = `Actually, you got my details wrong. My name is ${firstName} ${lastName} and I am from ${country}.`;
       console.log('[QuizStore] Notifying Agentforce of edited data:', message);
       onNameSubmitCallback(message);
     }
