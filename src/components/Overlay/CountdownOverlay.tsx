@@ -57,12 +57,13 @@ export function CountdownOverlay() {
           exit={{ opacity: 0, scale: 0.5 }}
           transition={{ type: 'spring', damping: 15, stiffness: 200 }}
         >
-          {/* Main container - fully transparent */}
-          <div className="relative w-32 h-32" style={{ background: 'transparent' }}>
+          {/* Main container - fully transparent with overflow visible for glow */}
+          <div className="relative w-32 h-32 overflow-visible" style={{ background: 'transparent' }}>
             {/* Animated ring */}
             <svg 
-              className="absolute inset-0 w-full h-full -rotate-90"
+              className="absolute inset-0 w-full h-full -rotate-90 overflow-visible"
               viewBox="0 0 120 120"
+              style={{ overflow: 'visible' }}
             >
               {/* Background track */}
               <circle
