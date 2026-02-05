@@ -121,9 +121,6 @@ const PitchAvatarMain = () => {
       
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />
-      
-      {/* Countdown Timer Overlay */}
-      <CountdownOverlay />
 
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 md:p-5 flex items-center justify-between">
@@ -178,6 +175,7 @@ const PitchAvatarMain = () => {
             isMuted={isMuted}
           />
           <QuizOverlayManager />
+          <CountdownOverlay />
           
           {/* Control buttons inside avatar - right side */}
           {isConnected && (
