@@ -1,19 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCountdownStore } from '@/stores/countdownStore';
-import { useEffect, useState } from 'react';
 
 /**
- * Premium Salesforce-branded countdown timer overlay
- * Holographic glassmorphism design with animated ring
+ * Clean Salesforce-branded countdown timer overlay
+ * Just the ring and number - no background
  */
 export function CountdownOverlay() {
   const { isVisible, seconds, remainingSeconds } = useCountdownStore();
-  const [prevSeconds, setPrevSeconds] = useState(remainingSeconds);
-  
-  // Track when seconds change for animation
-  useEffect(() => {
-    setPrevSeconds(remainingSeconds);
-  }, [remainingSeconds]);
   
   // Calculate progress (1 = full, 0 = empty)
   const progress = remainingSeconds / seconds;
@@ -22,28 +15,22 @@ export function CountdownOverlay() {
   const getUrgencyTheme = () => {
     if (remainingSeconds <= 10) {
       return {
-        gradient: 'from-red-500 via-orange-500 to-red-600',
-        glow: 'rgba(239, 68, 68, 0.6)',
         ring: '#ef4444',
-        text: 'text-red-100',
+        textColor: '#ef4444',
         pulse: true,
       };
     }
     if (remainingSeconds <= 30) {
       return {
-        gradient: 'from-amber-400 via-orange-500 to-amber-500',
-        glow: 'rgba(245, 158, 11, 0.5)',
         ring: '#f59e0b',
-        text: 'text-amber-100',
+        textColor: '#f59e0b',
         pulse: false,
       };
     }
     // Salesforce Blue theme
     return {
-      gradient: 'from-[#1B96FF] via-[#0176D3] to-[#032D60]',
-      glow: 'rgba(1, 118, 211, 0.5)',
       ring: '#0176D3',
-      text: 'text-[#B4E0FA]',
+      textColor: '#0176D3',
       pulse: false,
     };
   };
@@ -64,27 +51,14 @@ export function CountdownOverlay() {
       {isVisible && (
         <motion.div
           className="absolute top-[8%] left-[8%] z-40 pointer-events-none"
-          initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-          animate={{ opacity: 1, scale: 1, rotate: 0 }}
-          exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
           transition={{ type: 'spring', damping: 15, stiffness: 200 }}
         >
-          {/* Outer glow */}
-          <motion.div
-            className="absolute inset-0 rounded-full blur-xl"
-            style={{ background: theme.glow }}
-            animate={theme.pulse ? { 
-              opacity: [0.4, 0.8, 0.4],
-              scale: [1, 1.1, 1],
-            } : {}}
-            transition={{ duration: 0.5, repeat: Infinity }}
-          />
-          
-          {/* Main container - transparent */}
-          <div 
-            className="relative w-32 h-32 rounded-full"
-          >
-            {/* Animated ring track */}
+          {/* Main container */}
+          <div className="relative w-32 h-32">
+            {/* Animated ring */}
             <svg 
               className="absolute inset-0 w-full h-full -rotate-90"
               viewBox="0 0 120 120"
@@ -95,7 +69,7 @@ export function CountdownOverlay() {
                 cy="60"
                 r="54"
                 fill="none"
-                stroke="rgba(255,255,255,0.1)"
+                stroke="rgba(255,255,255,0.15)"
                 strokeWidth="4"
               />
               
@@ -113,7 +87,7 @@ export function CountdownOverlay() {
                 animate={{ strokeDashoffset }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
                 style={{
-                  filter: `drop-shadow(0 0 8px ${theme.ring})`,
+                  filter: `drop-shadow(0 0 6px ${theme.ring})`,
                 }}
               />
               
@@ -121,10 +95,10 @@ export function CountdownOverlay() {
               <motion.circle
                 cx="60"
                 cy="6"
-                r="5"
+                r="6"
                 fill={theme.ring}
                 style={{
-                  filter: `drop-shadow(0 0 10px ${theme.ring})`,
+                  filter: `drop-shadow(0 0 8px ${theme.ring})`,
                   transformOrigin: '60px 60px',
                 }}
                 animate={{ 
@@ -134,69 +108,37 @@ export function CountdownOverlay() {
               />
             </svg>
             
-            {/* Inner content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {/* Animated number */}
-              <motion.div
+            {/* Number */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.span
                 key={remainingSeconds}
-                initial={{ scale: 1.3, opacity: 0, y: -5 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
+                initial={{ scale: 1.2, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', damping: 12, stiffness: 200 }}
-                className="relative"
+                className="text-4xl font-bold tabular-nums"
+                style={{ color: theme.textColor }}
               >
-                <span 
-                  className={`text-4xl font-bold tabular-nums bg-gradient-to-b ${theme.gradient} bg-clip-text text-transparent`}
-                  style={{
-                    textShadow: `0 0 30px ${theme.glow}`,
-                  }}
-                >
-                  {timeDisplay}
-                </span>
-              </motion.div>
+                {timeDisplay}
+              </motion.span>
             </div>
             
-            
-            {/* Critical time pulse ring */}
+            {/* Pulse effect for critical time */}
             {theme.pulse && (
               <motion.div
                 className="absolute inset-0 rounded-full border-2"
                 style={{ borderColor: theme.ring }}
                 animate={{ 
                   opacity: [0.8, 0.2, 0.8],
-                  scale: [1, 1.08, 1],
+                  scale: [1, 1.1, 1],
                 }}
                 transition={{ 
-                  duration: 0.6, 
+                  duration: 0.5, 
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
               />
             )}
           </div>
-          
-          {/* Floating particles for visual interest */}
-          {[...Array(3)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full"
-              style={{ 
-                background: theme.ring,
-                left: `${30 + i * 20}%`,
-                top: `${20 + i * 15}%`,
-              }}
-              animate={{
-                y: [0, -8, 0],
-                opacity: [0.3, 0.8, 0.3],
-                scale: [1, 1.5, 1],
-              }}
-              transition={{
-                duration: 2,
-                delay: i * 0.3,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
-          ))}
         </motion.div>
       )}
     </AnimatePresence>
