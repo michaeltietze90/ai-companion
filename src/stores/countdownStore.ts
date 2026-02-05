@@ -5,10 +5,12 @@ interface CountdownState {
   seconds: number;
   remainingSeconds: number;
   intervalId: ReturnType<typeof setInterval> | null;
+  onExpireCallback: (() => void) | null;
   
   startCountdown: (seconds: number) => void;
   stopCountdown: () => void;
   tick: () => void;
+  setOnExpireCallback: (callback: (() => void) | null) => void;
 }
 
 export const useCountdownStore = create<CountdownState>((set, get) => ({
@@ -16,6 +18,7 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
   seconds: 60,
   remainingSeconds: 60,
   intervalId: null,
+  onExpireCallback: null,
 
   startCountdown: (seconds: number) => {
     // Clear any existing interval
@@ -45,13 +48,22 @@ export const useCountdownStore = create<CountdownState>((set, get) => ({
   },
 
   tick: () => {
-    const { remainingSeconds, stopCountdown } = get();
+    const { remainingSeconds, stopCountdown, onExpireCallback } = get();
     
     if (remainingSeconds <= 1) {
+      // Fire the expire callback before stopping
+      if (onExpireCallback) {
+        console.log('[Countdown] Timer expired, triggering callback');
+        onExpireCallback();
+      }
       stopCountdown();
       return;
     }
 
     set({ remainingSeconds: remainingSeconds - 1 });
+  },
+
+  setOnExpireCallback: (callback) => {
+    set({ onExpireCallback: callback });
   },
 }));
