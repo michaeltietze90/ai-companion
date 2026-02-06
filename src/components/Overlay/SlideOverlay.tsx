@@ -15,13 +15,13 @@ export function SlideOverlay() {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="absolute inset-x-[3%] bottom-[10%] z-40 pointer-events-none flex justify-center"
+          className="absolute inset-x-[3%] bottom-[20%] z-40 pointer-events-none flex justify-center"
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.95 }}
           transition={{ type: 'spring', damping: 20, stiffness: 250 }}
         >
-          <div className="relative w-full max-w-[85%] overflow-hidden rounded-2xl shadow-2xl">
+          <div className="relative w-full max-w-[90%] overflow-hidden rounded-2xl shadow-2xl">
             {/* Glow effect behind */}
             <div 
               className="absolute -inset-2 blur-xl opacity-30 rounded-2xl"
@@ -37,16 +37,6 @@ export function SlideOverlay() {
                 style={{ maxHeight: '45vh' }}
               />
               
-              {/* Slide number badge */}
-              <div 
-                className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white"
-                style={{ 
-                  background: 'linear-gradient(135deg, #0176D3 0%, #014486 100%)',
-                  boxShadow: '0 2px 8px rgba(1, 118, 211, 0.4)',
-                }}
-              >
-                Slide {currentSlide}
-              </div>
             </div>
           </div>
         </motion.div>
