@@ -37,7 +37,9 @@ export type ActionType =
   | 'countdown'
   | 'stopCountdown'
   | 'score'
-  | 'hideScore';
+  | 'hideScore'
+  | 'slide'
+  | 'hideSlide';
 
 export interface StructuredAction {
   type: ActionType;

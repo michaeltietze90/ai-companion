@@ -7,6 +7,7 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { ScoreOverlay } from "@/components/Overlay/ScoreOverlay";
+import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { useCountdownStore } from "@/stores/countdownStore";
@@ -186,6 +187,7 @@ const PitchAvatarMain = () => {
           <QuizOverlayManager />
           <CountdownOverlay />
           <ScoreOverlay />
+          <SlideOverlay />
           
           {/* Control buttons inside avatar - right side */}
           {isConnected && (
