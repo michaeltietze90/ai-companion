@@ -20,6 +20,7 @@ router.post("/", async (req, res) => {
     }
 
     const audioBytes = Buffer.from(audioBase64, "base64");
+    console.log(`Transcribing audio: ${audioBytes.length} bytes, mimeType: ${mimeType || "unknown"}`);
 
     const url = new URL("https://api.deepgram.com/v1/listen");
     url.searchParams.set("model", "nova-2");
@@ -43,16 +44,19 @@ router.post("/", async (req, res) => {
 
     if (!dgRes.ok) {
       const errText = await dgRes.text().catch(() => "");
-      console.error("Deepgram transcription error:", errText);
-      return res.status(500).json({ error: "Deepgram transcription failed" });
+      console.error("Deepgram transcription error:", dgRes.status, errText);
+      return res.status(500).json({ error: "Deepgram transcription failed", details: errText });
     }
 
     const json = await dgRes.json();
+    console.log("Deepgram response:", JSON.stringify(json).substring(0, 500));
+    
     const text =
       json?.results?.channels?.[0]?.alternatives?.[0]?.transcript ??
       json?.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.transcript ??
       "";
 
+    console.log("Extracted text:", text || "(empty)");
     res.json({ text });
   } catch (error) {
     console.error("Error transcribing audio:", error);
