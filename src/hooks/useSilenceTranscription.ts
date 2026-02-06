@@ -271,15 +271,27 @@ export function useSilenceTranscription(
         if (discard) return;
 
         const blob = new Blob(recordedChunks, { type: chosenMime?.split(";")[0] || "audio/webm" });
-        if (blob.size < 1024) return; // ignore tiny recordings
+        if (blob.size < 1024) {
+          console.log(`[STT] Ignoring tiny recording: ${blob.size} bytes`);
+          return; // ignore tiny recordings
+        }
+
+        // Calculate recording duration (rough estimate: ~1KB per second for webm/opus)
+        const estimatedDuration = blob.size / 1000; // rough estimate in seconds
+        console.log(`[STT] Sending ${blob.size} bytes (est. ${estimatedDuration.toFixed(1)}s) to Deepgram`);
 
         try {
           const text = await transcribe(blob);
-          if (!text) return;
+          if (!text || text.trim().length === 0) {
+            console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${estimatedDuration.toFixed(1)}s)`);
+            // Don't show error toast for empty results - might just be silence
+            return;
+          }
+          console.log(`[STT] ✓ Successfully transcribed: "${text}"`);
           onTranscript(text);
         } catch (e) {
-          console.error("Transcription failed:", e);
-          toast.error("Transcription failed");
+          console.error("[STT] Transcription failed:", e);
+          toast.error(`Transcription failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
         }
       };
 
