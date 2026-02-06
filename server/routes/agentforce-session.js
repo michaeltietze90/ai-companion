@@ -5,58 +5,9 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import { getSalesforceToken, getSfApiHost } from '../lib/salesforceAuth.js';
 
 const router = express.Router();
-
-// Token cache
-let cachedToken = null;
-
-async function getSalesforceToken() {
-  const now = Date.now();
-  
-  if (cachedToken && cachedToken.expires_at > now + 60000) {
-    return cachedToken.access_token;
-  }
-
-  const orgDomain = process.env.SALESFORCE_ORG_DOMAIN;
-  const clientId = process.env.SALESFORCE_CLIENT_ID;
-  const clientSecret = process.env.SALESFORCE_CLIENT_SECRET;
-
-  if (!orgDomain || !clientId || !clientSecret) {
-    throw new Error('Salesforce credentials not configured');
-  }
-
-  const tokenUrl = `${orgDomain}/services/oauth2/token`;
-  
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Salesforce token error:', response.status, errorText);
-    throw new Error(`Failed to get Salesforce token: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  cachedToken = {
-    access_token: data.access_token,
-    expires_at: now + (data.expires_in ? data.expires_in * 1000 : 3600000),
-  };
-
-  return data.access_token;
-}
-
-const getSfApiHost = () => process.env.SALESFORCE_API_HOST || 'https://api.salesforce.com';
 
 router.post('/', async (req, res) => {
   try {

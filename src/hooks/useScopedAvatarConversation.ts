@@ -353,6 +353,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     // Prevent concurrent messages (causes 423 "Locked" errors from Salesforce)
     if (isProcessingMessageRef.current) {
       console.warn('[sendMessage] Skipping - already processing a message');
+      toast.info('Please wait for the current response...');
       return;
     }
     isProcessingMessageRef.current = true;

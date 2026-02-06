@@ -83,9 +83,23 @@ const PitchAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  const { toggleListening, isListening, isConnecting: sttConnecting, forceCommit } = useSilenceTranscription(
+  // Barge-in handler - interrupt avatar when user speaks
+  const handleBargeIn = useCallback(() => {
+    console.log('[Pitch] Barge-in triggered - interrupting avatar');
+    interruptAvatar();
+  }, [interruptAvatar]);
+
+  const { 
+    toggleListening, 
+    isListening, 
+    isConnecting: sttConnecting,
+    isProcessing: sttProcessing, 
+    forceCommit,
+    audioLevel,
+    hasSpoken,
+  } = useSilenceTranscription(
     handleVoiceTranscript,
-    { disabled: isSpeaking, countdownActive }
+    { disabled: isSpeaking, countdownActive, onBargeIn: handleBargeIn }
   );
 
   // Wire up countdown expiry to force-commit the STT
@@ -192,25 +206,42 @@ const PitchAvatarMain = () => {
           {/* Control buttons inside avatar - right side */}
           {isConnected && (
             <div className="absolute top-1/2 -translate-y-1/2 right-4 z-30 flex flex-col gap-3">
-              {/* Mic toggle */}
-              <Button
-                size="lg"
-                className={`rounded-full w-12 h-12 ${
-                  isListening 
-                    ? 'bg-purple-500 hover:bg-purple-600' 
-                    : 'bg-secondary hover:bg-secondary/80'
-                }`}
-                onClick={toggleListening}
-                disabled={sttConnecting}
-              >
-                {sttConnecting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : isListening ? (
-                  <Mic className="w-5 h-5" />
-                ) : (
-                  <MicOff className="w-5 h-5" />
+              {/* Mic toggle with audio level indicator */}
+              <div className="relative">
+                {/* Audio level ring - pulses based on voice volume */}
+                {isListening && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-purple-500/30"
+                    animate={{
+                      scale: 1 + audioLevel * 0.5,
+                      opacity: 0.3 + audioLevel * 0.4,
+                    }}
+                    transition={{ duration: 0.1 }}
+                  />
                 )}
-              </Button>
+                <Button
+                  size="lg"
+                  className={`relative rounded-full w-12 h-12 ${
+                    sttProcessing
+                      ? 'bg-amber-500 hover:bg-amber-600'
+                      : isListening && hasSpoken
+                      ? 'bg-green-500 hover:bg-green-600'
+                      : isListening 
+                      ? 'bg-purple-500 hover:bg-purple-600' 
+                      : 'bg-secondary hover:bg-secondary/80'
+                  }`}
+                  onClick={toggleListening}
+                  disabled={sttConnecting || sttProcessing}
+                >
+                  {sttConnecting || sttProcessing ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isListening ? (
+                    <Mic className="w-5 h-5" />
+                  ) : (
+                    <MicOff className="w-5 h-5" />
+                  )}
+                </Button>
+              </div>
 
               {/* Mute toggle */}
               <Button
@@ -253,9 +284,21 @@ const PitchAvatarMain = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : isConnecting ? 'bg-amber-400' : 'bg-purple-500'} animate-pulse`} />
+          <div className={`w-2 h-2 rounded-full ${
+            sttProcessing ? 'bg-amber-400' :
+            isListening && hasSpoken ? 'bg-green-400' :
+            isListening ? 'bg-purple-400' :
+            isConnected ? 'bg-green-400' : 
+            isConnecting ? 'bg-amber-400' : 
+            'bg-purple-500'
+          } animate-pulse`} />
           <span className="text-sm text-muted-foreground">
-            {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Ready'}
+            {sttProcessing ? 'Processing...' :
+             isListening && hasSpoken ? 'Recording...' :
+             isListening ? 'Listening...' :
+             isConnecting ? 'Connecting...' : 
+             isConnected ? 'Connected' : 
+             'Ready'}
           </span>
         </motion.div>
       </div>

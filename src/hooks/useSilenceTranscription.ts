@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { VOICE_CONFIG } from "@/config/voiceConfig";
 
 const getTranscribeUrl = () => "/api/deepgram-transcribe";
 
@@ -31,6 +32,13 @@ type UseSilenceTranscriptionOptions = {
    * Also enables force commit on countdown expiry.
    */
   countdownActive?: boolean;
+
+  /**
+   * Callback for barge-in support. When user speaks while disabled=true (avatar speaking),
+   * this callback is called to allow interrupting the avatar.
+   * If provided, enables barge-in mode instead of discarding audio.
+   */
+  onBargeIn?: () => void;
 };
 
 type RecorderState = {
@@ -57,10 +65,8 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
-// Silence threshold in countdown mode (3 seconds)
-const COUNTDOWN_SILENCE_MS = 3000;
-// Normal silence threshold
-const NORMAL_SILENCE_MS = 500;
+// Use centralized voice config for all thresholds
+const { silence, recording, bargeIn, audioLevel: audioLevelConfig } = VOICE_CONFIG;
 
 /**
  * Simple voice input:
@@ -74,43 +80,57 @@ export function useSilenceTranscription(
 ) {
   const [isListening, setIsListening] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // true while sending to Deepgram
   const [partialTranscript, setPartialTranscript] = useState(""); // kept for compatibility (no live STT)
+  const [audioLevel, setAudioLevel] = useState(0); // 0-1 normalized RMS level
+  const [hasSpokenState, setHasSpokenState] = useState(false); // true once speech detected
 
   const stateRef = useRef<RecorderState | null>(null);
   const disabledRef = useRef(Boolean(options?.disabled));
   const countdownActiveRef = useRef(Boolean(options?.countdownActive));
+  const onBargeInRef = useRef(options?.onBargeIn);
+  const bargeInTriggeredRef = useRef(false); // Prevent multiple barge-in calls per disabled cycle
 
-  // Use 3s silence in countdown mode, otherwise normal threshold
+  // Use countdown silence threshold in countdown mode, otherwise normal threshold
   const getEffectiveSilenceMs = () => 
-    countdownActiveRef.current ? COUNTDOWN_SILENCE_MS : (options?.silenceMs ?? NORMAL_SILENCE_MS);
+    countdownActiveRef.current ? silence.countdownMs : (options?.silenceMs ?? silence.normalMs);
 
   const silenceMsRef = useRef(getEffectiveSilenceMs());
-  const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? 0.004);
-  // Use 60 seconds for countdown mode, 30 seconds for normal mode
-  const defaultMaxRecordMs = countdownActiveRef.current ? 60_000 : 30_000;
-  const maxRecordMsRef = useRef(options?.maxRecordMs ?? defaultMaxRecordMs);
+  const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? silence.rmsThreshold);
+  // Use countdown max recording time in countdown mode, otherwise normal max
+  const getDefaultMaxRecordMs = () => 
+    countdownActiveRef.current ? recording.maxCountdownMs : recording.maxNormalMs;
+  const maxRecordMsRef = useRef(options?.maxRecordMs ?? getDefaultMaxRecordMs());
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
     countdownActiveRef.current = Boolean(options?.countdownActive);
     silenceMsRef.current = getEffectiveSilenceMs();
-    silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? 0.004;
-    // Use 60 seconds for countdown mode, 30 seconds for normal mode
-    const defaultMaxRecordMs = countdownActiveRef.current ? 60_000 : 30_000;
-    maxRecordMsRef.current = options?.maxRecordMs ?? defaultMaxRecordMs;
+    silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? silence.rmsThreshold;
+    onBargeInRef.current = options?.onBargeIn;
+    // Update max recording time based on mode
+    maxRecordMsRef.current = options?.maxRecordMs ?? getDefaultMaxRecordMs();
+
+    // Reset barge-in flag when disabled changes to false (avatar stopped speaking)
+    if (!options?.disabled) {
+      bargeInTriggeredRef.current = false;
+    }
 
     // If disabled while recording, stop immediately and discard.
+    // (Barge-in logic is handled in the tick function when user speaks while disabled)
     if (disabledRef.current && stateRef.current) {
       void stopListening(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.disabled, options?.silenceMs, options?.silenceRmsThreshold, options?.maxRecordMs]);
+  }, [options?.disabled, options?.silenceMs, options?.silenceRmsThreshold, options?.maxRecordMs, options?.onBargeIn]);
 
   const cleanup = useCallback(async (discard: boolean) => {
     const s = stateRef.current;
     stateRef.current = null;
     setIsListening(false);
     setPartialTranscript("");
+    setAudioLevel(0);
+    setHasSpokenState(false);
 
     if (!s) return;
 
@@ -210,15 +230,34 @@ export function useSilenceTranscription(
       const tick = () => {
         const s = stateRef.current;
         if (!s) return;
+        
+        // Get current audio level first (for barge-in detection)
+        analyser.getFloatTimeDomainData(timeDomain);
+        let sum = 0;
+        for (let i = 0; i < timeDomain.length; i++) sum += timeDomain[i] * timeDomain[i];
+        const rms = Math.sqrt(sum / timeDomain.length);
+        
+        // If disabled (avatar speaking), check for barge-in
         if (disabledRef.current) {
-          s.stopRequested = true;
-          try {
-            s.recorder.stop();
-          } catch {
-            // ignore
+          // Check if user is speaking loudly enough to trigger barge-in
+          // Use a higher threshold (configurable multiplier) to avoid false triggers from avatar audio bleed
+          const bargeInThreshold = silenceRmsThresholdRef.current * bargeIn.thresholdMultiplier;
+          
+          if (rms > bargeInThreshold && onBargeInRef.current && !bargeInTriggeredRef.current) {
+            console.log(`[STT] Barge-in detected! RMS: ${rms.toFixed(4)} > ${bargeInThreshold.toFixed(4)}`);
+            bargeInTriggeredRef.current = true;
+            onBargeInRef.current();
+            // Don't stop - let the disabled state change naturally after barge-in
           }
+          
+          // Continue monitoring but don't stop yet (let useEffect handle stop)
+          s.rafId = requestAnimationFrame(tick);
           return;
         }
+
+        // Normalize RMS to 0-1 range and expose to UI for visual feedback
+        const normalizedLevel = Math.min(1, rms / audioLevelConfig.maxRms);
+        setAudioLevel(normalizedLevel);
 
         const elapsed = Date.now() - startedAt;
         
@@ -234,13 +273,9 @@ export function useSilenceTranscription(
           return;
         }
 
-        analyser.getFloatTimeDomainData(timeDomain);
-        let sum = 0;
-        for (let i = 0; i < timeDomain.length; i++) sum += timeDomain[i] * timeDomain[i];
-        const rms = Math.sqrt(sum / timeDomain.length);
-
         if (rms > silenceRmsThresholdRef.current) {
           hasSpoken = true;
+          setHasSpokenState(true);
           silenceStartedAt = null;
         } else if (hasSpoken) {
           silenceStartedAt ??= Date.now();
@@ -283,8 +318,8 @@ export function useSilenceTranscription(
         if (discard) return;
 
         const blob = new Blob(recordedChunks, { type: chosenMime?.split(";")[0] || "audio/webm" });
-        if (blob.size < 1024) {
-          console.log(`[STT] Ignoring tiny recording: ${blob.size} bytes`);
+        if (blob.size < recording.minBlobSize) {
+          console.log(`[STT] Ignoring tiny recording: ${blob.size} bytes (min: ${recording.minBlobSize})`);
           return; // ignore tiny recordings
         }
 
@@ -292,11 +327,13 @@ export function useSilenceTranscription(
         const actualDuration = (Date.now() - recordingStartedAt) / 1000;
         console.log(`[STT] Sending ${blob.size} bytes (recorded for ${actualDuration.toFixed(1)}s) to Deepgram`);
 
+        setIsProcessing(true);
         try {
           const text = await transcribe(blob);
           if (!text || text.trim().length === 0) {
-            console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${estimatedDuration.toFixed(1)}s)`);
-            // Don't show error toast for empty results - might just be silence
+            console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${actualDuration.toFixed(1)}s)`);
+            // Show subtle feedback so user knows to try again
+            toast.info("Couldn't understand. Please try again.");
             return;
           }
           console.log(`[STT] ✓ Successfully transcribed: "${text}"`);
@@ -304,6 +341,8 @@ export function useSilenceTranscription(
         } catch (e) {
           console.error("[STT] Transcription failed:", e);
           toast.error(`Transcription failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        } finally {
+          setIsProcessing(false);
         }
       };
 
@@ -366,7 +405,10 @@ export function useSilenceTranscription(
   return {
     isListening,
     isConnecting,
+    isProcessing,
     partialTranscript,
+    audioLevel,
+    hasSpoken: hasSpokenState,
     startListening,
     stopListening,
     toggleListening,
