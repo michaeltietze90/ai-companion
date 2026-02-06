@@ -5,6 +5,7 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { ScoreOverlay } from "@/components/Overlay/ScoreOverlay";
+import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
@@ -101,6 +102,7 @@ const PitchProtoL = () => {
         <QuizOverlayManager />
         <CountdownOverlay />
         <ScoreOverlay />
+        <SlideOverlay />
       </main>
 
       {isConnected && (

@@ -4,6 +4,7 @@ import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
+import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
@@ -89,6 +90,7 @@ const ChatProtoL = () => {
           videoRef={videoRef}
         />
         <QuizOverlayManager />
+        <SlideOverlay />
       </main>
 
       {isConnected && (

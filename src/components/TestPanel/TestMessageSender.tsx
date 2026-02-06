@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuizOverlayStore } from '@/stores/quizOverlayStore';
 import { useCountdownStore } from '@/stores/countdownStore';
+import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
 import { useStructuredActions } from '@/hooks/useStructuredActions';
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
 import { toast } from 'sonner';
@@ -104,6 +105,27 @@ const PRESET_MESSAGES = [
       actions: [{ type: 'hideScore' }],
     },
   },
+  {
+    name: 'Show Slide 1',
+    json: {
+      response: "Let me show you the first customer story.",
+      actions: [{ type: 'slide', data: { page: 1 } }],
+    },
+  },
+  {
+    name: 'Show Slide 10',
+    json: {
+      response: "Here's another great customer story.",
+      actions: [{ type: 'slide', data: { page: 10 } }],
+    },
+  },
+  {
+    name: 'Hide Slide',
+    json: {
+      response: "Hiding the slide now.",
+      actions: [{ type: 'hideSlide' }],
+    },
+  },
 ];
 
 interface TestMessageSenderProps {
@@ -115,6 +137,7 @@ export function TestMessageSender({ onSendMessage }: TestMessageSenderProps) {
   const [customJson, setCustomJson] = useState('');
   const { executeActions } = useStructuredActions();
   const { startCountdown, stopCountdown } = useCountdownStore();
+  const { showSlide, hideSlide } = useSlideOverlayStore();
 
   const handlePresetClick = (preset: typeof PRESET_MESSAGES[0]) => {
     processJsonMessage(preset.json);
@@ -153,6 +176,19 @@ export function TestMessageSender({ onSendMessage }: TestMessageSenderProps) {
         if (action.type === 'stopCountdown') {
           stopCountdown();
           toast.info('Countdown stopped');
+          return;
+        }
+        
+        if (action.type === 'slide') {
+          const page = (action.data?.page as number) || 1;
+          showSlide(page);
+          toast.info(`Showing slide ${page}`);
+          return;
+        }
+        
+        if (action.type === 'hideSlide') {
+          hideSlide();
+          toast.info('Slide hidden');
           return;
         }
         

@@ -3,6 +3,7 @@ import { useQuizOverlayStore, type LeaderboardEntry } from '@/stores/quizOverlay
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useCountdownStore } from '@/stores/countdownStore';
 import { useScoreOverlayStore } from '@/stores/scoreOverlayStore';
+import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
 import type { StructuredAction, StructuredData } from '@/lib/structuredResponseParser';
 import type { VisualCommand, VisualPosition, VisualType } from '@/lib/richResponseParser';
 
@@ -24,6 +25,7 @@ export function useStructuredActions() {
   const { startVisuals } = useVisualOverlayStore();
   const { startCountdown, stopCountdown } = useCountdownStore();
   const { showScore, hideScore } = useScoreOverlayStore();
+  const { showSlide, hideSlide } = useSlideOverlayStore();
 
   /**
    * Execute a single action
@@ -167,10 +169,22 @@ export function useStructuredActions() {
         break;
       }
       
+      case 'slide': {
+        const data = action.data as { page?: number } | undefined;
+        const page = data?.page ?? 1;
+        showSlide(page);
+        break;
+      }
+      
+      case 'hideSlide': {
+        hideSlide();
+        break;
+      }
+      
       default:
         console.warn('[StructuredActions] Unknown action type:', action.type);
     }
-  }, [showNameEntry, showLeaderboard, hideOverlay, setPrefillData, setScore, startVisuals, setLeaderboard, setUserRankData, startCountdown, stopCountdown, showScore, hideScore]);
+  }, [showNameEntry, showLeaderboard, hideOverlay, setPrefillData, setScore, startVisuals, setLeaderboard, setUserRankData, startCountdown, stopCountdown, showScore, hideScore, showSlide, hideSlide]);
 
   /**
    * Execute multiple actions in sequence
