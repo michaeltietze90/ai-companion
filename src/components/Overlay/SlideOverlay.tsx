@@ -15,7 +15,7 @@ export function SlideOverlay() {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="absolute inset-x-[3%] bottom-[4%] z-40 pointer-events-none flex justify-center"
+          className="absolute inset-x-[3%] bottom-[10%] z-40 pointer-events-none flex justify-center"
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.95 }}
