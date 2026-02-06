@@ -28,9 +28,17 @@
       "description": "HeyGen API key for avatar streaming",
       "required": true
     },
+    "DEEPGRAM_API_KEY": {
+      "description": "Deepgram API key for speech-to-text",
+      "required": true
+    },
     "ELEVENLABS_API_KEY": {
-      "description": "ElevenLabs API key for TTS and STT",
+      "description": "ElevenLabs API key for TTS and STT (optional)",
       "required": false
+    },
+    "DATABASE_URL": {
+      "description": "Heroku Postgres connection string (auto-set by addon)",
+      "required": true
     },
     "NODE_ENV": {
       "description": "Node environment",
@@ -43,12 +51,15 @@
       "size": "basic"
     }
   },
+  "addons": [
+    "heroku-postgresql:essential-0"
+  ],
   "buildpacks": [
     {
       "url": "heroku/nodejs"
     }
   ],
   "scripts": {
-    "postdeploy": "echo 'Deployment complete!'"
+    "postdeploy": "echo 'Deployment complete! Run: heroku pg:psql < database/schema.sql'"
   }
 }

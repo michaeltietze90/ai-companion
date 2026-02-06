@@ -1,36 +1,15 @@
 /**
  * ElevenLabs TTS Service
  * 
- * Abstracts API calls to work with both:
- * - Lovable Cloud (Supabase Edge Functions)
- * - Heroku Express backend (/api/* routes)
+ * All requests go to Express backend at /api/*
+ * No Supabase dependency.
  */
 
-// Detect environment
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const getApiUrl = () => '/api/elevenlabs-tts';
 
-const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-const getApiUrl = () => {
-  if (isSupabase) {
-    return `${SUPABASE_URL}/functions/v1/elevenlabs-tts`;
-  }
-  return '/api/elevenlabs-tts';
-};
-
-const getHeaders = () => {
-  if (isSupabase) {
-    return {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-  };
-};
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+});
 
 export class ElevenLabsTTSError extends Error {
   status: number;
@@ -79,7 +58,6 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
   });
 
   if (!response.ok) {
-    // The TTS function may return JSON error payloads. Prefer those over generic status.
     const contentType = response.headers.get('content-type') || '';
     const payload = contentType.includes('application/json')
       ? await response.json().catch(() => null)
@@ -106,7 +84,6 @@ export async function playTTS(text: string, options: TTSOptions = {}): Promise<H
   const audioUrl = URL.createObjectURL(audioBlob);
   const audio = new Audio(audioUrl);
   
-  // Clean up URL when audio finishes
   audio.onended = () => URL.revokeObjectURL(audioUrl);
   audio.onerror = () => URL.revokeObjectURL(audioUrl);
   

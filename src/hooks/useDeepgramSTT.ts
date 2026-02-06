@@ -5,31 +5,11 @@ import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 import { createClient, LiveTranscriptionEvents, type LiveClient } from '@deepgram/sdk';
 
-// Detect environment
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const getDeepgramTokenUrl = () => '/api/deepgram-token';
 
-const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-const getDeepgramTokenUrl = () => {
-  if (isSupabase) {
-    return `${SUPABASE_URL}/functions/v1/deepgram-token`;
-  }
-  return '/api/deepgram-token';
-};
-
-const getHeaders = () => {
-  if (isSupabase) {
-    return {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-  };
-};
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+});
 
 interface DeepgramConnection {
   liveClient: LiveClient;
@@ -40,21 +20,10 @@ interface DeepgramConnection {
   silenceCheckInterval: NodeJS.Timeout | null;
 }
 
-// VAD threshold - audio RMS below this = silence
-// Lowered to avoid false "silence" commits for quiet speakers / noise suppression.
 const VAD_SILENCE_THRESHOLD = 0.004;
 
 type UseDeepgramSTTOptions = {
-  /**
-   * When true, we keep the connection but stop sending mic audio and ignore transcripts.
-   * This prevents the avatar's own voice from being transcribed (echo) while it is speaking.
-   */
   disabled?: boolean;
-
-  /**
-   * Debounce window (ms) after the last final transcript chunk before we call onTranscript.
-   * Prevents early commits that can cut users off mid-utterance.
-   */
   commitDelayMs?: number;
 };
 
@@ -71,32 +40,26 @@ export function useDeepgramSTT(
   const finalBufferRef = useRef<string>('');
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commitDelayMsRef = useRef<number>(options?.commitDelayMs ?? 900);
-  const lastVoiceActivityRef = useRef<number>(Date.now()); // Track last voice detection
+  const lastVoiceActivityRef = useRef<number>(Date.now());
   const { setListening, setLastVoiceTranscript } = useConversationStore();
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
     commitDelayMsRef.current = options?.commitDelayMs ?? 900;
-
-    // If we disabled STT, clear any pending buffered commit.
     if (disabledRef.current) {
       finalBufferRef.current = '';
       if (commitTimerRef.current) {
         clearTimeout(commitTimerRef.current);
         commitTimerRef.current = null;
       }
+      setPartialTranscript('');
     }
-    // If we just disabled STT, clear any partial text so the UI doesn't look stuck.
-    if (disabledRef.current) setPartialTranscript('');
   }, [options?.disabled, options?.commitDelayMs]);
 
   const commitBufferedTranscript = useCallback(() => {
     const text = finalBufferRef.current.trim();
     finalBufferRef.current = '';
-
-    if (!text) return;
-    if (text === lastCommittedRef.current) return;
-
+    if (!text || text === lastCommittedRef.current) return;
     lastCommittedRef.current = text;
     setPartialTranscript('');
     setLastVoiceTranscript(text);
@@ -117,98 +80,61 @@ export function useDeepgramSTT(
   const cleanup = useCallback(() => {
     const conn = connectionRef.current;
     if (conn) {
-      if (conn.keepAliveInterval) {
-        clearInterval(conn.keepAliveInterval);
-      }
-      if (conn.silenceCheckInterval) {
-        clearInterval(conn.silenceCheckInterval);
-      }
-      if (conn.processor) {
-        conn.processor.disconnect();
-      }
-      if (conn.audioContext) {
-        conn.audioContext.close().catch(console.error);
-      }
-      if (conn.mediaStream) {
-        conn.mediaStream.getTracks().forEach(track => track.stop());
-      }
+      if (conn.keepAliveInterval) clearInterval(conn.keepAliveInterval);
+      if (conn.silenceCheckInterval) clearInterval(conn.silenceCheckInterval);
+      if (conn.processor) conn.processor.disconnect();
+      if (conn.audioContext) conn.audioContext.close().catch(console.error);
+      if (conn.mediaStream) conn.mediaStream.getTracks().forEach(track => track.stop());
       if (conn.liveClient) {
-        try {
-          conn.liveClient.requestClose();
-        } catch (e) {
-          console.error('Error closing Deepgram client:', e);
-        }
+        try { conn.liveClient.requestClose(); } catch (e) { console.error('Error closing Deepgram client:', e); }
       }
       connectionRef.current = null;
     }
-
     finalBufferRef.current = '';
-    if (commitTimerRef.current) {
-      clearTimeout(commitTimerRef.current);
-      commitTimerRef.current = null;
-    }
+    if (commitTimerRef.current) { clearTimeout(commitTimerRef.current); commitTimerRef.current = null; }
     setIsConnected(false);
     setPartialTranscript('');
     setListening(false);
   }, [setListening]);
 
   const startListening = useCallback(async () => {
-    if (isConnected || isConnecting) {
-      console.log('Already connected or connecting');
-      return;
-    }
+    if (isConnected || isConnecting) return;
 
     setIsConnecting(true);
     try {
-      // Get API key from backend
       const response = await fetch(getDeepgramTokenUrl(), {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({}),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get speech recognition token');
-      }
-
+      if (!response.ok) throw new Error('Failed to get speech recognition token');
       const data = await response.json();
-
-      if (!data?.apiKey) {
-        throw new Error('Failed to get speech recognition API key');
-      }
+      if (!data?.apiKey) throw new Error('Failed to get speech recognition API key');
 
       console.log('Got Deepgram API key, connecting via SDK...');
       debugLog('stt-event', 'STT', 'Got API key, connecting via Deepgram SDK');
 
-      // Request microphone access
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
       });
 
-      // Create Deepgram client using SDK
       const deepgram = createClient(data.apiKey);
-      
-      // Create live transcription connection
       const liveClient = deepgram.listen.live({
-        model: 'nova-2', // Back to nova-2 for better accuracy
+        model: 'nova-2',
         language: 'en',
         encoding: 'linear16',
         sample_rate: 16000,
         channels: 1,
         interim_results: true,
-        utterance_end_ms: 1500, // Wait 1.5s of silence before finalizing
-        endpointing: 1000, // Increased to 1 second
+        utterance_end_ms: 1500,
+        endpointing: 1000,
         smart_format: true,
         keywords: ['Agentforce:2', 'Data360:2', 'Agentic Enterprise:2', 'Salesforce:2'],
       });
 
       let keepAliveInterval: NodeJS.Timeout | null = null;
 
-      // Set up event handlers
       liveClient.on(LiveTranscriptionEvents.Open, () => {
         console.log('Deepgram SDK connection opened');
         debugLog('stt-event', 'STT', 'Deepgram SDK connection opened');
@@ -216,40 +142,24 @@ export function useDeepgramSTT(
         setListening(true);
         setIsConnecting(false);
 
-        // Send KeepAlive messages every 8 seconds to prevent timeout
         keepAliveInterval = setInterval(() => {
-          try {
-            liveClient.keepAlive();
-          } catch (e) {
-            console.error('KeepAlive error:', e);
-          }
+          try { liveClient.keepAlive(); } catch (e) { console.error('KeepAlive error:', e); }
         }, 8000);
 
-        // Update the connection ref with the interval
-        if (connectionRef.current) {
-          connectionRef.current.keepAliveInterval = keepAliveInterval;
-        }
+        if (connectionRef.current) connectionRef.current.keepAliveInterval = keepAliveInterval;
       });
 
       liveClient.on(LiveTranscriptionEvents.Transcript, (data) => {
         if (disabledRef.current) return;
-
         const transcript = data.channel?.alternatives?.[0]?.transcript?.trim();
-        
-        // Treat transcript updates as "voice activity" to avoid false early commits
-        // when RMS temporarily drops (noise suppression / quiet speakers).
         if (transcript) {
           lastVoiceActivityRef.current = Date.now();
-
-          // Deepgram interim transcripts are typically "full so far" snapshots.
-          // Keep the latest snapshot instead of concatenating (prevents duplicates).
           finalBufferRef.current = transcript;
           setPartialTranscript(transcript);
         }
       });
 
       liveClient.on(LiveTranscriptionEvents.Metadata, (data) => {
-        console.log('Deepgram metadata:', data);
         debugLog('stt-event', 'STT', `Session metadata received`, data);
       });
 
@@ -260,75 +170,44 @@ export function useDeepgramSTT(
       });
 
       liveClient.on(LiveTranscriptionEvents.Close, () => {
-        console.log('Deepgram SDK connection closed');
         debugLog('stt-event', 'STT', 'SDK connection closed');
         cleanup();
       });
 
-      // Set up audio processing with VAD (Voice Activity Detection)
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const source = audioContext.createMediaStreamSource(mediaStream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-      // Send audio data to Deepgram SDK + track voice activity
       processor.onaudioprocess = (e) => {
-        // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
         if (disabledRef.current) return;
-
         const inputData = e.inputBuffer.getChannelData(0);
-        
-        // Calculate RMS (volume level) for VAD
         let sum = 0;
-        for (let i = 0; i < inputData.length; i++) {
-          sum += inputData[i] * inputData[i];
-        }
+        for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
         const rms = Math.sqrt(sum / inputData.length);
-        
-        // If voice detected, update last activity timestamp
-        if (rms > VAD_SILENCE_THRESHOLD) {
-          lastVoiceActivityRef.current = Date.now();
-        }
+        if (rms > VAD_SILENCE_THRESHOLD) lastVoiceActivityRef.current = Date.now();
 
-        // Convert to 16-bit PCM
         const pcmData = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           const s = Math.max(-1, Math.min(1, inputData[i]));
           pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
-        
-        // Send to Deepgram via SDK
-        try {
-          liveClient.send(pcmData.buffer);
-        } catch (e) {
-          // Connection might be closed
-        }
+        try { liveClient.send(pcmData.buffer); } catch { /* Connection might be closed */ }
       };
 
       source.connect(processor);
       processor.connect(audioContext.destination);
 
-      // Interval to check for silence and commit when 900ms of silence detected
       const silenceCheckInterval = setInterval(() => {
         if (disabledRef.current) return;
-        
         const silenceDuration = Date.now() - lastVoiceActivityRef.current;
         const hasBufferedText = finalBufferRef.current.trim().length > 0;
-        
         if (hasBufferedText && silenceDuration >= commitDelayMsRef.current) {
           console.log(`[VAD] ${silenceDuration}ms silence detected, committing transcript`);
           commitBufferedTranscript();
         }
-      }, 100); // Check every 100ms
+      }, 100);
 
-      connectionRef.current = {
-        liveClient,
-        mediaStream,
-        audioContext,
-        processor,
-        keepAliveInterval,
-        silenceCheckInterval,
-      };
-
+      connectionRef.current = { liveClient, mediaStream, audioContext, processor, keepAliveInterval, silenceCheckInterval };
     } catch (error) {
       console.error('Failed to start Deepgram STT:', error);
       toast.error('Failed to start speech recognition');
@@ -338,24 +217,17 @@ export function useDeepgramSTT(
   }, [isConnected, isConnecting, onTranscript, setListening, cleanup, setLastVoiceTranscript]);
 
   const stopListening = useCallback(() => {
-    console.log('Stopping Deepgram STT');
     cleanup();
     lastCommittedRef.current = '';
   }, [cleanup]);
 
   const toggleListening = useCallback(() => {
-    if (isConnected) {
-      stopListening();
-    } else {
-      startListening();
-    }
+    if (isConnected) stopListening();
+    else startListening();
   }, [isConnected, startListening, stopListening]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      cleanup();
-    };
+    return () => { cleanup(); };
   }, [cleanup]);
 
   return {

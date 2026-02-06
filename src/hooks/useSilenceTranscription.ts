@@ -1,30 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-// Detect environment (Lovable Cloud vs local Express)
-const BACKEND_URL = import.meta.env.VITE_SUPABASE_URL;
-const BACKEND_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const isCloudBackend = Boolean(BACKEND_URL && BACKEND_KEY);
+const getTranscribeUrl = () => "/api/deepgram-transcribe";
 
-const getTranscribeUrl = () => {
-  if (isCloudBackend) return `${BACKEND_URL}/functions/v1/deepgram-transcribe`;
-  return "/api/deepgram-transcribe";
-};
-
-const getBackendHeaders = () => {
-  // For Lovable Cloud functions, include apikey/authorization.
-  if (isCloudBackend) {
-    return {
-      "Content-Type": "application/json",
-      apikey: BACKEND_KEY,
-      Authorization: `Bearer ${BACKEND_KEY}`,
-    } as const;
-  }
-
-  return {
-    "Content-Type": "application/json",
-  } as const;
-};
+const getBackendHeaders = () => ({
+  "Content-Type": "application/json",
+} as const);
 
 type UseSilenceTranscriptionOptions = {
   /**

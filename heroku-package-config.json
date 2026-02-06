@@ -1,5 +1,6 @@
 {
   "heroku-run-build-script": true,
+  "notes": "Copy these scripts and engines into your package.json before deploying to Heroku",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -9,5 +10,12 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "additionalDependencies": {
+    "pg": "^8.13.1"
+  },
+  "removeDependencies": [
+    "@supabase/supabase-js",
+    "lovable-tagger"
+  ]
 }

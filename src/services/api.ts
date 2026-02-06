@@ -1,39 +1,17 @@
 /**
  * API Service
  * 
- * Abstracts API calls to work with both:
- * - Lovable Cloud (Supabase Edge Functions) - when VITE_SUPABASE_URL is set
- * - Heroku Express backend - when running on Heroku (/api/* routes)
+ * All requests go to Express backend at /api/* routes.
+ * No Supabase dependency.
  */
 
 import { debugLog } from '@/stores/debugStore';
 
-// Detect environment
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const getApiUrl = (endpoint: string) => `/api/${endpoint}`;
 
-// Use Supabase if configured, otherwise use relative /api paths (Heroku)
-const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-const getApiUrl = (endpoint: string) => {
-  if (isSupabase) {
-    return `${SUPABASE_URL}/functions/v1/${endpoint}`;
-  }
-  // Heroku: use relative path
-  return `/api/${endpoint}`;
-};
-
-const getHeaders = () => {
-  if (isSupabase) {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-  };
-};
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+});
 
 // Instrumented fetch with debug logging
 const debugFetch = async (endpoint: string, options: RequestInit, body?: unknown): Promise<Response> => {
@@ -106,7 +84,7 @@ export async function endAgentSession(sessionId: string): Promise<void> {
   });
 }
 
-// Legacy non-streaming message (kept for backwards compatibility)
+// Legacy non-streaming message
 export async function sendAgentMessage(
   sessionId: string,
   message: string,
@@ -150,14 +128,12 @@ export async function* streamAgentMessage(
   });
 
   if (!response.ok) {
-    let errorMessage = `Edge function returned ${response.status}`;
+    let errorMessage = `Server returned ${response.status}`;
     try {
       const error = await response.json();
       debugLog('error', 'agentforce-message', `Stream failed: ${error.error}`, error);
-      // Include status code in error message so recovery logic can detect 404s
       errorMessage = `${errorMessage}: ${error.error || 'Error'}, ${JSON.stringify(error)}`;
     } catch {
-      // Response wasn't JSON
       const text = await response.text().catch(() => 'Unknown error');
       debugLog('error', 'agentforce-message', `Stream failed (non-JSON): ${text}`);
       errorMessage = `${errorMessage}: ${text}`;
@@ -183,9 +159,8 @@ export async function* streamAgentMessage(
 
       buffer += decoder.decode(value, { stream: true });
       
-      // Process complete SSE lines
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+      buffer = lines.pop() || '';
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
@@ -197,7 +172,6 @@ export async function* streamAgentMessage(
           const chunk = JSON.parse(payload) as StreamChunk;
           chunkCount++;
           
-          // Log SSE events
           if (chunk.type === 'sentence') {
             debugLog('sse-event', 'agentforce', `Sentence #${chunkCount}: "${chunk.text.slice(0, 40)}..."`, chunk);
           } else if (chunk.type === 'progress') {

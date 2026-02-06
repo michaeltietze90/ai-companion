@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchLeaderboard, saveLeaderboardEntry } from '@/services/leaderboardApi';
 
 export interface LeaderboardEntry {
   id: string;
@@ -20,26 +20,16 @@ export interface PrefillData {
 }
 
 interface QuizOverlayState {
-  /** Current overlay being shown */
   currentOverlay: OverlayType;
-  /** User's score for the current quiz */
   currentScore: number;
-  /** User's submitted entry */
   userEntry: LeaderboardEntry | null;
-  /** Top 5 leaderboard entries */
   leaderboard: LeaderboardEntry[];
-  /** User's rank (could be outside top 5) */
   userRank: number | null;
-  /** Prefilled data from Agentforce */
   prefillData: PrefillData | null;
-  /** Callback for when Start is pressed (e.g., reconnect avatar) */
   onStartCallback: (() => void) | null;
-  /** Callback for when user submits edited name entry (sends message to Agentforce) */
   onNameSubmitCallback: ((message: string) => void) | null;
-  /** Loading state for DB operations */
   isLoading: boolean;
 
-  // Actions
   showNameEntry: (score: number, prefill?: PrefillData) => void;
   showLeaderboard: () => void;
   hideOverlay: () => void;
@@ -52,9 +42,7 @@ interface QuizOverlayState {
   setOnStartCallback: (callback: (() => void) | null) => void;
   setOnNameSubmitCallback: (callback: ((message: string) => void) | null) => void;
   triggerStart: () => void;
-  /** Notify Agentforce about edited data */
   notifyDataEdit: (firstName: string, lastName: string, country: string) => void;
-  /** Fetch leaderboard from database */
   fetchLeaderboard: () => Promise<void>;
 }
 
@@ -88,9 +76,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   },
 
   showLeaderboard: () => {
-    // Show overlay first, then fetch in background if needed
     set({ currentOverlay: 'leaderboard' });
-    // Only fetch if we have no data yet
     if (get().leaderboard.length === 0) {
       get().fetchLeaderboard();
     }
@@ -106,14 +92,9 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
 
     try {
       console.log('Submitting entry to database...');
-      const { data, error } = await supabase.functions.invoke('leaderboard', {
-        body: {
-          action: 'save',
-          entry: { firstName, lastName, country, score: currentScore },
-        },
+      const data = await saveLeaderboardEntry({
+        firstName, lastName, country, score: currentScore,
       });
-
-      if (error) throw error;
 
       const entries = (data.entries || []).map(mapDbEntry);
       const userEntry: LeaderboardEntry = {
@@ -179,7 +160,6 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   notifyDataEdit: (firstName, lastName, country) => {
     const { onNameSubmitCallback, prefillData } = get();
     
-    // Check if data was actually edited from prefill
     const wasEdited = prefillData && (
       (prefillData.firstName && firstName !== prefillData.firstName) ||
       (prefillData.lastName && lastName !== prefillData.lastName) ||
@@ -187,8 +167,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
     );
     
     if (wasEdited && onNameSubmitCallback) {
-       // Build a corrective message to send back to Agentforce
-       const message = `Actually, you got my details wrong. My name is ${firstName} ${lastName} and I am from ${country}.`;
+      const message = `Actually, you got my details wrong. My name is ${firstName} ${lastName} and I am from ${country}.`;
       console.log('[QuizStore] Notifying Agentforce of edited data:', message);
       onNameSubmitCallback(message);
     }
@@ -211,12 +190,7 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
   fetchLeaderboard: async () => {
     set({ isLoading: true });
     try {
-      const { data, error } = await supabase.functions.invoke('leaderboard', {
-        body: { action: 'get' },
-      });
-
-      if (error) throw error;
-
+      const data = await fetchLeaderboard();
       const entries = (data.entries || []).map(mapDbEntry);
       set({ leaderboard: entries, isLoading: false });
     } catch (error) {
@@ -225,4 +199,3 @@ export const useQuizOverlayStore = create<QuizOverlayState>((set, get) => ({
     }
   },
 }));
-
