@@ -86,14 +86,18 @@ export function useSilenceTranscription(
 
   const silenceMsRef = useRef(getEffectiveSilenceMs());
   const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? 0.004);
-  const maxRecordMsRef = useRef(options?.maxRecordMs ?? 10_000); // Reduced to 10 seconds max
+  // Use 60 seconds for countdown mode, 30 seconds for normal mode
+  const defaultMaxRecordMs = countdownActiveRef.current ? 60_000 : 30_000;
+  const maxRecordMsRef = useRef(options?.maxRecordMs ?? defaultMaxRecordMs);
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
     countdownActiveRef.current = Boolean(options?.countdownActive);
     silenceMsRef.current = getEffectiveSilenceMs();
     silenceRmsThresholdRef.current = options?.silenceRmsThreshold ?? 0.004;
-    maxRecordMsRef.current = options?.maxRecordMs ?? 20_000;
+    // Use 60 seconds for countdown mode, 30 seconds for normal mode
+    const defaultMaxRecordMs = countdownActiveRef.current ? 60_000 : 30_000;
+    maxRecordMsRef.current = options?.maxRecordMs ?? defaultMaxRecordMs;
 
     // If disabled while recording, stop immediately and discard.
     if (disabledRef.current && stateRef.current) {
