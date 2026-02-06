@@ -1,6 +1,6 @@
 {
-  "name": "agentforce-avatar-platform",
-  "description": "Agentforce Avatar Platform with HeyGen and Salesforce integration",
+  "name": "cko-miguel-avatar",
+  "description": "CKO Miguel Avatar - AI Companion Avatar Platform with HeyGen and Salesforce integration",
   "repository": "https://github.com/your-repo/agentforce-avatar",
   "keywords": ["salesforce", "agentforce", "heygen", "avatar", "ai"],
   "env": {
