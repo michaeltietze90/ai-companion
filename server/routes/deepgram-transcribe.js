@@ -22,6 +22,12 @@ router.post("/", async (req, res) => {
     const audioBytes = Buffer.from(audioBase64, "base64");
     console.log(`Transcribing audio: ${audioBytes.length} bytes, mimeType: ${mimeType || "unknown"}`);
 
+    // Clean mimeType - remove codecs parameter if present (e.g., "audio/webm;codecs=opus" -> "audio/webm")
+    let contentType = "application/octet-stream";
+    if (typeof mimeType === "string" && mimeType) {
+      contentType = mimeType.split(";")[0].trim();
+    }
+
     const url = new URL("https://api.deepgram.com/v1/listen");
     url.searchParams.set("model", "nova-2");
     url.searchParams.set("language", "en");
@@ -33,11 +39,12 @@ router.post("/", async (req, res) => {
     url.searchParams.append("keywords", "Agentic Enterprise:2");
     url.searchParams.append("keywords", "Salesforce:2");
 
+    console.log(`Sending to Deepgram with Content-Type: ${contentType}`);
     const dgRes = await fetch(url.toString(), {
       method: "POST",
       headers: {
         Authorization: `Token ${DEEPGRAM_API_KEY}`,
-        "Content-Type": typeof mimeType === "string" && mimeType ? mimeType : "application/octet-stream",
+        "Content-Type": contentType,
       },
       body: audioBytes,
     });
