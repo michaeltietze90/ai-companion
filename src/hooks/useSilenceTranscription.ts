@@ -42,6 +42,7 @@ type RecorderState = {
   chunks: Blob[];
   rafId: number | null;
   stopRequested: boolean;
+  startedAt: number;
 };
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -85,7 +86,7 @@ export function useSilenceTranscription(
 
   const silenceMsRef = useRef(getEffectiveSilenceMs());
   const silenceRmsThresholdRef = useRef(options?.silenceRmsThreshold ?? 0.004);
-  const maxRecordMsRef = useRef(options?.maxRecordMs ?? 20_000);
+  const maxRecordMsRef = useRef(options?.maxRecordMs ?? 10_000); // Reduced to 10 seconds max
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
@@ -215,6 +216,20 @@ export function useSilenceTranscription(
           return;
         }
 
+        const elapsed = Date.now() - startedAt;
+        
+        // Enforce maximum recording time
+        if (elapsed >= maxRecordMsRef.current) {
+          console.log(`[STT] Max recording time reached (${maxRecordMsRef.current}ms), stopping`);
+          s.stopRequested = true;
+          try {
+            s.recorder.stop();
+          } catch {
+            // ignore
+          }
+          return;
+        }
+
         analyser.getFloatTimeDomainData(timeDomain);
         let sum = 0;
         for (let i = 0; i < timeDomain.length; i++) sum += timeDomain[i] * timeDomain[i];
@@ -227,6 +242,7 @@ export function useSilenceTranscription(
           silenceStartedAt ??= Date.now();
           const silenceFor = Date.now() - silenceStartedAt;
           if (silenceFor >= silenceMsRef.current) {
+            console.log(`[STT] Silence detected (${silenceFor}ms >= ${silenceMsRef.current}ms), stopping after ${(elapsed / 1000).toFixed(1)}s`);
             s.stopRequested = true;
             try {
               s.recorder.stop();
@@ -235,16 +251,6 @@ export function useSilenceTranscription(
             }
             return;
           }
-        }
-
-        if (Date.now() - startedAt >= maxRecordMsRef.current) {
-          s.stopRequested = true;
-          try {
-            s.recorder.stop();
-          } catch {
-            // ignore
-          }
-          return;
         }
 
         s.rafId = requestAnimationFrame(tick);
@@ -259,12 +265,14 @@ export function useSilenceTranscription(
         chunks,
         rafId: null,
         stopRequested: false,
+        startedAt,
       };
 
       recorder.onstop = async () => {
         const s = stateRef.current;
         // We set stateRef.current=null in cleanup, so snapshot chunks now.
         const recordedChunks = chunks.slice();
+        const recordingStartedAt = s?.startedAt ?? Date.now();
         const discard = disabledRef.current;
 
         await cleanup(discard);
@@ -276,9 +284,9 @@ export function useSilenceTranscription(
           return; // ignore tiny recordings
         }
 
-        // Calculate recording duration (rough estimate: ~1KB per second for webm/opus)
-        const estimatedDuration = blob.size / 1000; // rough estimate in seconds
-        console.log(`[STT] Sending ${blob.size} bytes (est. ${estimatedDuration.toFixed(1)}s) to Deepgram`);
+        // Calculate actual recording duration from when recording started
+        const actualDuration = (Date.now() - recordingStartedAt) / 1000;
+        console.log(`[STT] Sending ${blob.size} bytes (recorded for ${actualDuration.toFixed(1)}s) to Deepgram`);
 
         try {
           const text = await transcribe(blob);
