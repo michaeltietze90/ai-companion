@@ -4,30 +4,11 @@ import { useConversationStore } from '@/stores/conversationStore';
 import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 
-// Detect environment
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const getScribeTokenUrl = () => '/api/elevenlabs-scribe-token';
 
-const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-const getScribeTokenUrl = () => {
-  if (isSupabase) {
-    return `${SUPABASE_URL}/functions/v1/elevenlabs-scribe-token`;
-  }
-  return '/api/elevenlabs-scribe-token';
-};
-
-const getHeaders = () => {
-  if (isSupabase) {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-  };
-};
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+});
 
 interface ScribeConnection {
   ws: WebSocket;
@@ -37,10 +18,6 @@ interface ScribeConnection {
 }
 
 type UseElevenLabsSTTOptions = {
-  /**
-   * When true, we keep the connection but stop sending mic audio and ignore transcripts.
-   * This prevents the avatar's own voice from being transcribed (echo) while it is speaking.
-   */
   disabled?: boolean;
 };
 
@@ -58,25 +35,16 @@ export function useElevenLabsSTT(
 
   useEffect(() => {
     disabledRef.current = Boolean(options?.disabled);
-    // If we just disabled STT, clear any partial text so the UI doesn't look stuck.
     if (disabledRef.current) setPartialTranscript('');
   }, [options?.disabled]);
 
   const cleanup = useCallback(() => {
     const conn = connectionRef.current;
     if (conn) {
-      if (conn.processor) {
-        conn.processor.disconnect();
-      }
-      if (conn.audioContext) {
-        conn.audioContext.close().catch(console.error);
-      }
-      if (conn.mediaStream) {
-        conn.mediaStream.getTracks().forEach(track => track.stop());
-      }
-      if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
-        conn.ws.close();
-      }
+      if (conn.processor) conn.processor.disconnect();
+      if (conn.audioContext) conn.audioContext.close().catch(console.error);
+      if (conn.mediaStream) conn.mediaStream.getTracks().forEach(track => track.stop());
+      if (conn.ws && conn.ws.readyState === WebSocket.OPEN) conn.ws.close();
       connectionRef.current = null;
     }
     setIsConnected(false);
@@ -85,56 +53,36 @@ export function useElevenLabsSTT(
   }, [setListening]);
 
   const startListening = useCallback(async () => {
-    if (isConnected || isConnecting) {
-      console.log('Already connected or connecting');
-      return;
-    }
+    if (isConnected || isConnecting) return;
 
     setIsConnecting(true);
     try {
-      // Get token from API (works with both Supabase and Heroku)
       const response = await fetch(getScribeTokenUrl(), {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({}),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get speech recognition token');
-      }
+      if (!response.ok) throw new Error('Failed to get speech recognition token');
 
       const data = await response.json();
-
-      if (!data?.token) {
-        throw new Error('Failed to get speech recognition token');
-      }
+      if (!data?.token) throw new Error('Failed to get speech recognition token');
 
       console.log('Got ElevenLabs scribe token, connecting...');
 
-      // Request microphone access
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
       });
 
-      // WebSocket URL with query parameters
-      // Note: language_code is intentionally omitted to enable auto-detection
-      // This allows multilingual support (German, French, Italian, English, etc.)
-      // For Swiss Post use case, speakers may switch between languages
       const wsUrl = new URL('wss://api.elevenlabs.io/v1/speech-to-text/realtime');
       wsUrl.searchParams.set('model_id', 'scribe_v2_realtime');
       wsUrl.searchParams.set('token', data.token);
       wsUrl.searchParams.set('audio_format', 'pcm_16000');
       wsUrl.searchParams.set('commit_strategy', 'vad');
       wsUrl.searchParams.set('vad_silence_threshold_secs', '0.5');
-      // language_code omitted = auto-detect (supports 99+ languages)
       
       const ws = new WebSocket(wsUrl.toString());
 
-      // Set up audio processing
       const audioContext = new AudioContext({ sampleRate: 16000 });
       const source = audioContext.createMediaStreamSource(mediaStream);
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -145,8 +93,6 @@ export function useElevenLabsSTT(
         setIsConnected(true);
         setListening(true);
         setIsConnecting(false);
-        
-        // Start processing audio
         source.connect(processor);
         processor.connect(audioContext.destination);
       };
@@ -154,7 +100,6 @@ export function useElevenLabsSTT(
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
           if (data.message_type === 'session_started') {
             console.log('Scribe session started:', data.session_id);
             debugLog('stt-event', 'STT', `Session started: ${data.session_id}`);
@@ -189,33 +134,25 @@ export function useElevenLabsSTT(
         setIsConnecting(false);
       };
 
-      ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
+      ws.onclose = () => {
         cleanup();
       };
 
-      // Send audio data
       processor.onaudioprocess = (e) => {
         if (ws.readyState === WebSocket.OPEN) {
-          // Soft-pause STT while the avatar is speaking / app is busy, to prevent echo loops.
           if (disabledRef.current) return;
-
           const inputData = e.inputBuffer.getChannelData(0);
-          // Convert to 16-bit PCM
           const pcmData = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
             const s = Math.max(-1, Math.min(1, inputData[i]));
             pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
-          // Convert to base64
           const uint8Array = new Uint8Array(pcmData.buffer);
           let binary = '';
           for (let i = 0; i < uint8Array.length; i++) {
             binary += String.fromCharCode(uint8Array[i]);
           }
           const base64 = btoa(binary);
-          
-          // Send audio chunk in correct format
           ws.send(JSON.stringify({ 
             message_type: 'input_audio_chunk',
             audio_base_64: base64,
@@ -224,13 +161,7 @@ export function useElevenLabsSTT(
         }
       };
 
-      connectionRef.current = {
-        ws,
-        mediaStream,
-        audioContext,
-        processor,
-      };
-
+      connectionRef.current = { ws, mediaStream, audioContext, processor };
     } catch (error) {
       console.error('Failed to start ElevenLabs STT:', error);
       toast.error('Failed to start speech recognition');
@@ -240,24 +171,17 @@ export function useElevenLabsSTT(
   }, [isConnected, isConnecting, onTranscript, setListening, cleanup]);
 
   const stopListening = useCallback(() => {
-    console.log('Stopping ElevenLabs STT');
     cleanup();
     lastCommittedRef.current = '';
   }, [cleanup]);
 
   const toggleListening = useCallback(() => {
-    if (isConnected) {
-      stopListening();
-    } else {
-      startListening();
-    }
+    if (isConnected) stopListening();
+    else startListening();
   }, [isConnected, startListening, stopListening]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      cleanup();
-    };
+    return () => { cleanup(); };
   }, [cleanup]);
 
   return {

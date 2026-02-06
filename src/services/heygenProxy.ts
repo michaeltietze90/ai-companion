@@ -1,38 +1,18 @@
 /**
  * HeyGen Proxy Service
  * 
- * Abstracts API calls to work with both:
- * - Lovable Cloud (Supabase Edge Functions)
- * - Heroku Express backend (/api/* routes)
+ * All requests go to the Express backend at /api/*
+ * No Supabase dependency.
  */
 
-// Detect environment
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-const isSupabase = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-// Proto endpoint for getting HeyGen access token
+// Proto endpoint for getting HeyGen access token (default)
 const PROTO_TOKEN_URL = 'https://proto-salesforce-b927b6eea443.herokuapp.com/api/manage/getAccessToken';
 
-const getApiUrl = () => {
-  if (isSupabase) {
-    return `${SUPABASE_URL}/functions/v1/heygen-proxy`;
-  }
-  return '/api/heygen-proxy';
-};
+const getApiUrl = () => '/api/heygen-proxy';
 
-const getHeaders = () => {
-  if (isSupabase) {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-    };
-  }
-  return {
-    'Content-Type': 'application/json',
-  };
-};
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+});
 
 async function callProxy(action: string, params: Record<string, unknown> = {}) {
   const response = await fetch(getApiUrl(), {
@@ -49,16 +29,13 @@ async function callProxy(action: string, params: Record<string, unknown> = {}) {
   return response.json();
 }
 
-// Get HeyGen token - supports custom API key via edge function or falls back to Proto endpoint
+// Get HeyGen token - supports custom API key via server route or falls back to Proto endpoint
 export async function createHeyGenToken(apiKeyName?: string): Promise<string> {
-  // If a custom API key name is specified, use our edge function
-  if (apiKeyName && isSupabase) {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/heygen-token`, {
+  // If a custom API key name is specified, use our server route
+  if (apiKeyName) {
+    const response = await fetch('/api/heygen-token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKeyName }),
     });
 
@@ -84,7 +61,6 @@ export async function createHeyGenToken(apiKeyName?: string): Promise<string> {
   }
 
   let token = await response.text();
-  // Clean the token - remove quotes and any whitespace
   token = token.replace(/^"|"$/g, '').trim();
   console.log('Got access token from Proto endpoint');
   return token;
