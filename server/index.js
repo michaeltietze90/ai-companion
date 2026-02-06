@@ -50,7 +50,17 @@ app.get('/api/health', (req, res) => {
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // Handle React routing - serve index.html for all non-API routes
-app.get('*', (req, res) => {
+// Use a function to handle catch-all that's compatible with Express 5
+app.use((req, res, next) => {
+  // Skip API routes and static file requests
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  // Check if it's a static file request (has extension)
+  if (req.path.includes('.')) {
+    return next();
+  }
+  // Serve index.html for all other routes (React Router)
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
