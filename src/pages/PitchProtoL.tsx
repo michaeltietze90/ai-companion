@@ -139,12 +139,12 @@ const PitchProtoL = () => {
         <SlideOverlay />
       </main>
 
-      {/* Subtle status indicator */}
+      {/* Subtle status indicator - mid right */}
       {isConnected && (
         <motion.div
-          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center gap-4 px-8 py-4 rounded-full bg-black/40 backdrop-blur-sm">
@@ -152,27 +152,31 @@ const PitchProtoL = () => {
             <motion.div
               className={`w-3 h-3 rounded-full ${
                 isSpeaking 
-                  ? 'bg-amber-400' 
-                  : isListening 
-                    ? 'bg-purple-400' 
-                    : 'bg-gray-400'
+                  ? 'bg-purple-400' 
+                  : isProcessing 
+                    ? 'bg-amber-400' 
+                    : isListening 
+                      ? 'bg-purple-400' 
+                      : 'bg-gray-400'
               }`}
-              animate={isListening ? { 
+              animate={(isListening || isProcessing) ? { 
                 scale: [1, 1.3, 1],
                 opacity: [0.7, 1, 0.7]
               } : {}}
               transition={{ 
-                duration: 1.5, 
+                duration: isProcessing ? 0.8 : 1.5, 
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
             />
             <span className="text-white/80 text-xl font-light tracking-wide">
               {isSpeaking 
-                ? 'Thinking...' 
-                : isListening 
-                  ? 'Listening' 
-                  : 'Ready'}
+                ? 'Speaking' 
+                : isProcessing 
+                  ? 'Thinking...' 
+                  : isListening 
+                    ? 'Listening' 
+                    : 'Ready'}
             </span>
           </div>
         </motion.div>

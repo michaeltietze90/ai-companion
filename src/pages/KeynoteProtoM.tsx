@@ -116,12 +116,12 @@ const KeynoteProtoM = () => {
         />
       </main>
 
-      {/* Subtle status indicator */}
+      {/* Subtle status indicator - mid right */}
       {isConnected && (
         <motion.div
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-1/2 -translate-y-1/2 right-8 z-30"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center gap-3 px-6 py-3 rounded-full bg-black/40 backdrop-blur-sm">
@@ -129,27 +129,31 @@ const KeynoteProtoM = () => {
             <motion.div
               className={`w-2 h-2 rounded-full ${
                 isSpeaking 
-                  ? 'bg-amber-400' 
-                  : isListening 
-                    ? 'bg-green-400' 
-                    : 'bg-gray-400'
+                  ? 'bg-green-400' 
+                  : isProcessing 
+                    ? 'bg-amber-400' 
+                    : isListening 
+                      ? 'bg-green-400' 
+                      : 'bg-gray-400'
               }`}
-              animate={isListening ? { 
+              animate={(isListening || isProcessing) ? { 
                 scale: [1, 1.3, 1],
                 opacity: [0.7, 1, 0.7]
               } : {}}
               transition={{ 
-                duration: 1.5, 
+                duration: isProcessing ? 0.8 : 1.5, 
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
             />
             <span className="text-white/80 text-base font-light tracking-wide">
               {isSpeaking 
-                ? 'Thinking...' 
-                : isListening 
-                  ? 'Listening' 
-                  : 'Ready'}
+                ? 'Speaking' 
+                : isProcessing 
+                  ? 'Thinking...' 
+                  : isListening 
+                    ? 'Listening' 
+                    : 'Ready'}
             </span>
           </div>
         </motion.div>
