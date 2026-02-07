@@ -6,6 +6,7 @@ import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
 import type { ConversationState } from '@/stores/createConversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useVideoCallEscalationStore } from '@/stores/videoCallEscalationStore';
+import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
 import type { AppVoiceSettings } from '@/stores/appVoiceSettingsStore';
 import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/lib/richResponseParser';
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
@@ -98,6 +99,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const { show: showVideoCallEscalation } = useVideoCallEscalationStore();
+  const { hideSlide } = useSlideOverlayStore();
   const { executeActions, applyData } = useStructuredActions();
 
   const maybeToastElevenLabsError = useCallback((err: unknown) => {
@@ -464,6 +466,12 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
             const structured = parseStructuredResponse(fullResponse);
             addStreamingSentence(structured.speechText);
             
+            // Auto-hide slide unless this message explicitly shows a new slide
+            const hasSlideAction = structured.actions.some(a => a.type === 'slide');
+            if (!hasSlideAction) {
+              hideSlide();
+            }
+            
             if (structured.actions.length > 0) {
               executeActions(structured.actions);
             }
@@ -528,7 +536,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       setThinking(false);
       isProcessingMessageRef.current = false; // Allow new messages
     }
-  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation]);
+  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation, hideSlide]);
 
   // Interrupt avatar speech and clear queue
   const interruptAvatar = useCallback(async () => {
