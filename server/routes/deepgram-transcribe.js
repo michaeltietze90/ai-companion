@@ -21,6 +21,11 @@ router.post("/", async (req, res) => {
 
     const audioBytes = Buffer.from(audioBase64, "base64");
     console.log(`Transcribing audio: ${audioBytes.length} bytes, mimeType: ${mimeType || "unknown"}`);
+    
+    // Warn if audio is very large (>500KB typically indicates >30s of audio)
+    if (audioBytes.length > 500000) {
+      console.warn(`Warning: Large audio file (${(audioBytes.length / 1024).toFixed(1)}KB) - may timeout`);
+    }
 
     // Clean mimeType - remove codecs parameter if present (e.g., "audio/webm;codecs=opus" -> "audio/webm")
     let contentType = "application/octet-stream";
@@ -40,14 +45,31 @@ router.post("/", async (req, res) => {
     url.searchParams.append("keywords", "Salesforce:2");
 
     console.log(`Sending to Deepgram with Content-Type: ${contentType}`);
-    const dgRes = await fetch(url.toString(), {
-      method: "POST",
-      headers: {
-        Authorization: `Token ${DEEPGRAM_API_KEY}`,
-        "Content-Type": contentType,
-      },
-      body: audioBytes,
-    });
+    
+    // Create abort controller with timeout for long recordings
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout (Heroku has 30s limit)
+    
+    let dgRes;
+    try {
+      dgRes = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${DEEPGRAM_API_KEY}`,
+          "Content-Type": contentType,
+        },
+        body: audioBytes,
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("Deepgram request timed out after 25s");
+        return res.status(504).json({ error: "Transcription timed out - try a shorter recording" });
+      }
+      throw fetchError;
+    }
+    clearTimeout(timeoutId);
 
     if (!dgRes.ok) {
       const errText = await dgRes.text().catch(() => "");
