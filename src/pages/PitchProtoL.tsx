@@ -57,7 +57,7 @@ const PitchProtoL = () => {
   }, [sendMessage]);
 
   // Simple voice input: disabled while speaking, 500ms silence (3s in countdown mode)
-  const { isListening, forceCommit, startListening } = useSilenceTranscription(
+  const { isListening, forceCommit, startListening, isProcessing } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking, countdownActive }
   );
@@ -73,6 +73,17 @@ const PitchProtoL = () => {
     }
     wasSpeakingRef.current = isSpeaking;
   }, [isSpeaking, isConnected, startListening]);
+
+  // Re-start listening if recording stopped but no message was sent
+  const wasListeningRef = useRef(false);
+  useEffect(() => {
+    if (isConnected && !isSpeaking && wasListeningRef.current && !isListening && !isProcessing) {
+      console.log('[PitchProtoL] Recording ended without sending, restarting listen');
+      const timer = setTimeout(() => startListening(), 300);
+      return () => clearTimeout(timer);
+    }
+    wasListeningRef.current = isListening;
+  }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
 
   // Wire up countdown expiry to force-commit the STT
   useEffect(() => {

@@ -15,8 +15,9 @@ export const VOICE_CONFIG = {
     countdownMs: 3000,
     
     /** RMS threshold below which audio is considered silence (0-1 range) 
-     *  Set higher to require actual speech, not background noise */
-    rmsThreshold: 0.01,
+     *  Higher values require louder audio to count as "speech"
+     *  0.015 helps filter out ambient noise that might false-trigger hasSpoken */
+    rmsThreshold: 0.015,
   },
 
   /**
@@ -34,8 +35,9 @@ export const VOICE_CONFIG = {
     minBlobSize: 2048,
     
     /** Minimum recording duration before silence detection can stop (milliseconds)
-     *  Prevents false stops from brief ambient noise */
-    minDurationBeforeSilenceStop: 500,
+     *  This is the "listening window" - how long we wait for speech before silence can trigger
+     *  1.5s gives user time to start speaking after avatar finishes */
+    minDurationBeforeSilenceStop: 1500,
     
     /** Minimum duration (ms) for a recording to be considered valid speech
      *  Recordings shorter than this are discarded (likely just noise trigger) */

@@ -53,7 +53,7 @@ const ChatProtoM = () => {
   }, [sendMessage]);
 
   // Simple voice input: disabled while speaking, 500ms silence threshold
-  const { isListening, startListening } = useSilenceTranscription(
+  const { isListening, startListening, isProcessing } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
@@ -69,6 +69,17 @@ const ChatProtoM = () => {
     }
     wasSpeakingRef.current = isSpeaking;
   }, [isSpeaking, isConnected, startListening]);
+
+  // Re-start listening if recording stopped but no message was sent
+  const wasListeningRef = useRef(false);
+  useEffect(() => {
+    if (isConnected && !isSpeaking && wasListeningRef.current && !isListening && !isProcessing) {
+      console.log('[ChatProtoM] Recording ended without sending, restarting listen');
+      const timer = setTimeout(() => startListening(), 300);
+      return () => clearTimeout(timer);
+    }
+    wasListeningRef.current = isListening;
+  }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
