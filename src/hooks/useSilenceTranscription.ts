@@ -369,10 +369,11 @@ export function useSilenceTranscription(
             console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${actualDurationSec.toFixed(1)}s)`);
             // Show subtle feedback so user knows to try again
             toast.info("Couldn't understand. Please try again.");
-            return;
+            // Don't return early - let finally block run to reset isProcessing
+          } else {
+            console.log(`[STT] ✓ Successfully transcribed: "${text}"`);
+            onTranscript(text);
           }
-          console.log(`[STT] ✓ Successfully transcribed: "${text}"`);
-          onTranscript(text);
         } catch (e) {
           console.error("[STT] Transcription failed:", e);
           toast.error(`Transcription failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
