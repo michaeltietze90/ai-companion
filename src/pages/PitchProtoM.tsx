@@ -51,10 +51,23 @@ const PitchProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening, forceCommit } = useSilenceTranscription(
+  const { isListening, toggleListening, forceCommit, startListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking, countdownActive }
   );
+
+  // Track previous speaking state for auto-listen
+  const wasSpeakingRef = useRef(false);
+
+  // Auto-listen when avatar finishes speaking
+  useEffect(() => {
+    if (isConnected && wasSpeakingRef.current && !isSpeaking) {
+      // Avatar just stopped speaking - auto-start listening
+      console.log('[PitchProtoM] Avatar stopped speaking, auto-starting listen');
+      startListening();
+    }
+    wasSpeakingRef.current = isSpeaking;
+  }, [isSpeaking, isConnected, startListening]);
 
   // Wire up countdown expiry to force-commit the STT
   useEffect(() => {
