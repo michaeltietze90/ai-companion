@@ -37,6 +37,7 @@ const PitchProtoLAlwaysListening = () => {
     isThinking,
     startConversation,
     sendMessage,
+    interruptAvatar,
   } = useScopedAvatarConversation({
     store: usePitchConversationStore,
     voiceSettings,
@@ -54,35 +55,32 @@ const PitchProtoLAlwaysListening = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Use very long silence threshold (5 minutes) so it effectively never auto-stops
-  // Unless countdown is active, then use normal countdown behavior
+  // Barge-in handler - interrupt avatar when user speaks
+  const handleBargeIn = useCallback(() => {
+    console.log('[PitchProtoL-AlwaysListening] Barge-in detected, interrupting avatar');
+    interruptAvatar();
+  }, [interruptAvatar]);
+
+  // Always listening mode with barge-in support
+  // When countdown is active, use normal countdown behavior for silence threshold
   const { isListening, startListening, stopListening, forceCommit } = useSilenceTranscription(
     handleVoiceTranscript,
     { 
-      disabled: isSpeaking,
+      disabled: false, // Never disable - always listen for barge-in
       countdownActive,
       silenceMs: countdownActive ? undefined : 300000, // 5 minutes when not in countdown
       maxRecordMs: countdownActive ? undefined : 600000, // 10 minutes max when not in countdown
+      onBargeIn: isSpeaking ? handleBargeIn : undefined, // Only enable barge-in when avatar is speaking
     }
   );
 
   // Auto-start listening when connected
   useEffect(() => {
-    if (isConnected && !isSpeaking && !isListening) {
+    if (isConnected && !isListening) {
       console.log('[PitchProtoL-AlwaysListening] Auto-starting continuous listen');
       startListening();
     }
-  }, [isConnected, isSpeaking, isListening, startListening]);
-
-  // Re-start listening after avatar stops speaking
-  const wasSpeakingRef = useRef(false);
-  useEffect(() => {
-    if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      console.log('[PitchProtoL-AlwaysListening] Avatar stopped speaking, resuming listen');
-      startListening();
-    }
-    wasSpeakingRef.current = isSpeaking;
-  }, [isSpeaking, isConnected, startListening]);
+  }, [isConnected, isListening, startListening]);
 
   // Wire up countdown expiry to force-commit the STT
   useEffect(() => {

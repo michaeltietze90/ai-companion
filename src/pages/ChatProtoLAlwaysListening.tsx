@@ -33,6 +33,7 @@ const ChatProtoLAlwaysListening = () => {
     isThinking,
     startConversation,
     sendMessage,
+    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useChatConversationStore,
     voiceSettings,
@@ -49,33 +50,30 @@ const ChatProtoLAlwaysListening = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Use very long silence threshold (5 minutes) so it effectively never auto-stops
+  // Barge-in handler - interrupt avatar when user speaks
+  const handleBargeIn = useCallback(() => {
+    console.log('[ChatProtoL-AlwaysListening] Barge-in detected, interrupting avatar');
+    interruptAvatar();
+  }, [interruptAvatar]);
+
+  // Always listening mode with barge-in support
   const { isListening, startListening, stopListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { 
-      disabled: isSpeaking,
+      disabled: false, // Never disable - always listen for barge-in
       silenceMs: 300000, // 5 minutes
       maxRecordMs: 600000, // 10 minutes max
+      onBargeIn: isSpeaking ? handleBargeIn : undefined, // Only enable barge-in when avatar is speaking
     }
   );
 
   // Auto-start listening when connected
   useEffect(() => {
-    if (isConnected && !isSpeaking && !isListening) {
+    if (isConnected && !isListening) {
       console.log('[ChatProtoL-AlwaysListening] Auto-starting continuous listen');
       startListening();
     }
-  }, [isConnected, isSpeaking, isListening, startListening]);
-
-  // Re-start listening after avatar stops speaking
-  const wasSpeakingRef = useRef(false);
-  useEffect(() => {
-    if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      console.log('[ChatProtoL-AlwaysListening] Avatar stopped speaking, resuming listen');
-      startListening();
-    }
-    wasSpeakingRef.current = isSpeaking;
-  }, [isSpeaking, isConnected, startListening]);
+  }, [isConnected, isListening, startListening]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
