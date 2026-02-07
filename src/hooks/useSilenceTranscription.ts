@@ -278,6 +278,13 @@ export function useSilenceTranscription(
           setHasSpokenState(true);
           silenceStartedAt = null;
         } else if (hasSpoken) {
+          // Only allow silence detection to stop recording after minimum duration
+          // This prevents false stops from brief ambient noise triggering hasSpoken
+          if (elapsed < recording.minDurationBeforeSilenceStop) {
+            s.rafId = requestAnimationFrame(tick);
+            return;
+          }
+          
           silenceStartedAt ??= Date.now();
           const silenceFor = Date.now() - silenceStartedAt;
           if (silenceFor >= silenceMsRef.current) {

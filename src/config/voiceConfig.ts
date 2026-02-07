@@ -14,8 +14,9 @@ export const VOICE_CONFIG = {
     /** Countdown mode silence threshold - longer to allow for thinking during pitch */
     countdownMs: 3000,
     
-    /** RMS threshold below which audio is considered silence (0-1 range) */
-    rmsThreshold: 0.004,
+    /** RMS threshold below which audio is considered silence (0-1 range) 
+     *  Set higher to require actual speech, not background noise */
+    rmsThreshold: 0.01,
   },
 
   /**
@@ -30,6 +31,10 @@ export const VOICE_CONFIG = {
     
     /** Minimum blob size to process (bytes) - smaller recordings are ignored */
     minBlobSize: 1024,
+    
+    /** Minimum recording duration before silence detection can stop (milliseconds)
+     *  Prevents false stops from brief ambient noise */
+    minDurationBeforeSilenceStop: 1000,
   },
 
   /**
