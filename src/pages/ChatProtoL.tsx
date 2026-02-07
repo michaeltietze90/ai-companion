@@ -17,18 +17,23 @@ import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 /**
  * Chat Proto L Fullscreen Page
  * Resolution: 2160x3840 (9:16 portrait, 4K)
+ * 
+ * Simple flow:
+ * 1. Agent greets
+ * 2. Auto-start listening
+ * 3. Only send if speech detected + 500ms silence
+ * 4. While agent speaks: don't listen
+ * 5. When agent finishes: go back to step 2
  */
 const ChatProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
-  const conversationState = useChatConversationStore();
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
-    isThinking,
     startConversation,
     sendMessage,
   } = useScopedAvatarConversation({
@@ -47,7 +52,8 @@ const ChatProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening, startListening } = useSilenceTranscription(
+  // Simple voice input: disabled while speaking, 500ms silence threshold
+  const { isListening, startListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
@@ -101,6 +107,7 @@ const ChatProtoL = () => {
         <SlideOverlay />
       </main>
 
+      {/* Status indicator - listening is automatic */}
       {isConnected && (
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
@@ -108,22 +115,24 @@ const ChatProtoL = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Button
-            size="lg"
-            variant="ghost"
-            className={`w-48 h-48 rounded-full ${
-              isListening 
-                ? 'bg-blue-500 hover:bg-blue-600' 
-                : 'bg-gray-600 hover:bg-gray-500'
+          <div
+            className={`w-48 h-48 rounded-full flex items-center justify-center ${
+              isSpeaking 
+                ? 'bg-amber-500' 
+                : isListening 
+                  ? 'bg-blue-500' 
+                  : 'bg-gray-600'
             }`}
-            onClick={toggleListening}
           >
-            {isListening ? (
-              <Mic className="w-24 h-24 text-white" />
-            ) : (
+            {isSpeaking ? (
               <MicOff className="w-24 h-24 text-white" />
+            ) : (
+              <Mic className={`w-24 h-24 text-white ${isListening ? 'animate-pulse' : ''}`} />
             )}
-          </Button>
+          </div>
+          <div className="text-center mt-4 text-white text-lg">
+            {isSpeaking ? 'Agent Speaking' : isListening ? 'Listening...' : 'Ready'}
+          </div>
         </motion.div>
       )}
 

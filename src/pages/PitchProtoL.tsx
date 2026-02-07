@@ -20,18 +20,23 @@ import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
 /**
  * Pitch Proto L Fullscreen Page
  * Resolution: 2160x3840 (9:16 portrait, 4K)
+ * 
+ * Simple flow:
+ * 1. Agent greets
+ * 2. Auto-start listening
+ * 3. Only send if speech detected + 500ms silence (3s in countdown mode)
+ * 4. While agent speaks: don't listen
+ * 5. When agent finishes: go back to step 2
  */
 const PitchProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
-  const conversationState = usePitchConversationStore();
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
-    isThinking,
     startConversation,
     sendMessage,
   } = useScopedAvatarConversation({
@@ -51,7 +56,8 @@ const PitchProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening, forceCommit, startListening } = useSilenceTranscription(
+  // Simple voice input: disabled while speaking, 500ms silence (3s in countdown mode)
+  const { isListening, forceCommit, startListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking, countdownActive }
   );
@@ -62,7 +68,6 @@ const PitchProtoL = () => {
   // Auto-listen when avatar finishes speaking
   useEffect(() => {
     if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      // Avatar just stopped speaking - auto-start listening
       console.log('[PitchProtoL] Avatar stopped speaking, auto-starting listen');
       startListening();
     }
@@ -114,6 +119,7 @@ const PitchProtoL = () => {
         <SlideOverlay />
       </main>
 
+      {/* Status indicator - listening is automatic */}
       {isConnected && (
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
@@ -121,22 +127,24 @@ const PitchProtoL = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Button
-            size="lg"
-            variant="ghost"
-            className={`w-52 h-52 rounded-full ${
-              isListening 
-                ? 'bg-purple-500 hover:bg-purple-600' 
-                : 'bg-gray-600 hover:bg-gray-500'
+          <div
+            className={`w-52 h-52 rounded-full flex items-center justify-center ${
+              isSpeaking 
+                ? 'bg-amber-500' 
+                : isListening 
+                  ? 'bg-purple-500' 
+                  : 'bg-gray-600'
             }`}
-            onClick={toggleListening}
           >
-            {isListening ? (
-              <Mic className="w-28 h-28 text-white" />
-            ) : (
+            {isSpeaking ? (
               <MicOff className="w-28 h-28 text-white" />
+            ) : (
+              <Mic className={`w-28 h-28 text-white ${isListening ? 'animate-pulse' : ''}`} />
             )}
-          </Button>
+          </div>
+          <div className="text-center mt-4 text-white text-xl">
+            {isSpeaking ? 'Agent Speaking' : isListening ? 'Listening...' : 'Ready'}
+          </div>
         </motion.div>
       )}
 

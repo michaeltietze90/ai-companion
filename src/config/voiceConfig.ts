@@ -34,7 +34,7 @@ export const VOICE_CONFIG = {
     
     /** Minimum recording duration before silence detection can stop (milliseconds)
      *  Prevents false stops from brief ambient noise */
-    minDurationBeforeSilenceStop: 1000,
+    minDurationBeforeSilenceStop: 500,
   },
 
   /**
