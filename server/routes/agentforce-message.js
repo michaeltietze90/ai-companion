@@ -35,8 +35,9 @@ function extractStreamingTextChunk(data, accumulatedText) {
     return null;
   }
   
-  // Try to get text from delta first (true streaming), then from Text message
-  const chunk = delta?.text ?? delta?.content ?? (msg?.type === 'Text' ? msg?.text : null);
+  // Try to get text from delta first (true streaming), then from Text/TextChunk message
+  const chunk = delta?.text ?? delta?.content ?? 
+    ((msg?.type === 'Text' || msg?.type === 'TextChunk') ? (msg?.text ?? msg?.message) : null);
   
   if (typeof chunk !== 'string' || !chunk) return null;
   
