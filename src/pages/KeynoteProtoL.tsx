@@ -5,23 +5,22 @@ import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-// Note: Mic button is now status-only (no toggle) - listening is automatic
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
+import { useVadTranscription } from "@/hooks/useVadTranscription";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 
 /**
  * Keynote Proto L Fullscreen Page
  * Resolution: 2160x3840 (9:16 portrait, 4K)
  * 
- * Simple flow:
- * 1. Agent greets
- * 2. Auto-start listening
- * 3. Only send if speech detected + 500ms silence
- * 4. While agent speaks: don't listen
- * 5. When agent finishes: go back to step 2
+ * Uses VAD (Voice Activity Detection) for efficient speech capture:
+ * 1. VAD monitors mic continuously with ML model
+ * 2. Only records when actual speech is detected
+ * 3. Stops recording when speech ends
+ * 4. Sends to Deepgram only when there's real speech
+ * 5. While agent speaks: VAD paused, but can trigger barge-in
  */
 const KeynoteProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -34,6 +33,7 @@ const KeynoteProtoL = () => {
     isSpeaking,
     startConversation,
     sendMessage,
+    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
@@ -49,46 +49,39 @@ const KeynoteProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Simple voice input: disabled while speaking, 500ms silence threshold
-  const { isListening, startListening, isProcessing } = useSilenceTranscription(
+  const handleBargeIn = useCallback(() => {
+    console.log('[KeynoteProtoL] Barge-in detected');
+    interruptAvatar();
+  }, [interruptAvatar]);
+
+  // VAD-based voice input - much more efficient than RMS-based
+  const { isListening, isProcessing, isSpeechActive, isLoading, startListening, stopListening } = useVadTranscription(
     handleVoiceTranscript,
-    { disabled: isSpeaking }
+    { 
+      disabled: isSpeaking,
+      onBargeIn: handleBargeIn,
+    }
   );
 
   // Track previous speaking state for auto-listen
   const wasSpeakingRef = useRef(false);
 
-  // Auto-listen when avatar finishes speaking
+  // Auto-start VAD when avatar finishes speaking
   useEffect(() => {
     if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      console.log('[KeynoteProtoL] Avatar stopped speaking, auto-starting listen');
+      console.log('[KeynoteProtoL] Avatar stopped speaking, starting VAD');
       startListening();
     }
     wasSpeakingRef.current = isSpeaking;
   }, [isSpeaking, isConnected, startListening]);
 
-  // Re-start listening if recording stopped but no message was sent
-  // (e.g., empty transcription, filtered recording, or error)
-  const wasListeningRef = useRef(false);
-  const wasProcessingRef = useRef(false);
+  // Stop VAD when avatar starts speaking
   useEffect(() => {
-    // Detect: was listening OR processing, now neither, and avatar isn't speaking
-    const wasActive = wasListeningRef.current || wasProcessingRef.current;
-    const nowIdle = !isListening && !isProcessing;
-    
-    if (isConnected && !isSpeaking && wasActive && nowIdle) {
-      console.log('[KeynoteProtoL] Recording/processing ended, restarting listen in 300ms');
-      const timer = setTimeout(() => {
-        console.log('[KeynoteProtoL] Restarting listen now');
-        startListening();
-      }, 300);
-      return () => clearTimeout(timer);
+    if (isSpeaking && isListening) {
+      console.log('[KeynoteProtoL] Avatar started speaking, pausing VAD');
+      stopListening();
     }
-    
-    // Update refs AFTER checking
-    wasListeningRef.current = isListening;
-    wasProcessingRef.current = isProcessing;
-  }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
+  }, [isSpeaking, isListening, stopListening]);
 
   const handleStart = () => {
     startConversation(videoRef.current);
@@ -114,7 +107,7 @@ const KeynoteProtoL = () => {
         />
       </main>
 
-      {/* Status indicator - listening is automatic */}
+      {/* Status indicator - VAD-based */}
       {isConnected && (
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
@@ -123,22 +116,38 @@ const KeynoteProtoL = () => {
           transition={{ delay: 0.2 }}
         >
           <div
-            className={`w-48 h-48 rounded-full flex items-center justify-center ${
+            className={`w-48 h-48 rounded-full flex items-center justify-center transition-colors ${
               isSpeaking 
                 ? 'bg-amber-500' 
-                : isListening 
-                  ? 'bg-green-500' 
-                  : 'bg-gray-600'
+                : isProcessing
+                  ? 'bg-blue-500'
+                  : isSpeechActive
+                    ? 'bg-red-500 animate-pulse'
+                    : isListening 
+                      ? 'bg-green-500' 
+                      : isLoading
+                        ? 'bg-gray-500'
+                        : 'bg-gray-600'
             }`}
           >
             {isSpeaking ? (
               <MicOff className="w-24 h-24 text-white" />
             ) : (
-              <Mic className={`w-24 h-24 text-white ${isListening ? 'animate-pulse' : ''}`} />
+              <Mic className={`w-24 h-24 text-white ${isSpeechActive ? 'scale-110' : ''}`} />
             )}
           </div>
           <div className="text-center mt-4 text-white text-lg">
-            {isSpeaking ? 'Agent Speaking' : isListening ? 'Listening...' : 'Ready'}
+            {isSpeaking 
+              ? 'Agent Speaking' 
+              : isProcessing 
+                ? 'Processing...'
+                : isSpeechActive 
+                  ? 'Recording...' 
+                  : isListening 
+                    ? 'Listening' 
+                    : isLoading
+                      ? 'Loading VAD...'
+                      : 'Ready'}
           </div>
         </motion.div>
       )}
