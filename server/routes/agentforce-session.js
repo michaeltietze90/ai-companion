@@ -11,9 +11,12 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
   try {
-    const { action, sessionId, reason } = req.body;
-    const agentId = process.env.SALESFORCE_AGENT_ID;
+    const { action, sessionId, reason, agentId: requestAgentId } = req.body;
+    // Use agent ID from request, fall back to env var
+    const agentId = requestAgentId || process.env.SALESFORCE_AGENT_ID;
     const orgDomain = process.env.SALESFORCE_ORG_DOMAIN;
+    
+    console.log('[Agentforce Session] Action:', action, 'Agent ID:', agentId);
     
     if (!agentId || !orgDomain) {
       throw new Error('Salesforce configuration not complete');
