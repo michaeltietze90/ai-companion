@@ -11,7 +11,7 @@ export const useSlideOverlayStore = create<SlideOverlayState>((set) => ({
   isVisible: false,
   currentSlide: 1,
   showSlide: (slideNumber: number) => {
-    const clamped = Math.max(1, Math.min(50, slideNumber));
+    const clamped = Math.max(1, Math.min(100, slideNumber));
     console.log(`[SlideOverlay] Showing slide ${clamped}`);
     set({ isVisible: true, currentSlide: clamped });
   },
