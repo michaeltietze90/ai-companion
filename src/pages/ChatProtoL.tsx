@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useChatConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
+import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 
 /**
@@ -52,10 +52,19 @@ const ChatProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Simple voice input: disabled while speaking, 500ms silence threshold
-  const { isListening, startListening, isProcessing } = useSilenceTranscription(
+  // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
+  const { 
+    isListening, 
+    isConnecting: isVoiceConnecting, 
+    isProcessing, 
+    startListening, 
+    stopListening 
+  } = useDeepgramStreaming(
     handleVoiceTranscript,
-    { disabled: isSpeaking }
+    { 
+      disabled: isSpeaking,
+      utteranceEndMs: 1000, // 1 second silence = end of utterance
+    }
   );
 
   // Track previous speaking state for auto-listen

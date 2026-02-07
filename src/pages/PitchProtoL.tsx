@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { usePitchConversationStore } from "@/stores/pitchConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
+import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
 
 /**
@@ -48,7 +48,7 @@ const PitchProtoL = () => {
   });
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
+  const { isVisible: countdownActive } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -56,10 +56,19 @@ const PitchProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  // Simple voice input: disabled while speaking, 500ms silence (3s in countdown mode)
-  const { isListening, forceCommit, startListening, isProcessing } = useSilenceTranscription(
+  // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
+  const { 
+    isListening, 
+    isConnecting: isVoiceConnecting, 
+    isProcessing, 
+    startListening, 
+    stopListening 
+  } = useDeepgramStreaming(
     handleVoiceTranscript,
-    { disabled: isSpeaking, countdownActive }
+    { 
+      disabled: isSpeaking,
+      utteranceEndMs: countdownActive ? 3000 : 1000, // longer silence in countdown mode
+    }
   );
 
   // Track previous speaking state for auto-listen
@@ -90,12 +99,6 @@ const PitchProtoL = () => {
     wasListeningRef.current = isListening;
     wasProcessingRef.current = isProcessing;
   }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
-
-  // Wire up countdown expiry to force-commit the STT
-  useEffect(() => {
-    setOnExpireCallback(forceCommit);
-    return () => setOnExpireCallback(null);
-  }, [forceCommit, setOnExpireCallback]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);

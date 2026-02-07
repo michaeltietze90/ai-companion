@@ -8,13 +8,13 @@ import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useChatConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
+import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 
@@ -51,7 +51,6 @@ const ChatAvatarMain = () => {
     startConversation,
     sendMessage,
     endConversation,
-    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useChatConversationStore,
     voiceSettings,
@@ -76,24 +75,29 @@ const ChatAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  // Barge-in handler - interrupt avatar when user speaks
-  const handleBargeIn = useCallback(() => {
-    console.log('[Chat] Barge-in triggered - interrupting avatar');
-    interruptAvatar();
-  }, [interruptAvatar]);
-
+  // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
   const { 
-    toggleListening, 
     isListening, 
     isConnecting: sttConnecting,
     isProcessing: sttProcessing,
     startListening,
-    audioLevel,
-    hasSpoken,
-  } = useSilenceTranscription(
+    stopListening,
+  } = useDeepgramStreaming(
     handleVoiceTranscript,
-    { disabled: isSpeaking, onBargeIn: handleBargeIn }
+    { 
+      disabled: isSpeaking,
+      utteranceEndMs: 1000,
+    }
   );
+
+  // Toggle listening function
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopListening]);
 
   // Track previous speaking state for auto-listen
   const wasSpeakingRef = useRef(false);
@@ -196,42 +200,27 @@ const ChatAvatarMain = () => {
           {/* Control buttons inside avatar - right side */}
           {isConnected && (
             <div className="absolute top-1/2 -translate-y-1/2 right-4 z-30 flex flex-col gap-3">
-              {/* Mic toggle with audio level indicator */}
-              <div className="relative">
-                {/* Audio level ring - pulses based on voice volume */}
-                {isListening && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-blue-500/30"
-                    animate={{
-                      scale: 1 + audioLevel * 0.5,
-                      opacity: 0.3 + audioLevel * 0.4,
-                    }}
-                    transition={{ duration: 0.1 }}
-                  />
+              {/* Mic toggle */}
+              <Button
+                size="lg"
+                className={`rounded-full w-12 h-12 ${
+                  sttProcessing
+                    ? 'bg-amber-500 hover:bg-amber-600'
+                    : isListening 
+                    ? 'bg-blue-500 hover:bg-blue-600' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                }`}
+                onClick={toggleListening}
+                disabled={sttConnecting || sttProcessing}
+              >
+                {sttConnecting || sttProcessing ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : isListening ? (
+                  <Mic className="w-5 h-5" />
+                ) : (
+                  <MicOff className="w-5 h-5" />
                 )}
-                <Button
-                  size="lg"
-                  className={`relative rounded-full w-12 h-12 ${
-                    sttProcessing
-                      ? 'bg-amber-500 hover:bg-amber-600'
-                      : isListening && hasSpoken
-                      ? 'bg-green-500 hover:bg-green-600'
-                      : isListening 
-                      ? 'bg-blue-500 hover:bg-blue-600' 
-                      : 'bg-secondary hover:bg-secondary/80'
-                  }`}
-                  onClick={toggleListening}
-                  disabled={sttConnecting || sttProcessing}
-                >
-                  {sttConnecting || sttProcessing ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : isListening ? (
-                    <Mic className="w-5 h-5" />
-                  ) : (
-                    <MicOff className="w-5 h-5" />
-                  )}
-                </Button>
-              </div>
+              </Button>
 
               {/* Mute toggle */}
               <Button
@@ -241,16 +230,6 @@ const ChatAvatarMain = () => {
                 onClick={() => setIsMuted(!isMuted)}
               >
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
-
-              {/* Interrupt button */}
-              <Button
-                size="lg"
-                className="rounded-full w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white"
-                onClick={interruptAvatar}
-                disabled={!isSpeaking && !isThinking}
-              >
-                <Hand className="w-5 h-5" />
               </Button>
 
               {/* End conversation */}
@@ -276,7 +255,6 @@ const ChatAvatarMain = () => {
         >
           <div className={`w-2 h-2 rounded-full ${
             sttProcessing ? 'bg-amber-400' :
-            isListening && hasSpoken ? 'bg-green-400' :
             isListening ? 'bg-blue-400' :
             isConnected ? 'bg-green-400' : 
             isConnecting ? 'bg-amber-400' : 
@@ -284,7 +262,6 @@ const ChatAvatarMain = () => {
           } animate-pulse`} />
           <span className="text-sm text-muted-foreground">
             {sttProcessing ? 'Processing...' :
-             isListening && hasSpoken ? 'Recording...' :
              isListening ? 'Listening...' :
              isConnecting ? 'Connecting...' : 
              isConnected ? 'Connected' : 
