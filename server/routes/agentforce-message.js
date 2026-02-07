@@ -105,11 +105,11 @@ function extractStreamingTextChunk(data, accumulatedText) {
   const msg = data?.message;
   const delta = data?.delta;
   
-  // CRITICAL: Skip final "Inform" messages - they duplicate the streamed content
-  // The "Inform" type is sent at the END with the complete cleaned response
+  // NOTE: Inform messages contain the complete, clean response
+  // We return null but the caller should save the Inform for fallback use
   if (msg?.type === 'Inform') {
-    console.log('[Streaming] Skipping final Inform message (duplicates streamed content)');
-    return null;
+    console.log('[Streaming] Inform message received (will use as fallback if needed)');
+    return { isInform: true, informText: msg?.message || msg?.text || null };
   }
   
   // Try to get text from delta first (true streaming), then from Text/TextChunk message
@@ -241,6 +241,9 @@ router.post('/', async (req, res) => {
       // Track if response looks like structured JSON - if so, don't split
       let looksLikeJson = false;
       
+      // Store the Inform message as fallback (it has the clean, complete response)
+      let informMessage = null;
+      
       const reader = sfResponse.body.getReader();
       const decoder = new TextDecoder();
       
@@ -283,6 +286,14 @@ router.post('/', async (req, res) => {
               }
               
               const result = extractStreamingTextChunk(data, accumulatedFromAPI);
+              
+              // Check if this is an Inform message (final complete response)
+              if (result?.isInform) {
+                informMessage = result.informText;
+                console.log('[Streaming] Saved Inform message as fallback:', informMessage?.slice(0, 100));
+                continue;
+              }
+              
               if (result) {
                 // Smart space injection: Add space between letter→digit or digit→letter transitions
                 // This fixes "With30" → "With 30" and "monumental70" → "monumental 70"
@@ -336,34 +347,41 @@ router.post('/', async (req, res) => {
         }
         
         // Combine any remaining buffer with what we've accumulated
-        const finalText = (accumulatedFromAPI || textBuffer).trim();
+        let finalText = (accumulatedFromAPI || textBuffer).trim();
         
-        // Check if the ENTIRE response is a JSON object
-        // If so, emit it as a single unit (don't split at all)
-        if (finalText.startsWith('{') && finalText.endsWith('}')) {
+        // Helper to try parsing as valid structured JSON
+        const tryParseStructuredJson = (text) => {
+          if (!text || !text.startsWith('{') || !text.endsWith('}')) return null;
           try {
-            const parsed = JSON.parse(finalText);
-            if (parsed.response !== undefined) {
-              // This is a structured JSON response - emit as single unit
-              console.log('[Agentforce] Detected structured JSON response, emitting as single unit');
-              if (!emittedSentences.has(finalText)) {
-                emittedSentences.clear(); // Clear any partial emissions
-                emittedSentences.add(finalText);
-                console.log('[Agentforce] Emitting full JSON:', finalText);
-                res.write(`data: ${JSON.stringify({ type: 'sentence', text: finalText })}\n\n`);
-              }
-            }
-          } catch {
-            // Not valid JSON, emit remaining as normal
-            const remaining = normalizeSentence(textBuffer);
-            if (remaining && !emittedSentences.has(remaining)) {
-              emittedSentences.add(remaining);
-              console.log('[Agentforce] Emitting final sentence:', remaining);
-              res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
-            }
+            const parsed = JSON.parse(text);
+            if (parsed.response !== undefined) return { text, parsed };
+          } catch {}
+          return null;
+        };
+        
+        // First try the streamed text
+        let validJson = tryParseStructuredJson(finalText);
+        
+        // If streamed text is invalid JSON but we have an Inform message, use that instead
+        if (!validJson && informMessage && looksLikeJson) {
+          console.log('[Agentforce] Streamed JSON was invalid, using Inform message as fallback');
+          validJson = tryParseStructuredJson(informMessage);
+          if (validJson) {
+            finalText = informMessage;
+          }
+        }
+        
+        if (validJson) {
+          // This is a structured JSON response - emit as single unit
+          console.log('[Agentforce] Emitting structured JSON response');
+          if (!emittedSentences.has(finalText)) {
+            emittedSentences.clear(); // Clear any partial emissions
+            emittedSentences.add(finalText);
+            console.log('[Agentforce] Emitting full JSON:', finalText.slice(0, 200) + '...');
+            res.write(`data: ${JSON.stringify({ type: 'sentence', text: finalText })}\n\n`);
           }
         } else {
-          // Not JSON, emit remaining buffer as normal
+          // Not valid JSON, emit remaining buffer as normal text
           const remaining = normalizeSentence(textBuffer);
           if (remaining && !emittedSentences.has(remaining)) {
             emittedSentences.add(remaining);
