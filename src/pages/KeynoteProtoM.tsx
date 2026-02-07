@@ -14,18 +14,23 @@ import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 /**
  * Keynote Proto M Fullscreen Page
  * Resolution: 1080x1920 (9:16 portrait)
+ * 
+ * Simple flow:
+ * 1. Agent greets
+ * 2. Auto-start listening
+ * 3. Only send if speech detected + 500ms silence
+ * 4. While agent speaks: don't listen
+ * 5. When agent finishes: go back to step 2
  */
 const KeynoteProtoM = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
-  const conversationState = useKeynoteConversationStore();
 
   const {
     isConnected,
     isConnecting,
     isSpeaking,
-    isThinking,
     startConversation,
     sendMessage,
   } = useScopedAvatarConversation({
@@ -43,7 +48,8 @@ const KeynoteProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening, startListening } = useSilenceTranscription(
+  // Simple voice input: disabled while speaking, 500ms silence threshold
+  const { isListening, startListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
@@ -84,6 +90,7 @@ const KeynoteProtoM = () => {
         />
       </main>
 
+      {/* Status indicator - listening is automatic */}
       {isConnected && (
         <motion.div
           className="absolute top-8 right-8 z-30"
@@ -91,22 +98,21 @@ const KeynoteProtoM = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Button
-            size="lg"
-            variant="ghost"
-            className={`w-16 h-16 rounded-full ${
-              isListening 
-                ? 'bg-primary hover:bg-primary/90' 
-                : 'bg-gray-600 hover:bg-gray-500'
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isSpeaking 
+                ? 'bg-amber-500' 
+                : isListening 
+                  ? 'bg-green-500' 
+                  : 'bg-gray-600'
             }`}
-            onClick={toggleListening}
           >
-            {isListening ? (
-              <Mic className="w-8 h-8 text-white" />
-            ) : (
+            {isSpeaking ? (
               <MicOff className="w-8 h-8 text-white" />
+            ) : (
+              <Mic className={`w-8 h-8 text-white ${isListening ? 'animate-pulse' : ''}`} />
             )}
-          </Button>
+          </div>
         </motion.div>
       )}
 
