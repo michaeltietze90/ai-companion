@@ -51,6 +51,7 @@ type RecorderState = {
   rafId: number | null;
   stopRequested: boolean;
   startedAt: number;
+  hasSpoken: boolean; // Track if any speech was detected during this recording
 };
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -223,8 +224,10 @@ export function useSilenceTranscription(
       };
 
       const startedAt = Date.now();
-      let hasSpoken = false;
       let silenceStartedAt: number | null = null;
+      
+      // Track hasSpoken in a mutable object we can reference in onstop
+      const speechState = { hasSpoken: false };
 
       const timeDomain = new Float32Array(analyser.fftSize);
       const tick = () => {
@@ -274,10 +277,10 @@ export function useSilenceTranscription(
         }
 
         if (rms > silenceRmsThresholdRef.current) {
-          hasSpoken = true;
+          speechState.hasSpoken = true;
           setHasSpokenState(true);
           silenceStartedAt = null;
-        } else if (hasSpoken) {
+        } else if (speechState.hasSpoken) {
           // Only allow silence detection to stop recording after minimum duration
           // This prevents false stops from brief ambient noise triggering hasSpoken
           if (elapsed < recording.minDurationBeforeSilenceStop) {
@@ -312,13 +315,22 @@ export function useSilenceTranscription(
         rafId: null,
         stopRequested: false,
         startedAt,
+        hasSpoken: false, // Will be updated via speechState reference
       };
+      
+      // Link speechState to stateRef so onstop can access it
+      // We use a getter pattern since speechState is updated during tick()
+      Object.defineProperty(stateRef.current, 'hasSpoken', {
+        get: () => speechState.hasSpoken,
+        set: (v) => { speechState.hasSpoken = v; },
+      });
 
       recorder.onstop = async () => {
         const s = stateRef.current;
         // We set stateRef.current=null in cleanup, so snapshot chunks now.
         const recordedChunks = chunks.slice();
         const recordingStartedAt = s?.startedAt ?? Date.now();
+        const speechDetected = s?.hasSpoken ?? false;
         const discard = disabledRef.current;
 
         await cleanup(discard);
@@ -329,6 +341,13 @@ export function useSilenceTranscription(
         // Calculate actual recording duration from when recording started
         const actualDurationMs = Date.now() - recordingStartedAt;
         const actualDurationSec = actualDurationMs / 1000;
+        
+        // If no speech was ever detected, skip transcription entirely
+        // This prevents sending pure silence recordings to Deepgram (e.g., during breaks)
+        if (!speechDetected) {
+          console.log(`[STT] No speech detected during ${actualDurationSec.toFixed(1)}s recording, skipping transcription`);
+          return;
+        }
         
         // Filter out recordings that are too small or too short
         if (blob.size < recording.minBlobSize) {
