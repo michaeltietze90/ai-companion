@@ -120,6 +120,13 @@ const PRESET_MESSAGES = [
     },
   },
   {
+    name: 'Show Slide 42',
+    json: {
+      response: "Here's an important customer story.",
+      actions: [{ type: 'slide', data: { page: 42 } }],
+    },
+  },
+  {
     name: 'Hide Slide',
     json: {
       response: "Hiding the slide now.",
