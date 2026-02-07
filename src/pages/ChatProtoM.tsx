@@ -47,10 +47,22 @@ const ChatProtoM = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const { isListening, toggleListening } = useSilenceTranscription(
+  const { isListening, toggleListening, startListening } = useSilenceTranscription(
     handleVoiceTranscript,
     { disabled: isSpeaking }
   );
+
+  // Track previous speaking state for auto-listen
+  const wasSpeakingRef = useRef(false);
+
+  // Auto-listen when avatar finishes speaking
+  useEffect(() => {
+    if (isConnected && wasSpeakingRef.current && !isSpeaking) {
+      console.log('[ChatProtoM] Avatar stopped speaking, auto-starting listen');
+      startListening();
+    }
+    wasSpeakingRef.current = isSpeaking;
+  }, [isSpeaking, isConnected, startListening]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);

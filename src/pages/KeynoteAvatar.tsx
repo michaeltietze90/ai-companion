@@ -87,6 +87,7 @@ const KeynoteAvatarMain = () => {
     isListening, 
     isConnecting: sttConnecting, 
     isProcessing: sttProcessing,
+    startListening,
     partialTranscript,
     audioLevel,
     hasSpoken,
@@ -94,6 +95,18 @@ const KeynoteAvatarMain = () => {
     handleVoiceTranscript,
     { disabled: isSpeaking, onBargeIn: handleBargeIn }
   );
+
+  // Track previous speaking state for auto-listen
+  const wasSpeakingRef = useRef(false);
+
+  // Auto-listen when avatar finishes speaking
+  useEffect(() => {
+    if (isConnected && wasSpeakingRef.current && !isSpeaking) {
+      console.log('[KeynoteAvatar] Avatar stopped speaking, auto-starting listen');
+      startListening();
+    }
+    wasSpeakingRef.current = isSpeaking;
+  }, [isSpeaking, isConnected, startListening]);
 
   const handleStart = useCallback(() => {
     startConversation(videoRef.current);
