@@ -10,10 +10,13 @@ import ChatAvatar from "./pages/ChatAvatar";
 import PitchAvatar from "./pages/PitchAvatar";
 import KeynoteProtoM from "./pages/KeynoteProtoM";
 import KeynoteProtoL from "./pages/KeynoteProtoL";
+import KeynoteProtoLAlwaysListening from "./pages/KeynoteProtoLAlwaysListening";
 import ChatProtoM from "./pages/ChatProtoM";
 import ChatProtoL from "./pages/ChatProtoL";
+import ChatProtoLAlwaysListening from "./pages/ChatProtoLAlwaysListening";
 import PitchProtoM from "./pages/PitchProtoM";
 import PitchProtoL from "./pages/PitchProtoL";
+import PitchProtoLAlwaysListening from "./pages/PitchProtoLAlwaysListening";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +47,11 @@ const App = () => (
             <Route path="proto-m" element={<PitchProtoM />} />
             <Route path="proto-l" element={<PitchProtoL />} />
           </Route>
+          
+          {/* Always Listening Proto L Routes */}
+          <Route path="/keynote/alwayslistening" element={<KeynoteProtoLAlwaysListening />} />
+          <Route path="/chat/alwayslistening" element={<ChatProtoLAlwaysListening />} />
+          <Route path="/pitch/alwayslistening" element={<PitchProtoLAlwaysListening />} />
           
           {/* Legacy redirects */}
           <Route path="/proto-m" element={<Navigate to="/keynote/proto-m" replace />} />
