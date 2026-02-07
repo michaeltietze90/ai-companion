@@ -14,6 +14,83 @@ const router = express.Router();
 const CLAUSE_END_RE = /(?<=[.!?])\s+|\s+-\s+/;
 
 /**
+ * Check if text contains JSON and extract it.
+ * Returns { json: parsed object, textBefore: string, textAfter: string } if found,
+ * or null if no valid JSON found.
+ */
+function extractJsonFromText(text) {
+  // Look for JSON patterns: {...} or [...]
+  const jsonPatterns = [
+    /(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,  // Matches nested objects
+    /(\[[^\[\]]*(?:\[[^\[\]]*\][^\[\]]*)*\])/g  // Matches nested arrays
+  ];
+  
+  for (const pattern of jsonPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        try {
+          const parsed = JSON.parse(match);
+          // Valid JSON found - extract text before and after
+          const startIdx = text.indexOf(match);
+          const endIdx = startIdx + match.length;
+          return {
+            json: parsed,
+            jsonString: match,
+            textBefore: text.slice(0, startIdx).trim(),
+            textAfter: text.slice(endIdx).trim()
+          };
+        } catch {
+          // Not valid JSON, continue
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Split text into sentences, but preserve JSON blocks intact.
+ * Returns array of { type: 'text' | 'json', content: string, parsed?: object }
+ */
+function splitPreservingJson(text) {
+  const result = [];
+  let remaining = text;
+  
+  while (remaining.length > 0) {
+    const jsonExtract = extractJsonFromText(remaining);
+    
+    if (jsonExtract) {
+      // Add text before JSON as sentences
+      if (jsonExtract.textBefore) {
+        const sentences = jsonExtract.textBefore.split(CLAUSE_END_RE).filter(s => s.trim());
+        for (const s of sentences) {
+          result.push({ type: 'text', content: s.trim() });
+        }
+      }
+      
+      // Add JSON as single unit
+      result.push({ 
+        type: 'json', 
+        content: jsonExtract.jsonString, 
+        parsed: jsonExtract.json 
+      });
+      
+      remaining = jsonExtract.textAfter;
+    } else {
+      // No JSON found, split remaining text into sentences
+      const sentences = remaining.split(CLAUSE_END_RE).filter(s => s.trim());
+      for (const s of sentences) {
+        result.push({ type: 'text', content: s.trim() });
+      }
+      break;
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Extract text chunk from SSE data for STREAMING mode.
  * 
  * IMPORTANT: Salesforce SSE stream structure:
@@ -183,13 +260,16 @@ router.post('/', async (req, res) => {
               const msg = data?.message;
               const delta = data?.delta;
               
-              // Debug: Log what we're receiving
+              // Debug: Log what we're receiving - full content
               console.log('[Streaming] Received:', { 
                 messageType: msg?.type, 
-                hasText: !!msg?.text || !!msg?.message,
+                text: msg?.text || msg?.message || null,
                 hasDelta: !!delta,
-                deltaText: delta?.text?.slice(0, 50)
+                deltaText: delta?.text || null
               });
+              
+              // Also log raw payload for debugging
+              console.log('[Streaming] Raw payload:', payload.slice(0, 500));
               
               if (msg?.type === 'ProgressIndicator') {
                 const progressMsg = msg?.message;
@@ -218,18 +298,43 @@ router.post('/', async (req, res) => {
                 textBuffer += (needsSpace ? ' ' : '') + next;
                 accumulatedFromAPI = result.fullChunk;
                 
-                const parts = textBuffer.split(CLAUSE_END_RE);
+                // Use JSON-aware splitting
+                const segments = splitPreservingJson(textBuffer);
                 
-                for (let i = 0; i < parts.length - 1; i++) {
-                  const sentence = normalizeSentence(parts[i]);
-                  if (!sentence) continue;
-                  if (emittedSentences.has(sentence)) continue;
-                  emittedSentences.add(sentence);
-                  console.log('[Agentforce] Emitting sentence:', sentence);
-                  res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
+                // Emit all complete segments except the last one (which may be incomplete)
+                // But if we have JSON, we can emit it immediately as it's self-contained
+                let lastIncompleteText = '';
+                
+                for (let i = 0; i < segments.length; i++) {
+                  const segment = segments[i];
+                  const isLast = i === segments.length - 1;
+                  
+                  if (segment.type === 'json') {
+                    // JSON is always complete, emit it
+                    const jsonStr = segment.content;
+                    if (!emittedSentences.has(jsonStr)) {
+                      emittedSentences.add(jsonStr);
+                      console.log('[Agentforce] Emitting JSON:', jsonStr);
+                      res.write(`data: ${JSON.stringify({ type: 'sentence', text: jsonStr })}\n\n`);
+                    }
+                  } else if (segment.type === 'text') {
+                    const sentence = normalizeSentence(segment.content);
+                    if (!sentence) continue;
+                    
+                    // Keep last text segment as potentially incomplete (buffered)
+                    if (isLast) {
+                      lastIncompleteText = segment.content;
+                    } else {
+                      if (!emittedSentences.has(sentence)) {
+                        emittedSentences.add(sentence);
+                        console.log('[Agentforce] Emitting sentence:', sentence);
+                        res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
+                      }
+                    }
+                  }
                 }
                 
-                textBuffer = parts[parts.length - 1];
+                textBuffer = lastIncompleteText;
               }
             } catch {
               // Skip malformed JSON
