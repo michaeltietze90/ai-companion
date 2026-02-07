@@ -32,7 +32,6 @@ const KeynoteProtoL = () => {
     isSpeaking,
     startConversation,
     sendMessage,
-    interruptAvatar,
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
@@ -48,12 +47,7 @@ const KeynoteProtoL = () => {
     sendMessage(transcript);
   }, [sendMessage]);
 
-  const handleBargeIn = useCallback(() => {
-    console.log('[KeynoteProtoL] Barge-in detected');
-    interruptAvatar();
-  }, [interruptAvatar]);
-
-  // Deepgram streaming with built-in VAD - much simpler than client-side VAD
+  // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
   const { 
     isListening, 
     isConnecting: isVoiceConnecting, 
@@ -64,7 +58,6 @@ const KeynoteProtoL = () => {
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
-      onBargeIn: handleBargeIn,
       utteranceEndMs: 1000, // 1 second silence = end of utterance
     }
   );
