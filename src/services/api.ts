@@ -119,6 +119,7 @@ export async function* streamAgentMessage(
   const body = { sessionId, message, messagesStreamUrl, streaming: true };
   const startTime = Date.now();
   
+  console.log('[Agentforce Request] Sending message:', message);
   debugLog('api-request', 'agentforce-message', `Streaming: "${message.slice(0, 50)}..."`, body);
   
   const response = await fetch(getApiUrl('agentforce-message'), {
@@ -173,10 +174,13 @@ export async function* streamAgentMessage(
           chunkCount++;
           
           if (chunk.type === 'sentence') {
+            console.log('[Agentforce Response] Sentence:', chunk.text);
             debugLog('sse-event', 'agentforce', `Sentence #${chunkCount}: "${chunk.text.slice(0, 40)}..."`, chunk);
           } else if (chunk.type === 'progress') {
+            console.log('[Agentforce Response] Progress:', chunk.text);
             debugLog('sse-event', 'agentforce', `Progress: ${chunk.text}`, chunk);
           } else if (chunk.type === 'done') {
+            console.log('[Agentforce Response] Stream complete, total chunks:', chunkCount);
             debugLog('sse-event', 'agentforce', `Stream complete (${chunkCount} chunks)`, undefined, Date.now() - startTime);
           }
           
