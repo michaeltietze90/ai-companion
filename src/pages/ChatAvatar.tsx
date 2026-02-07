@@ -5,6 +5,7 @@ import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
+import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
@@ -186,6 +187,7 @@ const ChatAvatarMain = () => {
             isMuted={isMuted}
           />
           <QuizOverlayManager />
+          <SlideOverlay />
           
           {/* Control buttons inside avatar - right side */}
           {isConnected && (
