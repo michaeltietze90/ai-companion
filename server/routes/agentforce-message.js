@@ -173,6 +173,15 @@ router.post('/', async (req, res) => {
             try {
               const data = JSON.parse(payload);
               const msg = data?.message;
+              const delta = data?.delta;
+              
+              // Debug: Log what we're receiving
+              console.log('[Streaming] Received:', { 
+                messageType: msg?.type, 
+                hasText: !!msg?.text || !!msg?.message,
+                hasDelta: !!delta,
+                deltaText: delta?.text?.slice(0, 50)
+              });
               
               if (msg?.type === 'ProgressIndicator') {
                 const progressMsg = msg?.message;
