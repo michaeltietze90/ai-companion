@@ -70,14 +70,24 @@ const KeynoteProtoL = () => {
   // Re-start listening if recording stopped but no message was sent
   // (e.g., empty transcription, filtered recording, or error)
   const wasListeningRef = useRef(false);
+  const wasProcessingRef = useRef(false);
   useEffect(() => {
-    // If we were listening, stopped, finished processing, and avatar isn't speaking - restart
-    if (isConnected && !isSpeaking && wasListeningRef.current && !isListening && !isProcessing) {
-      console.log('[KeynoteProtoL] Recording ended without sending, restarting listen');
-      const timer = setTimeout(() => startListening(), 300); // Small delay to avoid rapid restarts
+    // Detect: was listening OR processing, now neither, and avatar isn't speaking
+    const wasActive = wasListeningRef.current || wasProcessingRef.current;
+    const nowIdle = !isListening && !isProcessing;
+    
+    if (isConnected && !isSpeaking && wasActive && nowIdle) {
+      console.log('[KeynoteProtoL] Recording/processing ended, restarting listen in 300ms');
+      const timer = setTimeout(() => {
+        console.log('[KeynoteProtoL] Restarting listen now');
+        startListening();
+      }, 300);
       return () => clearTimeout(timer);
     }
+    
+    // Update refs AFTER checking
     wasListeningRef.current = isListening;
+    wasProcessingRef.current = isProcessing;
   }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
 
   const handleStart = () => {

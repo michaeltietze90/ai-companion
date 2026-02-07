@@ -68,13 +68,19 @@ const KeynoteProtoM = () => {
 
   // Re-start listening if recording stopped but no message was sent
   const wasListeningRef = useRef(false);
+  const wasProcessingRef = useRef(false);
   useEffect(() => {
-    if (isConnected && !isSpeaking && wasListeningRef.current && !isListening && !isProcessing) {
-      console.log('[KeynoteProtoM] Recording ended without sending, restarting listen');
+    const wasActive = wasListeningRef.current || wasProcessingRef.current;
+    const nowIdle = !isListening && !isProcessing;
+    
+    if (isConnected && !isSpeaking && wasActive && nowIdle) {
+      console.log('[KeynoteProtoM] Recording/processing ended, restarting listen in 300ms');
       const timer = setTimeout(() => startListening(), 300);
       return () => clearTimeout(timer);
     }
+    
     wasListeningRef.current = isListening;
+    wasProcessingRef.current = isProcessing;
   }, [isListening, isProcessing, isSpeaking, isConnected, startListening]);
 
   const handleStart = () => {

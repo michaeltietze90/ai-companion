@@ -98,6 +98,11 @@ router.post('/', async (req, res) => {
   try {
     const { sessionId, message, messagesStreamUrl, streaming } = req.body;
 
+    console.log('[Agentforce] ======= NEW MESSAGE =======');
+    console.log('[Agentforce] Session:', sessionId);
+    console.log('[Agentforce] User message:', message);
+    console.log('[Agentforce] Streaming:', streaming);
+
     if (!sessionId || !message) {
       throw new Error('Session ID and message are required');
     }
@@ -109,6 +114,8 @@ router.post('/', async (req, res) => {
     const streamUrl = (typeof messagesStreamUrl === 'string' && messagesStreamUrl.trim())
       ? messagesStreamUrl
       : `${sfApiHost}/einstein/ai-agent/v1/sessions/${sessionId}/messages/stream`;
+
+    console.log('[Agentforce] Sending to:', streamUrl);
 
     const sfResponse = await fetch(streamUrl, {
       method: 'POST',
@@ -218,6 +225,7 @@ router.post('/', async (req, res) => {
                   if (!sentence) continue;
                   if (emittedSentences.has(sentence)) continue;
                   emittedSentences.add(sentence);
+                  console.log('[Agentforce] Emitting sentence:', sentence);
                   res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
                 }
                 
@@ -232,8 +240,13 @@ router.post('/', async (req, res) => {
         const remaining = normalizeSentence(textBuffer);
         if (remaining && !emittedSentences.has(remaining)) {
           emittedSentences.add(remaining);
+          console.log('[Agentforce] Emitting final sentence:', remaining);
           res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
         }
+        
+        console.log('[Agentforce] ======= STREAM COMPLETE =======');
+        console.log('[Agentforce] Total sentences emitted:', emittedSentences.size);
+        console.log('[Agentforce] Sentences:', [...emittedSentences]);
         
         res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
         res.end();
