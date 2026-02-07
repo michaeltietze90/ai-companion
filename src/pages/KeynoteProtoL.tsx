@@ -30,6 +30,7 @@ const KeynoteProtoL = () => {
     isConnected,
     isConnecting: isAvatarConnecting,
     isSpeaking,
+    isThinking,
     startConversation,
     sendMessage,
   } = useScopedAvatarConversation({
@@ -117,18 +118,18 @@ const KeynoteProtoL = () => {
               className={`w-3 h-3 rounded-full ${
                 isSpeaking 
                   ? 'bg-green-400' 
-                  : isProcessing 
+                  : (isThinking || isProcessing)
                     ? 'bg-amber-400' 
                     : isListening 
                       ? 'bg-green-400' 
                       : 'bg-gray-400'
               }`}
-              animate={(isListening || isProcessing) ? { 
+              animate={(isListening || isThinking || isProcessing) ? { 
                 scale: [1, 1.3, 1],
                 opacity: [0.7, 1, 0.7]
               } : {}}
               transition={{ 
-                duration: isProcessing ? 0.8 : 1.5, 
+                duration: (isThinking || isProcessing) ? 0.8 : 1.5, 
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
@@ -136,7 +137,7 @@ const KeynoteProtoL = () => {
             <span className="text-white/80 text-xl font-light tracking-wide">
               {isSpeaking 
                 ? 'Speaking' 
-                : isProcessing 
+                : (isThinking || isProcessing)
                   ? 'Thinking...' 
                   : isListening 
                     ? 'Listening' 
