@@ -238,6 +238,9 @@ router.post('/', async (req, res) => {
       const emittedSentences = new Set();
       const normalizeSentence = (s) => String(s || '').replace(/\s+/g, ' ').trim();
       
+      // Track if response looks like structured JSON - if so, don't split
+      let looksLikeJson = false;
+      
       const reader = sfResponse.body.getReader();
       const decoder = new TextDecoder();
       
@@ -298,43 +301,33 @@ router.post('/', async (req, res) => {
                 textBuffer += (needsSpace ? ' ' : '') + next;
                 accumulatedFromAPI = result.fullChunk;
                 
-                // Use JSON-aware splitting
-                const segments = splitPreservingJson(textBuffer);
-                
-                // Emit all complete segments except the last one (which may be incomplete)
-                // But if we have JSON, we can emit it immediately as it's self-contained
-                let lastIncompleteText = '';
-                
-                for (let i = 0; i < segments.length; i++) {
-                  const segment = segments[i];
-                  const isLast = i === segments.length - 1;
-                  
-                  if (segment.type === 'json') {
-                    // JSON is always complete, emit it
-                    const jsonStr = segment.content;
-                    if (!emittedSentences.has(jsonStr)) {
-                      emittedSentences.add(jsonStr);
-                      console.log('[Agentforce] Emitting JSON:', jsonStr);
-                      res.write(`data: ${JSON.stringify({ type: 'sentence', text: jsonStr })}\n\n`);
-                    }
-                  } else if (segment.type === 'text') {
-                    const sentence = normalizeSentence(segment.content);
-                    if (!sentence) continue;
-                    
-                    // Keep last text segment as potentially incomplete (buffered)
-                    if (isLast) {
-                      lastIncompleteText = segment.content;
-                    } else {
-                      if (!emittedSentences.has(sentence)) {
-                        emittedSentences.add(sentence);
-                        console.log('[Agentforce] Emitting sentence:', sentence);
-                        res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
-                      }
-                    }
+                // Detect if this is a structured JSON response (starts with { and contains "response")
+                // If so, DON'T split - wait until stream is complete and emit as single unit
+                if (!looksLikeJson && textBuffer.trim().startsWith('{')) {
+                  if (textBuffer.includes('"response"') || textBuffer.includes("'response'")) {
+                    looksLikeJson = true;
+                    console.log('[Agentforce] Detected structured JSON response - will emit as single unit');
                   }
                 }
                 
-                textBuffer = lastIncompleteText;
+                // If it's JSON, don't emit anything yet - wait for complete response
+                if (looksLikeJson) {
+                  continue;
+                }
+                
+                // Regular text: split into sentences for faster TTS
+                const parts = textBuffer.split(CLAUSE_END_RE);
+                
+                for (let i = 0; i < parts.length - 1; i++) {
+                  const sentence = normalizeSentence(parts[i]);
+                  if (!sentence) continue;
+                  if (emittedSentences.has(sentence)) continue;
+                  emittedSentences.add(sentence);
+                  console.log('[Agentforce] Emitting sentence:', sentence);
+                  res.write(`data: ${JSON.stringify({ type: 'sentence', text: sentence })}\n\n`);
+                }
+                
+                textBuffer = parts[parts.length - 1];
               }
             } catch {
               // Skip malformed JSON
@@ -342,11 +335,41 @@ router.post('/', async (req, res) => {
           }
         }
         
-        const remaining = normalizeSentence(textBuffer);
-        if (remaining && !emittedSentences.has(remaining)) {
-          emittedSentences.add(remaining);
-          console.log('[Agentforce] Emitting final sentence:', remaining);
-          res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
+        // Combine any remaining buffer with what we've accumulated
+        const finalText = (accumulatedFromAPI || textBuffer).trim();
+        
+        // Check if the ENTIRE response is a JSON object
+        // If so, emit it as a single unit (don't split at all)
+        if (finalText.startsWith('{') && finalText.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(finalText);
+            if (parsed.response !== undefined) {
+              // This is a structured JSON response - emit as single unit
+              console.log('[Agentforce] Detected structured JSON response, emitting as single unit');
+              if (!emittedSentences.has(finalText)) {
+                emittedSentences.clear(); // Clear any partial emissions
+                emittedSentences.add(finalText);
+                console.log('[Agentforce] Emitting full JSON:', finalText);
+                res.write(`data: ${JSON.stringify({ type: 'sentence', text: finalText })}\n\n`);
+              }
+            }
+          } catch {
+            // Not valid JSON, emit remaining as normal
+            const remaining = normalizeSentence(textBuffer);
+            if (remaining && !emittedSentences.has(remaining)) {
+              emittedSentences.add(remaining);
+              console.log('[Agentforce] Emitting final sentence:', remaining);
+              res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
+            }
+          }
+        } else {
+          // Not JSON, emit remaining buffer as normal
+          const remaining = normalizeSentence(textBuffer);
+          if (remaining && !emittedSentences.has(remaining)) {
+            emittedSentences.add(remaining);
+            console.log('[Agentforce] Emitting final sentence:', remaining);
+            res.write(`data: ${JSON.stringify({ type: 'sentence', text: remaining })}\n\n`);
+          }
         }
         
         console.log('[Agentforce] ======= STREAM COMPLETE =======');
