@@ -7,6 +7,8 @@ import type { ConversationState } from '@/stores/createConversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useVideoCallEscalationStore } from '@/stores/videoCallEscalationStore';
 import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
+import { useScoreOverlayStore } from '@/stores/scoreOverlayStore';
+import { useCountdownStore } from '@/stores/countdownStore';
 import type { AppVoiceSettings } from '@/stores/appVoiceSettingsStore';
 import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/lib/richResponseParser';
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
@@ -100,6 +102,8 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const { show: showVideoCallEscalation } = useVideoCallEscalationStore();
   const { hideSlide } = useSlideOverlayStore();
+  const { hideScore } = useScoreOverlayStore();
+  const { stopCountdown } = useCountdownStore();
   const { executeActions, applyData } = useStructuredActions();
 
   const maybeToastElevenLabsError = useCallback((err: unknown) => {
@@ -466,10 +470,18 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
             const structured = parseStructuredResponse(fullResponse);
             addStreamingSentence(structured.speechText);
             
-            // Auto-hide slide unless this message explicitly shows a new slide
-            const hasSlideAction = structured.actions.some(a => a.type === 'slide');
-            if (!hasSlideAction) {
+            // Auto-hide overlays unless this message explicitly includes them
+            // This prevents stale overlays from staying visible when moving to a new topic
+            const actionTypes = new Set(structured.actions.map(a => a.type));
+            
+            if (!actionTypes.has('slide')) {
               hideSlide();
+            }
+            if (!actionTypes.has('score')) {
+              hideScore();
+            }
+            if (!actionTypes.has('countdown')) {
+              stopCountdown();
             }
             
             if (structured.actions.length > 0) {
@@ -536,7 +548,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       setThinking(false);
       isProcessingMessageRef.current = false; // Allow new messages
     }
-  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation, hideSlide]);
+  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation, hideSlide, hideScore, stopCountdown]);
 
   // Interrupt avatar speech and clear queue
   const interruptAvatar = useCallback(async () => {
