@@ -50,7 +50,7 @@ export function VisualOverlay({ visuals, onVisualComplete, onAllComplete }: Visu
         setActiveVisuals(prev => prev.filter(v => v.id !== visual.id));
         setCompletedCount(c => c + 1);
         onVisualComplete?.(visual.id);
-      }, 500); // exit animation duration
+      }, 700); // exit animation duration (matches 0.6s transition + buffer)
     }, visual.duration);
 
     return hideTimeout;
@@ -104,7 +104,7 @@ export function VisualOverlay({ visuals, onVisualComplete, onAllComplete }: Visu
               initial={{ opacity: 0 }}
               animate={{ opacity: visual.isVisible ? 1 : 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: isAvatarOverlay ? 0.15 : 0.4, ease: 'easeInOut' }}
+              transition={{ duration: isAvatarOverlay ? 0.6 : 0.5, ease: 'easeInOut' }}
             >
               {isAvatarOverlay ? (
                 // Avatar overlay: fullscreen, no styling, seamless blend
@@ -131,13 +131,13 @@ export function VisualOverlay({ visuals, onVisualComplete, onAllComplete }: Visu
               ) : (
                 // Regular overlay with animations and styling
                 <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
+                  initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ 
-                    scale: visual.isVisible ? 1 : 0.95, 
+                    scale: visual.isVisible ? 1 : 0.98, 
                     opacity: visual.isVisible ? 1 : 0 
                   }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  transition={{ duration: 0.6, ease: 'easeInOut' }}
                   className="max-w-[80vw] max-h-[80vh]"
                 >
                   {visual.type === 'video' ? (

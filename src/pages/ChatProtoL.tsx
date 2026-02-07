@@ -103,7 +103,7 @@ const ChatProtoL = () => {
           <Button
             size="lg"
             variant="ghost"
-            className={`w-28 h-28 rounded-full ${
+            className={`w-48 h-48 rounded-full ${
               isListening 
                 ? 'bg-blue-500 hover:bg-blue-600' 
                 : 'bg-gray-600 hover:bg-gray-500'
@@ -111,9 +111,9 @@ const ChatProtoL = () => {
             onClick={toggleListening}
           >
             {isListening ? (
-              <Mic className="w-14 h-14 text-white" />
+              <Mic className="w-24 h-24 text-white" />
             ) : (
-              <MicOff className="w-14 h-14 text-white" />
+              <MicOff className="w-24 h-24 text-white" />
             )}
           </Button>
         </motion.div>

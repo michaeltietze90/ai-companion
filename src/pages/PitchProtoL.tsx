@@ -115,7 +115,7 @@ const PitchProtoL = () => {
           <Button
             size="lg"
             variant="ghost"
-            className={`w-32 h-32 rounded-full ${
+            className={`w-52 h-52 rounded-full ${
               isListening 
                 ? 'bg-purple-500 hover:bg-purple-600' 
                 : 'bg-gray-600 hover:bg-gray-500'
@@ -123,9 +123,9 @@ const PitchProtoL = () => {
             onClick={toggleListening}
           >
             {isListening ? (
-              <Mic className="w-16 h-16 text-white" />
+              <Mic className="w-28 h-28 text-white" />
             ) : (
-              <MicOff className="w-16 h-16 text-white" />
+              <MicOff className="w-28 h-28 text-white" />
             )}
           </Button>
         </motion.div>
