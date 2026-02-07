@@ -2,9 +2,7 @@ import { useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
-import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
@@ -39,7 +37,6 @@ const KeynoteProtoL = () => {
   });
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoL] Voice transcript:', transcript);
@@ -65,7 +62,6 @@ const KeynoteProtoL = () => {
         transformOrigin: 'top left',
       }}
     >
-      <VideoCallEscalationOverlay isVisible={isVideoCallVisible} onClose={hideVideoCall} duration={videoCallDuration} />
       <VisualOverlay visuals={activeVisuals} />
 
       <main className="absolute inset-0 z-10">

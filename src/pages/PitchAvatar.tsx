@@ -4,12 +4,10 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
-import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { ScoreOverlay } from "@/components/Overlay/ScoreOverlay";
 import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { useCountdownStore } from "@/stores/countdownStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
@@ -132,16 +130,9 @@ const PitchAvatarMain = () => {
     }
   };
 
-  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-purple-950/20 via-background to-pink-950/20">
-      {/* Video Call Escalation Overlay */}
-      <VideoCallEscalationOverlay 
-        isVisible={isVideoCallVisible} 
-        onClose={hideVideoCall} 
-        duration={videoCallDuration} 
-      />
       
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />

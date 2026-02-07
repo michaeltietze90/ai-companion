@@ -4,10 +4,8 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import ProtoMDevice from "@/components/ProtoMDevice/ProtoMDevice";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
-import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2, Hand } from "lucide-react";
@@ -121,16 +119,9 @@ const KeynoteAvatarMain = () => {
     }
   };
 
-  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-orange-950/20 via-background to-amber-950/20">
-      {/* Video Call Escalation Overlay */}
-      <VideoCallEscalationOverlay 
-        isVisible={isVideoCallVisible} 
-        onClose={hideVideoCall} 
-        duration={videoCallDuration} 
-      />
       
       {/* Visual Overlay Layer */}
       <VisualOverlay visuals={activeVisuals} />

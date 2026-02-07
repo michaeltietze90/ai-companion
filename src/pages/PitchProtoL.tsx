@@ -2,13 +2,11 @@ import { useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
-import { VideoCallEscalationOverlay } from "@/components/Overlay/VideoCallEscalationOverlay";
 import { CountdownOverlay } from "@/components/Overlay/CountdownOverlay";
 import { ScoreOverlay } from "@/components/Overlay/ScoreOverlay";
 import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { useVideoCallEscalationStore } from "@/stores/videoCallEscalationStore";
 import { useCountdownStore } from "@/stores/countdownStore";
 import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { Play, Loader2, Mic, MicOff } from "lucide-react";
@@ -45,7 +43,6 @@ const PitchProtoL = () => {
   });
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { isVisible: isVideoCallVisible, hide: hideVideoCall, duration: videoCallDuration } = useVideoCallEscalationStore();
   const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
@@ -90,7 +87,6 @@ const PitchProtoL = () => {
         transformOrigin: 'top left',
       }}
     >
-      <VideoCallEscalationOverlay isVisible={isVideoCallVisible} onClose={hideVideoCall} duration={videoCallDuration} />
       <VisualOverlay visuals={activeVisuals} />
 
       <main className="absolute inset-0 z-10">

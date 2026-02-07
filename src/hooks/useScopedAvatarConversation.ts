@@ -5,7 +5,6 @@ import { createHeyGenToken, speakText, stopStreaming, interruptSpeaking } from '
 import { ElevenLabsTTSError, synthesizeSpeech } from '@/services/elevenLabsTTS';
 import type { ConversationState } from '@/stores/createConversationStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
-import { useVideoCallEscalationStore } from '@/stores/videoCallEscalationStore';
 import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
 import { useScoreOverlayStore } from '@/stores/scoreOverlayStore';
 import { useCountdownStore } from '@/stores/countdownStore';
@@ -100,7 +99,6 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   }, [messagesStreamUrl]);
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
-  const { show: showVideoCallEscalation } = useVideoCallEscalationStore();
   const { hideSlide } = useSlideOverlayStore();
   const { hideScore } = useScoreOverlayStore();
   const { stopCountdown } = useCountdownStore();
@@ -401,9 +399,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
           startVisuals(triggerVisuals);
         }
         
-        if (hardcodedTrigger.customOverlay === 'video-call-escalation') {
-          showVideoCallEscalation(hardcodedTrigger.customOverlayDuration ?? 0);
-        }
+        // Video call escalation removed
         
         setThinking(false);
         
@@ -548,7 +544,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       setThinking(false);
       isProcessingMessageRef.current = false; // Allow new messages
     }
-  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, showVideoCallEscalation, hideSlide, hideScore, stopCountdown]);
+  }, [speakSentenceNoInterrupt, speakViaProxy, startVisuals, addMessage, setThinking, setLastAgentforceResponse, setSessionId, setMessagesStreamUrl, addStreamingSentence, clearStreamingSentences, executeActions, applyData, useJsonMode, defaultAgentId, setSpeaking, hideSlide, hideScore, stopCountdown]);
 
   // Interrupt avatar speech and clear queue
   const interruptAvatar = useCallback(async () => {
