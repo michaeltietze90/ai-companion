@@ -146,14 +146,14 @@ const PitchProtoL = () => {
         </div>
       )}
 
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-16">
-        <motion.div
-          className="flex items-center justify-center gap-12"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {!isConnected && (
+      {!isConnected && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          <motion.div
+            className="flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             <Button
               size="lg"
               className="px-32 py-16 text-4xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/30 rounded-3xl"
@@ -172,9 +172,9 @@ const PitchProtoL = () => {
                 </>
               )}
             </Button>
-          )}
-        </motion.div>
-      </footer>
+          </motion.div>
+        </div>
+      )}
       
       <style>{`
         :root {
