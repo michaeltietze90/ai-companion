@@ -16,8 +16,8 @@ export const VOICE_CONFIG = {
     
     /** RMS threshold below which audio is considered silence (0-1 range) 
      *  Higher values require louder audio to count as "speech"
-     *  0.015 helps filter out ambient noise that might false-trigger hasSpoken */
-    rmsThreshold: 0.015,
+     *  0.025 helps filter out ambient noise and avatar audio bleed */
+    rmsThreshold: 0.025,
   },
 
   /**
