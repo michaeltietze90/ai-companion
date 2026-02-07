@@ -325,20 +325,29 @@ export function useSilenceTranscription(
         if (discard) return;
 
         const blob = new Blob(recordedChunks, { type: chosenMime?.split(";")[0] || "audio/webm" });
+        
+        // Calculate actual recording duration from when recording started
+        const actualDurationMs = Date.now() - recordingStartedAt;
+        const actualDurationSec = actualDurationMs / 1000;
+        
+        // Filter out recordings that are too small or too short
         if (blob.size < recording.minBlobSize) {
           console.log(`[STT] Ignoring tiny recording: ${blob.size} bytes (min: ${recording.minBlobSize})`);
-          return; // ignore tiny recordings
+          return;
+        }
+        
+        if (actualDurationMs < recording.minValidDurationMs) {
+          console.log(`[STT] Ignoring short recording: ${actualDurationMs}ms (min: ${recording.minValidDurationMs}ms)`);
+          return;
         }
 
-        // Calculate actual recording duration from when recording started
-        const actualDuration = (Date.now() - recordingStartedAt) / 1000;
-        console.log(`[STT] Sending ${blob.size} bytes (recorded for ${actualDuration.toFixed(1)}s) to Deepgram`);
+        console.log(`[STT] Sending ${blob.size} bytes (recorded for ${actualDurationSec.toFixed(1)}s) to Deepgram`);
 
         setIsProcessing(true);
         try {
           const text = await transcribe(blob);
           if (!text || text.trim().length === 0) {
-            console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${actualDuration.toFixed(1)}s)`);
+            console.warn(`[STT] Deepgram returned empty transcription for ${blob.size} byte audio (${actualDurationSec.toFixed(1)}s)`);
             // Show subtle feedback so user knows to try again
             toast.info("Couldn't understand. Please try again.");
             return;

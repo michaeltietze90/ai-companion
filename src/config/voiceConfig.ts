@@ -29,12 +29,17 @@ export const VOICE_CONFIG = {
     /** Maximum recording duration in countdown/pitch mode (milliseconds) */
     maxCountdownMs: 60_000,
     
-    /** Minimum blob size to process (bytes) - smaller recordings are ignored */
-    minBlobSize: 1024,
+    /** Minimum blob size to process (bytes) - smaller recordings are ignored
+     *  ~2KB is roughly 0.1s of audio, so this filters out near-empty recordings */
+    minBlobSize: 2048,
     
     /** Minimum recording duration before silence detection can stop (milliseconds)
      *  Prevents false stops from brief ambient noise */
     minDurationBeforeSilenceStop: 500,
+    
+    /** Minimum duration (ms) for a recording to be considered valid speech
+     *  Recordings shorter than this are discarded (likely just noise trigger) */
+    minValidDurationMs: 800,
   },
 
   /**
