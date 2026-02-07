@@ -8,19 +8,18 @@ import { Button } from "@/components/ui/button";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
-import { useVadTranscription } from "@/hooks/useVadTranscription";
+import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 
 /**
  * Keynote Proto L Fullscreen Page
  * Resolution: 2160x3840 (9:16 portrait, 4K)
  * 
- * Uses VAD (Voice Activity Detection) for efficient speech capture:
- * 1. VAD monitors mic continuously with ML model
- * 2. Only records when actual speech is detected
- * 3. Stops recording when speech ends
- * 4. Sends to Deepgram only when there's real speech
- * 5. While agent speaks: VAD paused, but can trigger barge-in
+ * Uses Deepgram Streaming with built-in VAD:
+ * 1. Streams audio continuously to Deepgram
+ * 2. Deepgram's endpointing detects speech end
+ * 3. speech_final triggers transcript send
+ * 4. While agent speaks: streaming paused, but can trigger barge-in
  */
 const KeynoteProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -29,7 +28,7 @@ const KeynoteProtoL = () => {
 
   const {
     isConnected,
-    isConnecting,
+    isConnecting: isAvatarConnecting,
     isSpeaking,
     startConversation,
     sendMessage,
@@ -54,38 +53,42 @@ const KeynoteProtoL = () => {
     interruptAvatar();
   }, [interruptAvatar]);
 
-  // VAD-based voice input - much more efficient than RMS-based
-  const { isListening, isProcessing, isSpeechActive, isLoading, startListening, stopListening } = useVadTranscription(
+  // Deepgram streaming with built-in VAD - much simpler than client-side VAD
+  const { 
+    isListening, 
+    isConnecting: isVoiceConnecting, 
+    isProcessing, 
+    startListening, 
+    stopListening 
+  } = useDeepgramStreaming(
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
       onBargeIn: handleBargeIn,
+      utteranceEndMs: 1000, // 1 second silence = end of utterance
     }
   );
 
   // Track previous speaking state for auto-listen
   const wasSpeakingRef = useRef(false);
 
-  // Auto-start VAD when avatar finishes speaking
+  // Auto-start streaming when avatar finishes speaking
   useEffect(() => {
     if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      console.log('[KeynoteProtoL] Avatar stopped speaking, starting VAD');
+      console.log('[KeynoteProtoL] Avatar stopped speaking, starting Deepgram stream');
       startListening();
     }
     wasSpeakingRef.current = isSpeaking;
   }, [isSpeaking, isConnected, startListening]);
 
-  // Stop VAD when avatar starts speaking
-  useEffect(() => {
-    if (isSpeaking && isListening) {
-      console.log('[KeynoteProtoL] Avatar started speaking, pausing VAD');
-      stopListening();
-    }
-  }, [isSpeaking, isListening, stopListening]);
+  // Stop streaming when avatar starts speaking (but keep connection for barge-in)
+  // Actually, we'll keep streaming for barge-in detection - just won't send transcripts
 
   const handleStart = () => {
     startConversation(videoRef.current);
   };
+  
+  const isConnectingAny = isAvatarConnecting || isVoiceConnecting;
 
   return (
     <div 
@@ -107,7 +110,7 @@ const KeynoteProtoL = () => {
         />
       </main>
 
-      {/* Status indicator - VAD-based */}
+      {/* Status indicator - Deepgram streaming */}
       {isConnected && (
         <motion.div
           className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
@@ -121,19 +124,17 @@ const KeynoteProtoL = () => {
                 ? 'bg-amber-500' 
                 : isProcessing
                   ? 'bg-blue-500'
-                  : isSpeechActive
-                    ? 'bg-red-500 animate-pulse'
-                    : isListening 
-                      ? 'bg-green-500' 
-                      : isLoading
-                        ? 'bg-gray-500'
-                        : 'bg-gray-600'
+                  : isListening 
+                    ? 'bg-green-500' 
+                    : isVoiceConnecting
+                      ? 'bg-gray-500 animate-pulse'
+                      : 'bg-gray-600'
             }`}
           >
             {isSpeaking ? (
               <MicOff className="w-24 h-24 text-white" />
             ) : (
-              <Mic className={`w-24 h-24 text-white ${isSpeechActive ? 'scale-110' : ''}`} />
+              <Mic className={`w-24 h-24 text-white ${isListening ? 'animate-pulse' : ''}`} />
             )}
           </div>
           <div className="text-center mt-4 text-white text-lg">
@@ -141,13 +142,11 @@ const KeynoteProtoL = () => {
               ? 'Agent Speaking' 
               : isProcessing 
                 ? 'Processing...'
-                : isSpeechActive 
-                  ? 'Recording...' 
-                  : isListening 
-                    ? 'Listening' 
-                    : isLoading
-                      ? 'Loading VAD...'
-                      : 'Ready'}
+                : isListening 
+                  ? 'Listening' 
+                  : isVoiceConnecting
+                    ? 'Connecting...'
+                    : 'Ready'}
           </div>
         </motion.div>
       )}
@@ -159,9 +158,9 @@ const KeynoteProtoL = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className={`w-6 h-6 rounded-full ${isConnecting ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
+            <div className={`w-6 h-6 rounded-full ${isConnectingAny ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
             <span className="text-2xl text-muted-foreground">
-              {isConnecting ? 'Connecting...' : 'Keynote Ready'}
+              {isConnectingAny ? 'Connecting...' : 'Keynote Ready'}
             </span>
           </motion.div>
         </div>
@@ -179,9 +178,9 @@ const KeynoteProtoL = () => {
               size="lg"
               className="px-24 py-12 text-3xl bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold shadow-lg shadow-primary/30 rounded-3xl"
               onClick={handleStart}
-              disabled={isConnecting}
+              disabled={isConnectingAny}
             >
-              {isConnecting ? (
+              {isConnectingAny ? (
                 <>
                   <Loader2 className="w-10 h-10 mr-6 animate-spin" />
                   Connecting...

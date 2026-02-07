@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useMicVAD, utils } from "@ricky0123/vad-web";
+import { useMicVAD, utils } from "@ricky0123/vad-react";
 import { toast } from "sonner";
 
 type UseVadTranscriptionOptions = {
