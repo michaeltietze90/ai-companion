@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import HologramAvatar from "@/components/Avatar/HologramAvatar";
 import { VisualOverlay } from "@/components/Overlay/VisualOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
-import { Play, Loader2, Mic, MicOff } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useKeynoteConversationStore } from "@/stores/createConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
@@ -103,43 +103,41 @@ const KeynoteProtoL = () => {
         />
       </main>
 
-      {/* Status indicator - Deepgram streaming */}
+      {/* Subtle status indicator */}
       {isConnected && (
         <motion.div
-          className="absolute top-1/2 -translate-y-1/2 right-16 z-30"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div
-            className={`w-48 h-48 rounded-full flex items-center justify-center transition-colors ${
-              isSpeaking 
-                ? 'bg-amber-500' 
-                : isProcessing
-                  ? 'bg-blue-500'
+          <div className="flex items-center gap-4 px-8 py-4 rounded-full bg-black/40 backdrop-blur-sm">
+            {/* Subtle animated dot */}
+            <motion.div
+              className={`w-3 h-3 rounded-full ${
+                isSpeaking 
+                  ? 'bg-amber-400' 
                   : isListening 
-                    ? 'bg-green-500' 
-                    : isVoiceConnecting
-                      ? 'bg-gray-500 animate-pulse'
-                      : 'bg-gray-600'
-            }`}
-          >
-            {isSpeaking ? (
-              <MicOff className="w-24 h-24 text-white" />
-            ) : (
-              <Mic className={`w-24 h-24 text-white ${isListening ? 'animate-pulse' : ''}`} />
-            )}
-          </div>
-          <div className="text-center mt-4 text-white text-lg">
-            {isSpeaking 
-              ? 'Agent Speaking' 
-              : isProcessing 
-                ? 'Processing...'
+                    ? 'bg-green-400' 
+                    : 'bg-gray-400'
+              }`}
+              animate={isListening ? { 
+                scale: [1, 1.3, 1],
+                opacity: [0.7, 1, 0.7]
+              } : {}}
+              transition={{ 
+                duration: 1.5, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            <span className="text-white/80 text-xl font-light tracking-wide">
+              {isSpeaking 
+                ? 'Thinking...' 
                 : isListening 
                   ? 'Listening' 
-                  : isVoiceConnecting
-                    ? 'Connecting...'
-                    : 'Ready'}
+                  : 'Ready'}
+            </span>
           </div>
         </motion.div>
       )}
