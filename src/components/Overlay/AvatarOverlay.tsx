@@ -59,7 +59,7 @@ export function AvatarOverlay() {
             next.delete(visual.id);
             return next;
           });
-        }, 200);
+        }, 800); // Wait for fade animation to complete
       }, visual.duration);
     });
   }, [avatarVisualIds, processedIds, markVisualComplete]);
@@ -75,7 +75,7 @@ export function AvatarOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: visual.isVisible ? 1 : 0 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15, ease: 'easeInOut' }}
+          transition={{ duration: 0.7, ease: 'easeInOut' }}
         >
           {visual.type === 'video' ? (
             <video
