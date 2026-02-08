@@ -81,7 +81,6 @@ export function AvatarOverlay() {
             <video
               src={visual.src}
               autoPlay
-              muted
               loop={false}
               playsInline
               className="w-full h-full object-cover"
