@@ -156,6 +156,8 @@ export function useDeepgramStreaming(
         // High priority - x3 boost
         { word: "Agentforce", boost: 3 },
         { word: "CKO", boost: 3 },
+        { word: "Backflip", boost: 3 },
+        { word: "Net New AOV", boost: 3 },
         
         // Standard priority - x2 boost
         { word: "Data 360", boost: 2 },
