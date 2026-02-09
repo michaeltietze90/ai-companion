@@ -192,7 +192,7 @@ const PitchProtoL = () => {
           >
             <div className={`w-6 h-6 rounded-full ${isConnecting ? 'bg-amber-400' : 'bg-purple-500'} animate-pulse`} />
             <span className="text-2xl text-muted-foreground">
-              {isConnecting ? 'Connecting...' : 'Pitch Ready'}
+              {isConnecting ? 'Connecting...' : 'Ready'}
             </span>
           </motion.div>
         </div>
@@ -220,7 +220,7 @@ const PitchProtoL = () => {
               ) : (
                 <>
                   <Play className="w-12 h-12 mr-6" />
-                  Start Pitch
+                  Chat with Miguel
                 </>
               )}
             </Button>
