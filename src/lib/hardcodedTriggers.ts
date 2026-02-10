@@ -6,8 +6,7 @@
  */
 
 import backflipVideo from '@/assets/Miguel_Backflip.mp4';
-import superpowerVideo from '@/assets/Miguel_Superpower.mp4';
-import dancingVideo from '@/assets/Miguel_Dancing.mp4';
+import superpowerVideo from '@/assets/Miguel_Superhero_Speech.mp4';
 
 export type TriggerPosition = 
   | 'center' | 'top' | 'bottom' | 'left' | 'right' 
@@ -52,19 +51,10 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     },
   },
   {
-    keywords: ['superpower', 'super power'],
+    keywords: ['net new aov', 'net new a.o.v', 'net new a o v', 'netnew aov'],
     speech: '', // Silent - just play the video
     video: {
       src: superpowerVideo,
-      duration: 10000, // 10s to allow for loading + 7.9s video
-      position: 'avatar', // Seamless overlay on avatar
-    },
-  },
-  {
-    keywords: ['bunny'],
-    speech: '', // Silent - just play the video
-    video: {
-      src: dancingVideo,
       duration: 10000, // 10s to allow for loading + 7.9s video
       position: 'avatar', // Seamless overlay on avatar
     },

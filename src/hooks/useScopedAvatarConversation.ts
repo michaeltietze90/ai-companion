@@ -368,7 +368,9 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
 
     try {
       // Check hardcoded triggers first
+      console.log('[sendMessage] Checking triggers for text:', text);
       const hardcodedTrigger = findHardcodedTrigger(text);
+      console.log('[sendMessage] Trigger found:', hardcodedTrigger ? hardcodedTrigger.keywords[0] : 'none');
       if (hardcodedTrigger) {
         addMessage({ role: 'assistant', content: hardcodedTrigger.speech });
         setLastAgentforceResponse(hardcodedTrigger.speech);
