@@ -6,6 +6,7 @@
  */
 
 import backflipVideo from '@/assets/Miguel_Backflip.mp4';
+import superpowerVideo from '@/assets/Miguel_Superpower.mp4';
 
 export type TriggerPosition = 
   | 'center' | 'top' | 'bottom' | 'left' | 'right' 
@@ -46,6 +47,15 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     video: {
       src: backflipVideo,
       duration: 5000,
+      position: 'avatar', // Seamless overlay on avatar
+    },
+  },
+  {
+    keywords: ['superpower', 'super power'],
+    speech: '', // Silent - just play the video
+    video: {
+      src: superpowerVideo,
+      duration: 8000,
       position: 'avatar', // Seamless overlay on avatar
     },
   },
