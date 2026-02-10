@@ -12,6 +12,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+type KeywordBoost = {
+  word: string;
+  boost: number;
+};
+
 type UseDeepgramStreamingOptions = {
   /**
    * When true, pause streaming (e.g., while avatar is speaking)
@@ -33,6 +38,12 @@ type UseDeepgramStreamingOptions = {
    * For longer recordings (like pitch mode), use higher values (e.g., 5000ms)
    */
   endpointingMs?: number;
+
+  /**
+   * Custom keywords to boost for speech recognition.
+   * If provided, these REPLACE the default keywords entirely.
+   */
+  keywords?: KeywordBoost[];
 };
 
 const DEEPGRAM_WS_URL = "wss://api.deepgram.com/v1/listen";
@@ -41,7 +52,7 @@ export function useDeepgramStreaming(
   onTranscript: (text: string) => void,
   options: UseDeepgramStreamingOptions = {}
 ) {
-  const { disabled = false, onBargeIn, utteranceEndMs = 1000, endpointingMs = 500 } = options;
+  const { disabled = false, onBargeIn, utteranceEndMs = 1000, endpointingMs = 500, keywords: customKeywords } = options;
 
   const [isListening, setIsListening] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -158,7 +169,8 @@ export function useDeepgramStreaming(
       
       // Add keyword boosting for brand names, customer names, and industry terms
       // Format: "word:boost" where boost is 1-5 (higher = more likely to recognize)
-      const keywords: { word: string; boost: number }[] = [
+      // Use custom keywords if provided, otherwise use default list
+      const defaultKeywords: KeywordBoost[] = [
         // High priority - x3 boost
         { word: "Agentforce", boost: 3 },
         { word: "CKO", boost: 3 },
@@ -262,7 +274,8 @@ export function useDeepgramStreaming(
         { word: "Zota Payment Services", boost: 2 },
       ];
       
-      keywords.forEach(({ word, boost }) => {
+      const keywordsToUse = customKeywords || defaultKeywords;
+      keywordsToUse.forEach(({ word, boost }) => {
         params.append("keywords", `${word}:${boost}`);
       });
 

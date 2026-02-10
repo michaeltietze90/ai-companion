@@ -51,6 +51,20 @@ const KeynoteProtoM = () => {
   }, [sendMessage]);
 
   // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
+  // Keynote-specific keywords for the 4 expected phrases
+  const keynoteKeywords = [
+    { word: "Are you Miguel", boost: 5 },
+    { word: "Miguel", boost: 4 },
+    { word: "agentic enterprise", boost: 5 },
+    { word: "agentic", boost: 4 },
+    { word: "enterprise", boost: 3 },
+    { word: "net new AOV", boost: 5 },
+    { word: "net new", boost: 4 },
+    { word: "AOV", boost: 4 },
+    { word: "backflip", boost: 5 },
+    { word: "back flip", boost: 5 },
+  ];
+
   const { 
     isListening, 
     isConnecting: isVoiceConnecting, 
@@ -62,6 +76,7 @@ const KeynoteProtoM = () => {
     { 
       disabled: isSpeaking,
       utteranceEndMs: 1000, // 1 second silence = end of utterance
+      keywords: keynoteKeywords,
     }
   );
 
