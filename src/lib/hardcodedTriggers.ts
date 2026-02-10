@@ -88,3 +88,41 @@ export function findHardcodedTrigger(userInput: string): HardcodedTrigger | null
   
   return null;
 }
+
+/**
+ * Get all video URLs from hardcoded triggers for preloading.
+ */
+export function getTriggerVideoUrls(): string[] {
+  return HARDCODED_TRIGGERS
+    .filter(t => t.video?.src)
+    .map(t => t.video!.src);
+}
+
+/**
+ * Preload all trigger videos into browser cache.
+ * Call this on page load for instant playback.
+ */
+export function preloadTriggerVideos(): void {
+  const videoUrls = getTriggerVideoUrls();
+  
+  videoUrls.forEach(url => {
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.muted = true;
+    video.src = url;
+    
+    // Load the video data
+    video.load();
+    
+    console.log(`[Preload] Preloading video: ${url.slice(-30)}`);
+    
+    // Listen for when it's buffered
+    video.addEventListener('canplaythrough', () => {
+      console.log(`[Preload] Video ready: ${url.slice(-30)}`);
+    }, { once: true });
+    
+    video.addEventListener('error', (e) => {
+      console.warn(`[Preload] Failed to preload: ${url.slice(-30)}`, e);
+    }, { once: true });
+  });
+}

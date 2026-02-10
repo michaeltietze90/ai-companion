@@ -16,6 +16,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Pitch Proto L Fullscreen Page
@@ -118,6 +119,11 @@ const PitchProtoL = () => {
     setOnNameSubmitCallback(sendMessage);
     return () => setOnNameSubmitCallback(null);
   }, [sendMessage, setOnNameSubmitCallback]);
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 
