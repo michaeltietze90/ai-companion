@@ -10,6 +10,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Keynote Proto M Fullscreen Page
@@ -96,6 +97,11 @@ const KeynoteProtoM = () => {
   const handleStart = () => {
     startConversation(videoRef.current);
   };
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 

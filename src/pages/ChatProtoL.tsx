@@ -13,6 +13,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Chat Proto L Fullscreen Page
@@ -111,6 +112,11 @@ const ChatProtoL = () => {
     setOnNameSubmitCallback(sendMessage);
     return () => setOnNameSubmitCallback(null);
   }, [sendMessage, setOnNameSubmitCallback]);
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 

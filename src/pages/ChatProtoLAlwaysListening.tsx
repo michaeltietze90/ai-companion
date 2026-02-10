@@ -12,6 +12,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Chat Proto L Always Listening Page
@@ -96,6 +97,11 @@ const ChatProtoLAlwaysListening = () => {
       stopListening(false);
     }
   }, [isListening, stopListening]);
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 

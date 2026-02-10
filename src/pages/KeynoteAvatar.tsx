@@ -17,6 +17,7 @@ import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Miguel Keynote Avatar - Main Page
@@ -135,6 +136,10 @@ const KeynoteAvatarMain = () => {
     }
   };
 
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-orange-950/20 via-background to-amber-950/20">

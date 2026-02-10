@@ -16,6 +16,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Pitch Proto L Always Listening Page
@@ -109,6 +110,11 @@ const PitchProtoLAlwaysListening = () => {
       stopListening(false);
     }
   }, [isListening, stopListening]);
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 

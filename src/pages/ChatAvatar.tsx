@@ -17,6 +17,7 @@ import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Chat with Miguel Avatar - Main Page
@@ -135,6 +136,10 @@ const ChatAvatarMain = () => {
     }
   };
 
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-blue-950/20 via-background to-cyan-950/20">

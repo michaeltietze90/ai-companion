@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { usePitchConversationStore } from "@/stores/pitchConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
@@ -141,6 +142,10 @@ const PitchAvatarMain = () => {
     }
   };
 
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-purple-950/20 via-background to-pink-950/20">

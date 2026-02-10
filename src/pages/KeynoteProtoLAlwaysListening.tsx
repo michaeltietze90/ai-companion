@@ -10,6 +10,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
+import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
  * Keynote Proto L Always Listening Page
@@ -88,6 +89,11 @@ const KeynoteProtoLAlwaysListening = () => {
       stopListening(false); // false = don't discard, transcribe and send
     }
   }, [isListening, stopListening]);
+
+  // Preload trigger videos on mount for instant playback
+  useEffect(() => {
+    preloadTriggerVideos();
+  }, []);
 
   return (
     <div 
