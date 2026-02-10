@@ -61,7 +61,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     },
   },
   {
-    keywords: ['bad bunny', 'badbunny'],
+    keywords: ['bunny'],
     speech: '', // Silent - just play the video
     video: {
       src: dancingVideo,

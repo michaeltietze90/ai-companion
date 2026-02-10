@@ -164,7 +164,7 @@ export function useDeepgramStreaming(
         { word: "CKO", boost: 3 },
         { word: "Backflip", boost: 3 },
         { word: "Superpower", boost: 3 },
-        { word: "Bad Bunny", boost: 3 },
+        { word: "Bunny", boost: 3 },
         { word: "Net New AOV", boost: 3 },
         
         // Standard priority - x2 boost
