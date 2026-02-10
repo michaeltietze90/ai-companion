@@ -53,6 +53,44 @@ export function AvatarOverlay() {
     }, 800); // Wait for fade animation to complete
   }, [markVisualComplete]);
 
+  // Handle video started playing - set up fallback timeout
+  const handleVideoPlay = useCallback((visualId: string, videoDuration: number) => {
+    console.log(`[AvatarOverlay] Video started playing: ${visualId}, duration: ${videoDuration}s`);
+    
+    // Clear any existing timeout
+    const existingTimeout = timeoutRefs.current.get(visualId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Set fallback timeout based on actual video duration + buffer
+    // Use video's reported duration if available, otherwise use a long fallback
+    const timeoutMs = videoDuration > 0 
+      ? (videoDuration * 1000) + 2000  // video duration + 2s buffer
+      : 30000; // 30s fallback if duration unknown
+    
+    console.log(`[AvatarOverlay] Setting fallback timeout: ${timeoutMs}ms`);
+    
+    const hideTimeout = setTimeout(() => {
+      console.log(`[AvatarOverlay] Fallback timeout triggered for: ${visualId}`);
+      setLocalVisuals(prev => 
+        prev.map(v => v.id === visualId && !v.hasEnded ? { ...v, isVisible: false } : v)
+      );
+      
+      setTimeout(() => {
+        setLocalVisuals(prev => prev.filter(v => v.id !== visualId));
+        markVisualComplete(visualId);
+        setProcessedIds(prev => {
+          const next = new Set(prev);
+          next.delete(visualId);
+          return next;
+        });
+      }, 800);
+    }, timeoutMs);
+    
+    timeoutRefs.current.set(visualId, hideTimeout);
+  }, [markVisualComplete]);
+
   // Track and manage avatar visuals lifecycle
   useEffect(() => {
     if (avatarVisuals.length === 0) {
@@ -67,33 +105,30 @@ export function AvatarOverlay() {
       // Mark as processed immediately
       setProcessedIds(prev => new Set([...prev, visual.id]));
       
-      // Add to local visuals
+      // Add to local visuals (timeout will be set when video starts playing)
       setLocalVisuals(prev => {
         if (prev.find(v => v.id === visual.id)) return prev;
         return [...prev, { ...visual, isVisible: true, hasEnded: false }];
       });
-
-      // Schedule fallback hide after duration (in case onEnded doesn't fire)
-      const hideTimeout = setTimeout(() => {
-        console.log(`[AvatarOverlay] Fallback timeout for: ${visual.id}`);
-        setLocalVisuals(prev => 
-          prev.map(v => v.id === visual.id && !v.hasEnded ? { ...v, isVisible: false } : v)
-        );
-        
-        // Remove after fade out and mark complete in store
-        setTimeout(() => {
-          setLocalVisuals(prev => prev.filter(v => v.id !== visual.id));
-          markVisualComplete(visual.id);
-          // Clean up processed ID after removal
-          setProcessedIds(prev => {
-            const next = new Set(prev);
-            next.delete(visual.id);
-            return next;
-          });
-        }, 800); // Wait for fade animation to complete
-      }, visual.duration);
       
-      timeoutRefs.current.set(visual.id, hideTimeout);
+      // For images, set timeout immediately since they don't have onPlay
+      if (visual.type === 'image') {
+        const hideTimeout = setTimeout(() => {
+          setLocalVisuals(prev => 
+            prev.map(v => v.id === visual.id ? { ...v, isVisible: false } : v)
+          );
+          setTimeout(() => {
+            setLocalVisuals(prev => prev.filter(v => v.id !== visual.id));
+            markVisualComplete(visual.id);
+            setProcessedIds(prev => {
+              const next = new Set(prev);
+              next.delete(visual.id);
+              return next;
+            });
+          }, 800);
+        }, visual.duration);
+        timeoutRefs.current.set(visual.id, hideTimeout);
+      }
     });
   }, [avatarVisualIds, processedIds, markVisualComplete]);
 
@@ -117,6 +152,7 @@ export function AvatarOverlay() {
               loop={false}
               playsInline
               preload="auto"
+              onPlay={(e) => handleVideoPlay(visual.id, e.currentTarget.duration)}
               onEnded={() => handleVideoEnded(visual.id)}
               className="w-full h-full object-cover"
               style={{ background: 'transparent' }}
