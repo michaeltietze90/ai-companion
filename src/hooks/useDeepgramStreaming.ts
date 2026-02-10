@@ -168,7 +168,6 @@ export function useDeepgramStreaming(
         { word: "Net New AOV", boost: 3 },
         
         // Standard priority - x2 boost
-        { word: "Data 360", boost: 2 },
         { word: "Data Cloud", boost: 2 },
         { word: "Mulesoft", boost: 2 },
         { word: "Salesforce", boost: 2 },
@@ -208,7 +207,6 @@ export function useDeepgramStreaming(
         { word: "Finnair", boost: 2 },
         { word: "Fujitsu", boost: 2 },
         { word: "Fisher & Paykel", boost: 2 },
-        { word: "Good360", boost: 2 },
         { word: "Goodyear", boost: 2 },
         { word: "Globoplay", boost: 2 },
         { word: "Grupo Falabella", boost: 2 },
