@@ -27,6 +27,12 @@ type UseDeepgramStreamingOptions = {
    * Milliseconds of silence before utterance ends. Default: 1000ms
    */
   utteranceEndMs?: number;
+
+  /**
+   * Milliseconds of silence before speech_final is triggered. Default: 500ms
+   * For longer recordings (like pitch mode), use higher values (e.g., 5000ms)
+   */
+  endpointingMs?: number;
 };
 
 const DEEPGRAM_WS_URL = "wss://api.deepgram.com/v1/listen";
@@ -35,7 +41,7 @@ export function useDeepgramStreaming(
   onTranscript: (text: string) => void,
   options: UseDeepgramStreamingOptions = {}
 ) {
-  const { disabled = false, onBargeIn, utteranceEndMs = 1000 } = options;
+  const { disabled = false, onBargeIn, utteranceEndMs = 1000, endpointingMs = 500 } = options;
 
   const [isListening, setIsListening] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -143,7 +149,7 @@ export function useDeepgramStreaming(
         punctuate: "true",
         interim_results: "true",
         utterance_end_ms: utteranceEndMs.toString(),
-        endpointing: "500", // 500ms silence triggers speech_final
+        endpointing: endpointingMs.toString(), // silence threshold for speech_final
         vad_events: "true", // Get VAD events for barge-in
         encoding: "linear16",
         sample_rate: "16000",
@@ -406,6 +412,36 @@ export function useDeepgramStreaming(
     
     cleanup();
   }, [cleanup]);
+
+  // Reconnect when VAD parameters change (e.g., countdown mode starts/stops)
+  const prevEndpointingRef = useRef(endpointingMs);
+  const prevUtteranceEndRef = useRef(utteranceEndMs);
+  
+  useEffect(() => {
+    const paramsChanged = 
+      prevEndpointingRef.current !== endpointingMs || 
+      prevUtteranceEndRef.current !== utteranceEndMs;
+    
+    if (paramsChanged && isListening) {
+      console.log(`[Deepgram] VAD params changed (endpointing: ${prevEndpointingRef.current}->${endpointingMs}, utteranceEnd: ${prevUtteranceEndRef.current}->${utteranceEndMs}), reconnecting...`);
+      
+      // Cleanup and restart with new parameters
+      cleanup();
+      
+      // Small delay before reconnecting
+      const timer = setTimeout(() => {
+        startListening();
+      }, 100);
+      
+      prevEndpointingRef.current = endpointingMs;
+      prevUtteranceEndRef.current = utteranceEndMs;
+      
+      return () => clearTimeout(timer);
+    }
+    
+    prevEndpointingRef.current = endpointingMs;
+    prevUtteranceEndRef.current = utteranceEndMs;
+  }, [endpointingMs, utteranceEndMs, isListening, cleanup, startListening]);
 
   // Cleanup on unmount
   useEffect(() => {

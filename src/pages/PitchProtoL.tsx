@@ -68,7 +68,10 @@ const PitchProtoL = () => {
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
-      utteranceEndMs: countdownActive ? 3000 : 1000, // longer silence in countdown mode
+      // In countdown/pitch mode: 5 seconds of silence before sending
+      // Normal mode: 1 second of silence
+      utteranceEndMs: countdownActive ? 5000 : 1000,
+      endpointingMs: countdownActive ? 5000 : 500,
     }
   );
 
