@@ -400,19 +400,28 @@ export function useDeepgramStreaming(
     (streamRef.current as any)._processor = processor;
   }, []);
 
+  // Force flush and send whatever is in the buffer (e.g., when countdown ends)
+  const flushAndSend = useCallback(() => {
+    if (transcriptBufferRef.current.trim()) {
+      const fullTranscript = transcriptBufferRef.current.trim();
+      console.log(`[Deepgram] Force flush, sending: "${fullTranscript}"`);
+      transcriptBufferRef.current = "";
+      setIsProcessing(true);
+      onTranscriptRef.current(fullTranscript);
+      setTimeout(() => setIsProcessing(false), 100);
+      return true; // Indicates something was sent
+    }
+    return false; // Nothing to send
+  }, []);
+
   const stopListening = useCallback(() => {
     console.log("[Deepgram] Stopping...");
     
     // Send any remaining transcript before stopping
-    if (transcriptBufferRef.current.trim() && !disabledRef.current) {
-      const fullTranscript = transcriptBufferRef.current.trim();
-      console.log(`[Deepgram] Sending remaining: "${fullTranscript}"`);
-      transcriptBufferRef.current = "";
-      onTranscriptRef.current(fullTranscript);
-    }
+    flushAndSend();
     
     cleanup();
-  }, [cleanup]);
+  }, [cleanup, flushAndSend]);
 
   // Reconnect when VAD parameters change (e.g., countdown mode starts/stops)
   const prevEndpointingRef = useRef(endpointingMs);
@@ -457,5 +466,6 @@ export function useDeepgramStreaming(
     isProcessing,
     startListening,
     stopListening,
+    flushAndSend, // Force send accumulated transcript (e.g., when countdown ends)
   };
 }

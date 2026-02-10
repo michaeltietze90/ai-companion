@@ -50,7 +50,7 @@ const PitchProtoL = () => {
   });
 
   const { activeVisuals } = useVisualOverlayStore();
-  const { isVisible: countdownActive } = useCountdownStore();
+  const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -64,7 +64,8 @@ const PitchProtoL = () => {
     isConnecting: isVoiceConnecting, 
     isProcessing, 
     startListening, 
-    stopListening 
+    stopListening,
+    flushAndSend,
   } = useDeepgramStreaming(
     handleVoiceTranscript,
     { 
@@ -124,6 +125,18 @@ const PitchProtoL = () => {
   useEffect(() => {
     preloadTriggerVideos();
   }, []);
+
+  // When countdown expires, immediately send whatever transcript we have
+  useEffect(() => {
+    const handleCountdownExpire = () => {
+      console.log('[PitchProtoL] Countdown expired, flushing transcript');
+      flushAndSend();
+      stopListening();
+    };
+    
+    setOnExpireCallback(handleCountdownExpire);
+    return () => setOnExpireCallback(null);
+  }, [flushAndSend, stopListening, setOnExpireCallback]);
 
   return (
     <div 
