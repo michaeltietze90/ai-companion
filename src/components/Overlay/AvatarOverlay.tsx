@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { VisualCommand } from '@/lib/richResponseParser';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
@@ -10,18 +10,48 @@ import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 
 interface ActiveVisual extends VisualCommand {
   isVisible: boolean;
+  hasEnded?: boolean; // Track if video has finished playing
 }
 
 export function AvatarOverlay() {
   const { activeVisuals: storeVisuals, markVisualComplete } = useVisualOverlayStore();
   const [localVisuals, setLocalVisuals] = useState<ActiveVisual[]>([]);
   const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Filter only avatar-positioned visuals
   const avatarVisuals = storeVisuals.filter(v => v.position === 'avatar');
 
   // Create a stable key from current avatar visual IDs
   const avatarVisualIds = avatarVisuals.map(v => v.id).join(',');
+
+  // Handle video end - hide overlay when video finishes
+  const handleVideoEnded = useCallback((visualId: string) => {
+    console.log(`[AvatarOverlay] Video ended: ${visualId}`);
+    
+    // Clear any existing timeout since video finished naturally
+    const existingTimeout = timeoutRefs.current.get(visualId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      timeoutRefs.current.delete(visualId);
+    }
+    
+    // Mark video as ended and start fade out
+    setLocalVisuals(prev => 
+      prev.map(v => v.id === visualId ? { ...v, isVisible: false, hasEnded: true } : v)
+    );
+    
+    // Remove after fade out and mark complete in store
+    setTimeout(() => {
+      setLocalVisuals(prev => prev.filter(v => v.id !== visualId));
+      markVisualComplete(visualId);
+      setProcessedIds(prev => {
+        const next = new Set(prev);
+        next.delete(visualId);
+        return next;
+      });
+    }, 800); // Wait for fade animation to complete
+  }, [markVisualComplete]);
 
   // Track and manage avatar visuals lifecycle
   useEffect(() => {
@@ -40,13 +70,14 @@ export function AvatarOverlay() {
       // Add to local visuals
       setLocalVisuals(prev => {
         if (prev.find(v => v.id === visual.id)) return prev;
-        return [...prev, { ...visual, isVisible: true }];
+        return [...prev, { ...visual, isVisible: true, hasEnded: false }];
       });
 
-      // Schedule hide after duration
+      // Schedule fallback hide after duration (in case onEnded doesn't fire)
       const hideTimeout = setTimeout(() => {
+        console.log(`[AvatarOverlay] Fallback timeout for: ${visual.id}`);
         setLocalVisuals(prev => 
-          prev.map(v => v.id === visual.id ? { ...v, isVisible: false } : v)
+          prev.map(v => v.id === visual.id && !v.hasEnded ? { ...v, isVisible: false } : v)
         );
         
         // Remove after fade out and mark complete in store
@@ -61,6 +92,8 @@ export function AvatarOverlay() {
           });
         }, 800); // Wait for fade animation to complete
       }, visual.duration);
+      
+      timeoutRefs.current.set(visual.id, hideTimeout);
     });
   }, [avatarVisualIds, processedIds, markVisualComplete]);
 
@@ -83,6 +116,8 @@ export function AvatarOverlay() {
               autoPlay
               loop={false}
               playsInline
+              preload="auto"
+              onEnded={() => handleVideoEnded(visual.id)}
               className="w-full h-full object-cover"
               style={{ background: 'transparent' }}
             />

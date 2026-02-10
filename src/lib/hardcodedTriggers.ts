@@ -55,7 +55,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     speech: '', // Silent - just play the video
     video: {
       src: superpowerVideo,
-      duration: 8000,
+      duration: 10000, // 10s to allow for loading + 7.9s video
       position: 'avatar', // Seamless overlay on avatar
     },
   },
