@@ -57,7 +57,7 @@ const KeynoteAvatarMain = () => {
     voiceSettings,
     defaultAgentId: DEFAULT_KEYNOTE_AGENT_ID,
     availableAgents: KEYNOTE_AGENTS,
-    useJsonMode: true,
+    useJsonMode: false,
   });
 
   const {
