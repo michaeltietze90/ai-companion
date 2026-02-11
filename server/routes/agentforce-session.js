@@ -16,7 +16,10 @@ router.post('/', async (req, res) => {
     const agentId = requestAgentId || process.env.SALESFORCE_AGENT_ID;
     const orgDomain = process.env.SALESFORCE_ORG_DOMAIN;
     
-    console.log('[Agentforce Session] Action:', action, 'Agent ID:', agentId);
+    console.log('[Agentforce Session] Action:', action);
+    console.log('[Agentforce Session] Request body agentId:', requestAgentId);
+    console.log('[Agentforce Session] Env SALESFORCE_AGENT_ID:', process.env.SALESFORCE_AGENT_ID);
+    console.log('[Agentforce Session] Using agentId:', agentId);
     
     if (!agentId || !orgDomain) {
       throw new Error('Salesforce configuration not complete');
