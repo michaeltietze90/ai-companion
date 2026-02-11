@@ -17,6 +17,7 @@ import ChatProtoLAlwaysListening from "./pages/ChatProtoLAlwaysListening";
 import PitchProtoM from "./pages/PitchProtoM";
 import PitchProtoL from "./pages/PitchProtoL";
 import PitchProtoLAlwaysListening from "./pages/PitchProtoLAlwaysListening";
+import LogViewer from "./pages/LogViewer";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,9 @@ const App = () => (
           <Route path="/keynote/alwayslistening" element={<KeynoteProtoLAlwaysListening />} />
           <Route path="/chat/alwayslistening" element={<ChatProtoLAlwaysListening />} />
           <Route path="/pitch/alwayslistening" element={<PitchProtoLAlwaysListening />} />
+          
+          {/* Log Viewer (mobile-optimized) */}
+          <Route path="/logs" element={<LogViewer />} />
           
           {/* Legacy redirects */}
           <Route path="/proto-m" element={<Navigate to="/keynote/proto-m" replace />} />

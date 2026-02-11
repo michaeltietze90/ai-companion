@@ -462,6 +462,11 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
         }
 
         setLastAgentforceResponse(fullResponse);
+        
+        // Log the response for remote debug viewer
+        if (fullResponse) {
+          debugLog('agentforce-response', 'Agentforce', fullResponse);
+        }
 
         if (fullResponse) {
           if (useJsonMode) {
