@@ -6,7 +6,7 @@
  */
 
 import backflipVideo from '@/assets/Miguel_Backflip.mp4';
-import superpowerVideo from '@/assets/Miguel_Superhero_Speech.mp4';
+import superpowerVideo from '@/assets/Miguel_Net_New_AOV.mp4';
 
 export type TriggerPosition = 
   | 'center' | 'top' | 'bottom' | 'left' | 'right' 
