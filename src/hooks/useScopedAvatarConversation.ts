@@ -298,6 +298,9 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     heygenApiKeyName?: string
   ) => {
     const targetAgentId = agentId || defaultAgentId;
+    console.log('[startConversation] agentId param:', agentId);
+    console.log('[startConversation] defaultAgentId:', defaultAgentId);
+    console.log('[startConversation] targetAgentId:', targetAgentId);
     debugLog('state-change', 'Conversation', 'Starting conversation', { agentId: targetAgentId });
     setConnecting(true);
     setError(null);
