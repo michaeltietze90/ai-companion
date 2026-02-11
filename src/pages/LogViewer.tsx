@@ -32,12 +32,14 @@ const LogViewer = () => {
   const [showAll, setShowAll] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
 
   // Handle incoming event
   const handleEvent = useCallback((event: DebugEvent) => {
+    // Handle mic level updates separately (don't add to events list)
+    if (event.source === 'mic-level') {
+      setMicLevel(parseInt(event.message) || 0);
+      return;
+    }
     setEvents((prev) => [event, ...prev].slice(0, 200));
   }, []);
 
@@ -87,45 +89,13 @@ const LogViewer = () => {
     };
   }, [handleEvent]);
 
-  // Mic level visualization
+  // Reset mic level after inactivity
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    
-    const startMic = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContextRef.current = new AudioContext();
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 256;
-        
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        source.connect(analyserRef.current);
-        
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-        
-        const updateLevel = () => {
-          if (analyserRef.current) {
-            analyserRef.current.getByteFrequencyData(dataArray);
-            const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-            setMicLevel(Math.min(100, average * 1.5));
-          }
-          animationRef.current = requestAnimationFrame(updateLevel);
-        };
-        
-        updateLevel();
-      } catch (err) {
-        console.log('[LogViewer] Mic access denied or unavailable');
-      }
-    };
-    
-    startMic();
-    
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (stream) stream.getTracks().forEach(t => t.stop());
-      if (audioContextRef.current) audioContextRef.current.close();
-    };
-  }, []);
+    const timeout = setTimeout(() => {
+      if (micLevel > 0) setMicLevel(0);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [micLevel]);
 
   const handleClear = () => {
     setEvents([]);

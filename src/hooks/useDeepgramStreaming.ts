@@ -385,6 +385,9 @@ export function useDeepgramStreaming(
     // Create a ScriptProcessorNode to get raw audio data
     const processor = audioContext.createScriptProcessor(4096, 1, 1);
     
+    // Throttle mic level broadcasts (every 100ms)
+    let lastMicLevelTime = 0;
+    
     processor.onaudioprocess = (event) => {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -393,9 +396,21 @@ export function useDeepgramStreaming(
       const inputData = event.inputBuffer.getChannelData(0);
       const pcmData = new Int16Array(inputData.length);
       
+      // Calculate RMS for mic level
+      let sum = 0;
       for (let i = 0; i < inputData.length; i++) {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        sum += s * s;
+      }
+      
+      // Broadcast mic level every 100ms
+      const now = Date.now();
+      if (now - lastMicLevelTime > 100) {
+        lastMicLevelTime = now;
+        const rms = Math.sqrt(sum / inputData.length);
+        const level = Math.min(100, rms * 300); // Scale to 0-100
+        debugLog('stt-event', 'mic-level', String(Math.round(level)));
       }
       
       // Send to Deepgram
