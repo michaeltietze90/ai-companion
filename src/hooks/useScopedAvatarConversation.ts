@@ -372,6 +372,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       const hardcodedTrigger = findHardcodedTrigger(text);
       console.log('[sendMessage] Trigger found:', hardcodedTrigger ? hardcodedTrigger.keywords[0] : 'none');
       if (hardcodedTrigger) {
+        debugLog('trigger', 'Trigger', `🎬 Triggered: "${hardcodedTrigger.keywords[0]}"`);
         addMessage({ role: 'assistant', content: hardcodedTrigger.speech });
         setLastAgentforceResponse(hardcodedTrigger.speech);
         
@@ -448,6 +449,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
             if (!useJsonMode) {
               const parsed = parseRichResponse(chunk.text);
               addStreamingSentence(parsed.speechText.trim() || chunk.text);
+              debugLog('sse-event', 'Agentforce', parsed.speechText.trim() || chunk.text);
 
               if (parsed.hasRichContent) {
                 startVisuals(parsed.visuals);
