@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Pause, Play, Wifi, WifiOff } from "lucide-react";
-import { subscribeToRemoteEvents, type DebugEvent, type DebugEventType } from "@/stores/debugStore";
+import { type DebugEvent, type DebugEventType } from "@/stores/debugStore";
 
 /**
  * Mobile Log Viewer
@@ -46,23 +46,63 @@ const LogViewer = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedEventsRef = useRef<DebugEvent[]>([]);
 
-  // Subscribe to remote events
-  useEffect(() => {
-    setIsConnected(true);
-    
-    const unsubscribe = subscribeToRemoteEvents((event) => {
-      if (isPaused) {
-        pausedEventsRef.current = [event, ...pausedEventsRef.current].slice(0, 500);
-      } else {
-        setEvents((prev) => [event, ...prev].slice(0, 500));
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      setIsConnected(false);
-    };
+  // Handle incoming event
+  const handleEvent = useCallback((event: DebugEvent) => {
+    if (isPaused) {
+      pausedEventsRef.current = [event, ...pausedEventsRef.current].slice(0, 500);
+    } else {
+      setEvents((prev) => [event, ...prev].slice(0, 500));
+    }
   }, [isPaused]);
+
+  // Subscribe via WebSocket for cross-device support
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/logs?role=viewer`;
+    
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('[LogViewer] WebSocket connected');
+        setIsConnected(true);
+      };
+      
+      ws.onmessage = (e) => {
+        try {
+          const serialized = JSON.parse(e.data);
+          const event: DebugEvent = {
+            ...serialized,
+            timestamp: new Date(serialized.timestamp),
+          };
+          handleEvent(event);
+        } catch (err) {
+          console.error('[LogViewer] Failed to parse event:', err);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('[LogViewer] WebSocket disconnected');
+        setIsConnected(false);
+        // Reconnect after 3 seconds
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+      
+      ws.onerror = () => {
+        // Error triggers onclose
+      };
+    };
+    
+    connect();
+    
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
+  }, [handleEvent]);
 
   // Resume and merge paused events
   const handleResume = () => {

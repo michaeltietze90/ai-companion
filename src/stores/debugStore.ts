@@ -54,6 +54,44 @@ try {
   console.warn('BroadcastChannel not supported:', e);
 }
 
+// WebSocket for cross-device communication (sender side)
+let logSenderWs: WebSocket | null = null;
+let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function connectLogSender() {
+  if (logSenderWs?.readyState === WebSocket.OPEN) return;
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/logs?role=sender`;
+  
+  try {
+    logSenderWs = new WebSocket(wsUrl);
+    
+    logSenderWs.onopen = () => {
+      console.log('[DebugStore] WebSocket sender connected');
+    };
+    
+    logSenderWs.onclose = () => {
+      logSenderWs = null;
+      // Reconnect after 5 seconds
+      if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = setTimeout(connectLogSender, 5000);
+    };
+    
+    logSenderWs.onerror = () => {
+      // Error will trigger onclose
+    };
+  } catch (e) {
+    console.warn('[DebugStore] WebSocket connection failed:', e);
+  }
+}
+
+// Connect on load (only if not on /logs page to avoid loop)
+if (typeof window !== 'undefined' && !window.location.pathname.includes('/logs')) {
+  // Delay connection to avoid blocking page load
+  setTimeout(connectLogSender, 1000);
+}
+
 export const useDebugStore = create<DebugState>((set) => ({
   events: [],
   isVisible: false,
@@ -66,13 +104,19 @@ export const useDebugStore = create<DebugState>((set) => ({
       timestamp: new Date(),
     };
     
-    // Broadcast to other tabs/windows
+    const serialized: SerializedDebugEvent = {
+      ...newEvent,
+      timestamp: newEvent.timestamp.toISOString(),
+    };
+    
+    // Broadcast to other tabs/windows (same browser)
     if (broadcastChannel) {
-      const serialized: SerializedDebugEvent = {
-        ...newEvent,
-        timestamp: newEvent.timestamp.toISOString(),
-      };
       broadcastChannel.postMessage({ type: 'new-event', event: serialized });
+    }
+    
+    // Send via WebSocket (cross-device)
+    if (logSenderWs?.readyState === WebSocket.OPEN) {
+      logSenderWs.send(JSON.stringify(serialized));
     }
     
     return {

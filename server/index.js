@@ -8,6 +8,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 
 // Import API routes
 import agentforceSessionRouter from './routes/agentforce-session.js';
@@ -66,7 +68,52 @@ app.use((req, res, next) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, () => {
+// Create HTTP server for both Express and WebSocket
+const server = createServer(app);
+
+// WebSocket server for real-time log streaming
+const wss = new WebSocketServer({ server, path: '/ws/logs' });
+
+// Store connected log viewers
+const logViewers = new Set();
+
+wss.on('connection', (ws, req) => {
+  const isViewer = req.url === '/ws/logs?role=viewer';
+  const isSender = req.url === '/ws/logs?role=sender';
+  
+  if (isViewer) {
+    logViewers.add(ws);
+    console.log(`[WS] Log viewer connected. Total viewers: ${logViewers.size}`);
+    
+    ws.on('close', () => {
+      logViewers.delete(ws);
+      console.log(`[WS] Log viewer disconnected. Total viewers: ${logViewers.size}`);
+    });
+  } else if (isSender) {
+    console.log('[WS] Log sender connected');
+    
+    ws.on('message', (data) => {
+      // Broadcast to all viewers
+      const message = data.toString();
+      logViewers.forEach((viewer) => {
+        if (viewer.readyState === 1) { // OPEN
+          viewer.send(message);
+        }
+      });
+    });
+    
+    ws.on('close', () => {
+      console.log('[WS] Log sender disconnected');
+    });
+  }
+  
+  ws.on('error', (err) => {
+    console.error('[WS] Error:', err.message);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket available at /ws/logs`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
