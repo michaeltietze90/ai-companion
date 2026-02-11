@@ -318,7 +318,6 @@ export function useDeepgramStreaming(
           
           if (transcript) {
             console.log(`[Deepgram] ${isFinal ? 'Final' : 'Interim'}: "${transcript}" (speech_final: ${speechFinal})`);
-            debugLog('stt-event', 'Deepgram', `${isFinal ? '✓' : '...'} ${transcript}`);
             
             if (isFinal) {
               // Accumulate final transcripts
@@ -333,7 +332,6 @@ export function useDeepgramStreaming(
             if (speechFinal && transcriptBufferRef.current.trim()) {
               const fullTranscript = transcriptBufferRef.current.trim();
               console.log(`[Deepgram] Speech final, sending: "${fullTranscript}"`);
-              debugLog('stt-event', 'Deepgram', `Voice: "${fullTranscript}"`);
               transcriptBufferRef.current = "";
               
               // Only send if not disabled
@@ -353,7 +351,6 @@ export function useDeepgramStreaming(
           if (transcriptBufferRef.current.trim() && !disabledRef.current) {
             const fullTranscript = transcriptBufferRef.current.trim();
             console.log(`[Deepgram] Utterance end, sending: "${fullTranscript}"`);
-            debugLog('stt-event', 'Deepgram', `Voice: "${fullTranscript}"`);
             transcriptBufferRef.current = "";
             setIsProcessing(true);
             onTranscriptRef.current(fullTranscript);

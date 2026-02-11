@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Pause, Play, Wifi, WifiOff } from "lucide-react";
+import { Trash2, Wifi, WifiOff, Mic } from "lucide-react";
 import { type DebugEvent, type DebugEventType } from "@/stores/debugStore";
 
 /**
@@ -12,48 +12,34 @@ import { type DebugEvent, type DebugEventType } from "@/stores/debugStore";
  * Access at: /logs
  */
 
-const eventTypeColors: Record<DebugEventType, string> = {
-  'voice-transcript': 'bg-blue-500',
-  'agentforce-response': 'bg-green-500',
-  'trigger': 'bg-purple-500',
-  'api-request': 'bg-yellow-500',
-  'api-response': 'bg-yellow-600',
-  'sse-event': 'bg-orange-500',
-  'heygen-event': 'bg-pink-500',
-  'stt-event': 'bg-cyan-500',
-  'state-change': 'bg-gray-500',
-  'error': 'bg-red-500',
-};
-
-const eventTypeLabels: Record<DebugEventType, string> = {
-  'voice-transcript': 'Voice',
-  'agentforce-response': 'Response',
-  'trigger': 'Trigger',
-  'api-request': 'API Req',
-  'api-response': 'API Res',
-  'sse-event': 'SSE',
-  'heygen-event': 'HeyGen',
-  'stt-event': 'STT',
-  'state-change': 'State',
-  'error': 'Error',
+// Simplified event types for cleaner display
+const eventConfig: Record<DebugEventType, { icon: string; color: string; bgColor: string; label: string; show: boolean }> = {
+  'voice-transcript': { icon: '🎤', color: 'text-blue-400', bgColor: 'bg-blue-500/20 border-blue-500/30', label: 'You said', show: true },
+  'agentforce-response': { icon: '💬', color: 'text-green-400', bgColor: 'bg-green-500/20 border-green-500/30', label: 'Miguel', show: true },
+  'trigger': { icon: '🎬', color: 'text-purple-400', bgColor: 'bg-purple-500/20 border-purple-500/30', label: 'Video', show: true },
+  'error': { icon: '❌', color: 'text-red-400', bgColor: 'bg-red-500/20 border-red-500/30', label: 'Error', show: true },
+  'api-request': { icon: '→', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'API', show: false },
+  'api-response': { icon: '←', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'API', show: false },
+  'sse-event': { icon: '⚡', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'SSE', show: false },
+  'heygen-event': { icon: '🎭', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'HeyGen', show: false },
+  'stt-event': { icon: '🎙️', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'STT', show: false },
+  'state-change': { icon: '⚙️', color: 'text-gray-500', bgColor: 'bg-gray-500/10', label: 'State', show: false },
 };
 
 const LogViewer = () => {
   const [events, setEvents] = useState<DebugEvent[]>([]);
-  const [isPaused, setIsPaused] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [filter, setFilter] = useState<DebugEventType | 'all'>('all');
+  const [showAll, setShowAll] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const pausedEventsRef = useRef<DebugEvent[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationRef = useRef<number | null>(null);
 
   // Handle incoming event
   const handleEvent = useCallback((event: DebugEvent) => {
-    if (isPaused) {
-      pausedEventsRef.current = [event, ...pausedEventsRef.current].slice(0, 500);
-    } else {
-      setEvents((prev) => [event, ...prev].slice(0, 500));
-    }
-  }, [isPaused]);
+    setEvents((prev) => [event, ...prev].slice(0, 200));
+  }, []);
 
   // Subscribe via WebSocket for cross-device support
   useEffect(() => {
@@ -87,13 +73,10 @@ const LogViewer = () => {
       ws.onclose = () => {
         console.log('[LogViewer] WebSocket disconnected');
         setIsConnected(false);
-        // Reconnect after 3 seconds
         reconnectTimer = setTimeout(connect, 3000);
       };
       
-      ws.onerror = () => {
-        // Error triggers onclose
-      };
+      ws.onerror = () => {};
     };
     
     connect();
@@ -104,21 +87,49 @@ const LogViewer = () => {
     };
   }, [handleEvent]);
 
-  // Resume and merge paused events
-  const handleResume = () => {
-    setEvents((prev) => [...pausedEventsRef.current, ...prev].slice(0, 500));
-    pausedEventsRef.current = [];
-    setIsPaused(false);
-  };
+  // Mic level visualization
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    
+    const startMic = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContextRef.current = new AudioContext();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+        
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        source.connect(analyserRef.current);
+        
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        
+        const updateLevel = () => {
+          if (analyserRef.current) {
+            analyserRef.current.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+            setMicLevel(Math.min(100, average * 1.5));
+          }
+          animationRef.current = requestAnimationFrame(updateLevel);
+        };
+        
+        updateLevel();
+      } catch (err) {
+        console.log('[LogViewer] Mic access denied or unavailable');
+      }
+    };
+    
+    startMic();
+    
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (audioContextRef.current) audioContextRef.current.close();
+    };
+  }, []);
 
   const handleClear = () => {
     setEvents([]);
-    pausedEventsRef.current = [];
   };
-
-  const filteredEvents = filter === 'all' 
-    ? events 
-    : events.filter(e => e.type === filter);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -126,151 +137,132 @@ const LogViewer = () => {
       hour: '2-digit', 
       minute: '2-digit', 
       second: '2-digit',
-      fractionalSecondDigits: 3
     });
   };
 
+  // Filter events based on showAll toggle
+  const displayEvents = showAll 
+    ? events 
+    : events.filter(e => eventConfig[e.type]?.show);
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-4 py-3 safe-area-inset-top">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">Keynote Logs</h1>
-            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-              isConnected ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
+      <header className="sticky top-0 z-10 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold">Keynote Logs</h1>
+            <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
+              isConnected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
             }`}>
               {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-              {isConnected ? 'Live' : 'Disconnected'}
+              {isConnected ? 'Live' : 'Offline'}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => isPaused ? handleResume() : setIsPaused(true)}
-              className={`p-2 rounded-lg ${isPaused ? 'bg-green-600' : 'bg-gray-700'}`}
-            >
-              {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-            </button>
+            {/* Mic level indicator */}
+            <div className="flex items-center gap-1.5 bg-gray-800 rounded-full px-2.5 py-1.5">
+              <Mic className={`w-3.5 h-3.5 ${micLevel > 10 ? 'text-green-400' : 'text-gray-500'}`} />
+              <div className="w-12 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-green-500 rounded-full"
+                  animate={{ width: `${micLevel}%` }}
+                  transition={{ duration: 0.05 }}
+                />
+              </div>
+            </div>
+            
             <button
               onClick={handleClear}
-              className="p-2 rounded-lg bg-gray-700"
+              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+        {/* Toggle for showing all events */}
+        <div className="mt-2 flex items-center gap-2">
           <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-              filter === 'all' 
-                ? 'bg-white text-gray-900' 
-                : 'bg-gray-800 text-gray-300'
+            onClick={() => setShowAll(false)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              !showAll ? 'bg-white text-black' : 'bg-gray-800 text-gray-400'
             }`}
           >
-            All ({events.length})
+            Conversation
           </button>
-          {(['voice-transcript', 'agentforce-response', 'trigger', 'error'] as DebugEventType[]).map((type) => {
-            const count = events.filter(e => e.type === type).length;
-            return (
-              <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                  filter === type 
-                    ? `${eventTypeColors[type]} text-white` 
-                    : 'bg-gray-800 text-gray-300'
-                }`}
-              >
-                {eventTypeLabels[type]} ({count})
-              </button>
-            );
-          })}
+          <button
+            onClick={() => setShowAll(true)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              showAll ? 'bg-white text-black' : 'bg-gray-800 text-gray-400'
+            }`}
+          >
+            All Events
+          </button>
+          <span className="text-xs text-gray-500 ml-auto">
+            {displayEvents.length} events
+          </span>
         </div>
       </header>
 
       {/* Event List */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-2"
+        className="flex-1 overflow-y-auto px-3 py-3"
       >
-        {isPaused && pausedEventsRef.current.length > 0 && (
-          <div className="mb-2 p-2 bg-yellow-900/50 rounded-lg text-center text-sm text-yellow-300">
-            {pausedEventsRef.current.length} new events paused
-          </div>
-        )}
-
-        {filteredEvents.length === 0 ? (
+        {displayEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-            <div className="text-4xl mb-2">📡</div>
-            <p className="text-center">
-              Waiting for logs...
+            <div className="text-5xl mb-3">📡</div>
+            <p className="text-center text-sm">
+              Waiting for conversation...
               <br />
-              <span className="text-sm">Open Keynote in another tab to see logs here</span>
+              <span className="text-xs text-gray-600">Open Keynote Proto L in another browser</span>
             </p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {filteredEvents.map((event) => (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="mb-2"
-              >
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-800">
-                  {/* Header row */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${eventTypeColors[event.type]} text-white`}>
-                      {eventTypeLabels[event.type]}
-                    </span>
-                    <span className="text-xs text-gray-500 font-mono">
-                      {formatTime(event.timestamp)}
-                    </span>
-                    {event.source && event.source !== 'KeynoteProtoL' && (
-                      <span className="text-xs text-gray-600">
-                        {event.source}
+            {displayEvents.map((event) => {
+              const config = eventConfig[event.type] || eventConfig['state-change'];
+              
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="mb-2"
+                >
+                  <div className={`rounded-xl p-3 border ${config.bgColor}`}>
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base">{config.icon}</span>
+                      <span className={`text-xs font-semibold ${config.color}`}>
+                        {event.source || config.label}
                       </span>
-                    )}
+                      <span className="text-[10px] text-gray-500 ml-auto font-mono">
+                        {formatTime(event.timestamp)}
+                      </span>
+                    </div>
+                    
+                    {/* Message */}
+                    <p className={`text-sm leading-relaxed ${
+                      event.type === 'voice-transcript' ? 'text-blue-200' :
+                      event.type === 'agentforce-response' ? 'text-green-200' :
+                      event.type === 'trigger' ? 'text-purple-200' :
+                      event.type === 'error' ? 'text-red-300' :
+                      'text-gray-300'
+                    }`}>
+                      {event.message.replace(/^[🎤💬🎬❌→←⚡🎭🎙️⚙️]\s*/, '').replace(/^["']|["']$/g, '')}
+                    </p>
                   </div>
-                  
-                  {/* Message */}
-                  <p className={`text-sm leading-relaxed ${
-                    event.type === 'error' ? 'text-red-400' : 
-                    event.type === 'voice-transcript' ? 'text-blue-300' :
-                    event.type === 'agentforce-response' ? 'text-green-300' :
-                    'text-gray-300'
-                  }`}>
-                    {event.message}
-                  </p>
-
-                  {/* Data (if any) */}
-                  {event.data && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-gray-500 cursor-pointer">
-                        Show data
-                      </summary>
-                      <pre className="mt-1 text-xs text-gray-400 bg-gray-950 p-2 rounded overflow-x-auto">
-                        {JSON.stringify(event.data, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         )}
       </div>
-
-      {/* Footer status */}
-      <footer className="sticky bottom-0 bg-gray-900 border-t border-gray-800 px-4 py-2 text-center text-xs text-gray-500 safe-area-inset-bottom">
-        {filteredEvents.length} events • BroadcastChannel API
-      </footer>
     </div>
   );
 };

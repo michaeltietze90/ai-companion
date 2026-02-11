@@ -47,7 +47,7 @@ const KeynoteProtoL = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoL] Voice transcript:', transcript);
-    debugLog('voice-transcript', 'KeynoteProtoL', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     sendMessage(transcript);
   }, [sendMessage]);
 
