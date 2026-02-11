@@ -31,7 +31,7 @@ export const CHAT_AGENTS: AgentConfig[] = [
 // Pitch Script Agent
 export const PITCH_AGENTS: AgentConfig[] = [
   {
-    id: '0XxKZ000000yfFr0AI',
+    id: '0XxKZ000000yfGV0AY',
     name: 'Pitch Agent Script',
     description: 'Scripted pitch conversation agent',
   },
