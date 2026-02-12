@@ -7,7 +7,7 @@
 
 import backflipVideo from '@/assets/Miguel_Backflip.mp4';
 import superpowerVideo from '@/assets/Miguel_Net_New_AOV.mp4';
-import discoVideo from '@/assets/Miguel_Disco_Mode.mp4';
+import dancingVideo from '@/assets/Miguel_Dancing_New.mp4';
 import gongVideo from '@/assets/Miguel_Gong.mp4';
 
 export type TriggerPosition = 
@@ -65,7 +65,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     keywords: ['dance', 'dancing'],
     speech: '', // Silent - just play the video
     video: {
-      src: discoVideo,
+      src: dancingVideo,
       duration: 15000, // 15s to allow for loading + video playback
       position: 'avatar', // Seamless overlay on avatar
     },
