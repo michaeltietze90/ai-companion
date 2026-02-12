@@ -18,6 +18,7 @@ import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
+import { debugLog } from "@/stores/debugStore";
 
 /**
  * Miguel Keynote Avatar - Main Page
@@ -72,6 +73,7 @@ const KeynoteAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);

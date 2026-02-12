@@ -16,6 +16,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useSilenceTranscription } from "@/hooks/useSilenceTranscription";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
+import { debugLog } from "@/stores/debugStore";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 
 /**
@@ -53,6 +54,7 @@ const PitchProtoLAlwaysListening = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[PitchProtoL-AlwaysListening] Voice transcript:', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     sendMessage(transcript);
   }, [sendMessage]);
 

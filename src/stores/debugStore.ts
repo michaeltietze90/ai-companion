@@ -119,6 +119,22 @@ export const useDebugStore = create<DebugState>((set) => ({
       logSenderWs.send(JSON.stringify(serialized));
     }
     
+    // Persist conversation events to database (from today forward)
+    const conversationTypes = ['voice-transcript', 'agentforce-response', 'trigger'];
+    if (conversationTypes.includes(newEvent.type)) {
+      fetch('/api/conversation-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: newEvent.timestamp.toISOString(),
+          type: newEvent.type,
+          source: newEvent.source,
+          message: newEvent.message,
+          data: newEvent.data,
+        }),
+      }).catch(() => { /* ignore - fire and forget */ });
+    }
+    
     return {
       events: [newEvent, ...state.events].slice(0, state.maxEvents),
     };

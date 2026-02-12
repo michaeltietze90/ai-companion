@@ -22,6 +22,7 @@ import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
+import { debugLog } from "@/stores/debugStore";
 
 /**
  * Pitch Agent Script - Main Page
@@ -77,6 +78,7 @@ const PitchAvatarMain = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Pitch] Voice transcript:', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);

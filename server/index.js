@@ -22,6 +22,7 @@ import deepgramTokenRouter from './routes/deepgram-token.js';
 import deepgramTranscribeRouter from './routes/deepgram-transcribe.js';
 import deepgramKeyRouter from './routes/deepgram-key.js';
 import leaderboardRouter from './routes/leaderboard.js';
+import conversationLogRouter from './routes/conversation-log.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +45,7 @@ app.use('/api/deepgram-token', deepgramTokenRouter);
 app.use('/api/deepgram-transcribe', deepgramTranscribeRouter);
 app.use('/api/deepgram-key', deepgramKeyRouter);
 app.use('/api/leaderboard', leaderboardRouter);
+app.use('/api/conversation-log', conversationLogRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

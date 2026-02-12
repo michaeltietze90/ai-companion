@@ -11,6 +11,7 @@ import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
+import { debugLog } from "@/stores/debugStore";
 
 /**
  * Keynote Proto M Fullscreen Page
@@ -47,6 +48,7 @@ const KeynoteProtoM = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoM] Voice transcript:', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     sendMessage(transcript);
   }, [sendMessage]);
 

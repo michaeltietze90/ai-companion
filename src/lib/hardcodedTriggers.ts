@@ -53,7 +53,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     },
   },
   {
-    keywords: ['net new aov', 'net new a.o.v', 'net new a o v', 'netnew aov'],
+    keywords: ['superpower', 'super power'],
     speech: '', // Silent - just play the video
     video: {
       src: superpowerVideo,

@@ -17,6 +17,7 @@ import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
+import { debugLog } from "@/stores/debugStore";
 
 /**
  * Pitch Proto L Fullscreen Page
@@ -55,6 +56,7 @@ const PitchProtoL = () => {
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[PitchProtoL] Voice transcript:', transcript);
+    debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     sendMessage(transcript);
   }, [sendMessage]);
 
