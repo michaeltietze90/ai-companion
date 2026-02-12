@@ -71,7 +71,7 @@ export const HARDCODED_TRIGGERS: HardcodedTrigger[] = [
     },
   },
   {
-    keywords: ['celebrate', 'celebration'],
+    keywords: ['dream', 'dreaming'],
     speech: '', // Silent - just play the video
     video: {
       src: gongVideo,
