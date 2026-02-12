@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Play, MessageCircle, Presentation, FileText } from "lucide-react";
+import { Play, Presentation, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * Home Page - App Selection
- * Allows users to choose between Keynote Avatar, Chat Avatar, and Pitch Agent Script
+ * Allows users to choose between Keynote Avatar and Pitch Agent Script
  */
 const Home = () => {
   return (
@@ -26,7 +26,7 @@ const Home = () => {
         </motion.div>
 
         {/* App Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Keynote Avatar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -58,43 +58,6 @@ const Home = () => {
                   <Button className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white">
                     <Play className="w-4 h-4 mr-2" />
                     Launch Keynote
-                  </Button>
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-
-          {/* Chat Avatar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Link to="/chat">
-              <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 h-full">
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                
-                <div className="relative z-10">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-5 shadow-lg shadow-blue-500/20">
-                    <MessageCircle className="w-7 h-7 text-white" />
-                  </div>
-                  
-                  <h2 className="text-xl font-bold text-foreground mb-2">
-                    Chat with Miguel
-                  </h2>
-                  
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Interactive chat agent experience
-                  </p>
-                  
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-5">
-                    <span className="px-2 py-1 rounded bg-secondary">Chat Agent</span>
-                  </div>
-                  
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white">
-                    <Play className="w-4 h-4 mr-2" />
-                    Launch Chat
                   </Button>
                 </div>
               </div>

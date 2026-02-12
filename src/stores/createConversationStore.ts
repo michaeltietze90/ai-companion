@@ -111,7 +111,7 @@ const createConversationSlice: StateCreator<ConversationState> = (set) => ({
 
 /**
  * Factory function to create isolated conversation stores.
- * Each app instance (Keynote, Chat) gets its own store to enable parallel sessions.
+ * Each app instance (Keynote, Pitch) gets its own store to enable parallel sessions.
  */
 export function createConversationStore(): UseBoundStore<StoreApi<ConversationState>> {
   return create<ConversationState>(createConversationSlice);
@@ -119,4 +119,3 @@ export function createConversationStore(): UseBoundStore<StoreApi<ConversationSt
 
 // Pre-created stores for each app
 export const useKeynoteConversationStore = createConversationStore();
-export const useChatConversationStore = createConversationStore();

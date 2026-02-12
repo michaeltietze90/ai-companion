@@ -6,14 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import KeynoteAvatar from "./pages/KeynoteAvatar";
-import ChatAvatar from "./pages/ChatAvatar";
 import PitchAvatar from "./pages/PitchAvatar";
 import KeynoteProtoM from "./pages/KeynoteProtoM";
 import KeynoteProtoL from "./pages/KeynoteProtoL";
 import KeynoteProtoLAlwaysListening from "./pages/KeynoteProtoLAlwaysListening";
-import ChatProtoM from "./pages/ChatProtoM";
-import ChatProtoL from "./pages/ChatProtoL";
-import ChatProtoLAlwaysListening from "./pages/ChatProtoLAlwaysListening";
 import PitchProtoM from "./pages/PitchProtoM";
 import PitchProtoL from "./pages/PitchProtoL";
 import PitchProtoLAlwaysListening from "./pages/PitchProtoLAlwaysListening";
@@ -37,12 +33,6 @@ const App = () => (
             <Route path="proto-l" element={<KeynoteProtoL />} />
           </Route>
           
-          {/* Chat Avatar Routes */}
-          <Route path="/chat" element={<ChatAvatar />}>
-            <Route path="proto-m" element={<ChatProtoM />} />
-            <Route path="proto-l" element={<ChatProtoL />} />
-          </Route>
-          
           {/* Pitch Agent Script Routes */}
           <Route path="/pitch" element={<PitchAvatar />}>
             <Route path="proto-m" element={<PitchProtoM />} />
@@ -51,7 +41,6 @@ const App = () => (
           
           {/* Always Listening Proto L Routes */}
           <Route path="/keynote/alwayslistening" element={<KeynoteProtoLAlwaysListening />} />
-          <Route path="/chat/alwayslistening" element={<ChatProtoLAlwaysListening />} />
           <Route path="/pitch/alwayslistening" element={<PitchProtoLAlwaysListening />} />
           
           {/* Log Viewer (mobile-optimized) */}
