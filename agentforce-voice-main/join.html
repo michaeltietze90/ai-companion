@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Proto Hologram & AgentForce Voice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:,">
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px;max-width:780px;margin:auto}
+      button{padding:10px 16px;font-size:16px;cursor:pointer}
+      input,textarea{font-size:16px;padding:8px;width:100%;box-sizing:border-box}
+      label{display:block;margin-top:12px;margin-bottom:6px;font-weight:600}
+      .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+      .grow{flex:1}
+      .muted{color:#666}
+      #remote audio{display:block;margin-top:10px}
+      .pill{display:inline-block;border:1px solid #ddd;padding:4px 8px;border-radius:999px;margin-right:8px}
+      .box{border:1px solid #eee;border-radius:10px;padding:12px;margin-top:12px}
+      .err{color:#b00020}
+    </style>
+    <!-- Recommended UMD build -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@latest/dist/livekit-client.umd.min.js"></script>
+  </head>
+  <body>
+    <h2>Proto Hologram & AgentForce Voice</h2>
+    <p class="muted">
+      1) Join Room → connects to AgentForce voice agent, 2) Create Session → creates a new session with greeting.
+    </p>
+
+    <div class="box">
+      <div class="row">
+        <span class="pill">Session: <span id="sid">(none)</span></span>
+        <span class="pill">Room: <span id="roomstate">disconnected</span></span>
+      </div>
+    </div>
+
+
+    <div class="row" style="margin-top:12px">
+      <button id="btnJoinRoom">🎤 Join Voice Room</button>
+      <button id="btnCreateSession">📝 Create Session</button>
+      <div id="status" class="grow muted" aria-live="polite"></div>
+    </div>
+
+    <div id="remote" style="margin-top:20px"></div>
+
+    <label for="agentOut" style="margin-top:16px">Agent Response</label>
+    <textarea id="agentOut" rows="5" placeholder="Agent greeting/response will appear here..."></textarea>
+
+    <script>
+      const API_BASE = 'http://127.0.0.1:7000';
+      const API_JOIN_ROOM      = `${API_BASE}/api/room/join`;
+      const API_CREATE_SESSION = `${API_BASE}/api/session/create`;
+
+      let room = null;
+      let sessionId = "";
+      const $ = (id) => document.getElementById(id);
+      const status = (msg, isErr=false) => { const el=$('status'); el.textContent=msg; el.classList.toggle('err', !!isErr); };
+      const setSid = (v) => $('sid').textContent = v || "(none)";
+      const setRoomState = (v) => $('roomstate').textContent = v;
+
+      function ensureLiveKitOrFail() {
+        if (!window.LivekitClient) {
+          status("LivekitClient failed to load. Check the CDN script tag.", true);
+          console.error("LivekitClient missing; did the CDN fail to load?");
+          return false;
+        }
+        return true;
+      }
+
+      async function joinRoom() {
+        try {
+          if (!ensureLiveKitOrFail()) return;
+          status("Joining LiveKit room...");
+          const res = await fetch(API_JOIN_ROOM, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          if (!res.ok) throw new Error(`Join room error (${res.status}): ${await res.text()}`);
+          const data = await res.json();
+
+          sessionId = data.sessionId;
+          setSid(sessionId);
+
+          const LIVEKIT_URL = data.livekitUrl;
+          const TOKEN = data.token;
+
+          if (room) { try { await room.disconnect(); } catch {} }
+
+          const { Room, RoomEvent, createLocalAudioTrack } = LivekitClient;
+
+          room = new Room({ adaptiveStream: true, dynacast: true });
+          room
+            .on(RoomEvent.ParticipantConnected, (p) => console.log('Participant connected:', p.identity))
+            .on(RoomEvent.ParticipantDisconnected, (p) => console.log('Participant disconnected:', p.identity))
+            .on(RoomEvent.ConnectionStateChanged, (s) => setRoomState(s))
+            .on(RoomEvent.TrackSubscribed, (track, pub) => {
+              if (pub.kind === 'audio' && track && track.mediaStreamTrack) {
+                const audio = document.createElement('audio');
+                audio.autoplay = true;
+                audio.controls = true;
+                audio.srcObject = new MediaStream([track.mediaStreamTrack]);
+                $('remote').appendChild(audio);
+              }
+            });
+
+          await room.connect(LIVEKIT_URL, TOKEN);
+          setRoomState("connected");
+
+          status("Publishing microphone...");
+          const mic = await createLocalAudioTrack();
+          await room.localParticipant.publishTrack(mic);
+          status("Mic published. You are in the room ✅");
+        } catch (e) {
+          console.error(e);
+          status('Error: ' + (e?.message || e), true);
+        }
+      }
+
+      async function createSession() {
+        try {
+          status("Creating session (or using existing) and reading agent response...");
+          const payload = sessionId ? { sessionId } : {};
+          const res = await fetch(API_CREATE_SESSION, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          if (!res.ok) throw new Error(`Create session error (${res.status}): ${await res.text()}`);
+          const data = await res.json();
+
+          if (!sessionId) {
+            sessionId = data.sessionId || sessionId;
+            setSid(sessionId);
+          }
+          const agentText = (data.agentResponse || "").trim();
+          if (agentText) {
+            $('agentOut').value = agentText;
+            status("Agent response received.");
+          } else {
+            status("Session created. No initial agent message provided.");
+          }
+        } catch (e) {
+          console.error(e);
+          status('Error: ' + (e?.message || e), true);
+        }
+      }
+
+
+      $('btnJoinRoom').addEventListener('click', joinRoom);
+      $('btnCreateSession').addEventListener('click', createSession);
+    </script>
+  </body>
+</html>

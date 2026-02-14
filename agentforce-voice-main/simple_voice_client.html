@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proto Hologram & AgentForce Voice Client</title>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@latest/dist/livekit-client.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        input, button { padding: 10px; margin: 5px; font-size: 16px; }
+        input[type="text"] { width: 100%; box-sizing: border-box; }
+        button { background: #0066cc; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0052a3; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        #audioContainer { margin-top: 20px; }
+        audio { width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🎤 Proto Hologram & AgentForce Voice Client</h1>
+    
+    <div>
+        <label>LiveKit URL:</label>
+        <input type="text" id="livekitUrl" placeholder="wss://agentforceprod5-yf6oz00b.livekit.cloud">
+    </div>
+    
+    <div>
+        <label>LiveKit Token:</label>
+        <input type="text" id="livekitToken" placeholder="Paste your LiveKit token here">
+    </div>
+    
+    <button onclick="connectToRoom()">🔗 Connect to Voice Room</button>
+    <button onclick="disconnectFromRoom()">❌ Disconnect</button>
+    
+    <div id="status" class="status disconnected">Disconnected</div>
+    
+    <div id="audioContainer">
+        <h3>🔊 Agent Audio:</h3>
+        <!-- Agent audio will appear here -->
+    </div>
+
+    <script>
+        let room = null;
+        
+        async function connectToRoom() {
+            const url = document.getElementById('livekitUrl').value.trim();
+            const token = document.getElementById('livekitToken').value.trim();
+            
+            if (!url || !token) {
+                alert('Please enter both LiveKit URL and Token');
+                return;
+            }
+            
+            try {
+                updateStatus('Connecting...', false);
+                
+                // Create room
+                const { Room, RoomEvent, createLocalAudioTrack } = LivekitClient;
+                room = new Room({ adaptiveStream: true, dynacast: true });
+                
+                // Set up event listeners
+                room.on(RoomEvent.Connected, () => {
+                    updateStatus('✅ Connected to AgentForce voice room!', true);
+                });
+                
+                room.on(RoomEvent.Disconnected, () => {
+                    updateStatus('❌ Disconnected from room', false);
+                });
+                
+                room.on(RoomEvent.ParticipantConnected, (participant) => {
+                    console.log('Participant connected:', participant.identity);
+                    updateStatus(`✅ Connected - Agent: ${participant.identity}`, true);
+                });
+                
+                room.on(RoomEvent.TrackSubscribed, (track, publication) => {
+                    if (publication.kind === 'audio' && track.mediaStreamTrack) {
+                        console.log('Audio track received from agent');
+                        
+                        // Create audio element for agent voice
+                        const audio = document.createElement('audio');
+                        audio.autoplay = true;
+                        audio.controls = true;
+                        audio.srcObject = new MediaStream([track.mediaStreamTrack]);
+                        
+                        // Add to page
+                        const container = document.getElementById('audioContainer');
+                        container.appendChild(audio);
+                        
+                        updateStatus('✅ Connected - Agent audio active!', true);
+                    }
+                });
+                
+                // Connect to room
+                await room.connect(url, token);
+                
+                // Publish microphone
+                const micTrack = await createLocalAudioTrack();
+                await room.localParticipant.publishTrack(micTrack);
+                
+                console.log('Connected and microphone published');
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                updateStatus(`❌ Connection failed: ${error.message}`, false);
+            }
+        }
+        
+        async function disconnectFromRoom() {
+            if (room) {
+                await room.disconnect();
+                room = null;
+                
+                // Clear audio elements
+                const container = document.getElementById('audioContainer');
+                const audios = container.querySelectorAll('audio');
+                audios.forEach(audio => audio.remove());
+                
+                updateStatus('❌ Disconnected', false);
+            }
+        }
+        
+        function updateStatus(message, isConnected) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + (isConnected ? 'connected' : 'disconnected');
+        }
+        
+        // Auto-fill if we have credentials from the script
+        window.addEventListener('load', () => {
+            // You can manually paste credentials here or get them from your script
+        });
+    </script>
+</body>
+</html>

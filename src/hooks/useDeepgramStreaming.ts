@@ -186,6 +186,7 @@ export function useDeepgramStreaming(
         { word: "Dreamforce", boost: 2 },
         
         // Customer names - x2 boost
+        { word: "UKI", boost: 5 },
         { word: "1-800Accountant", boost: 2 },
         { word: "Absa Group", boost: 2 },
         { word: "Adobe Population Health", boost: 2 },

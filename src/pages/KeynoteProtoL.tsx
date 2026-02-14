@@ -54,6 +54,7 @@ const KeynoteProtoL = () => {
   // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
   // Keynote-specific keywords for the 4 expected phrases
   const keynoteKeywords = [
+    { word: "UKI", boost: 5 },
     { word: "Are you Miguel", boost: 5 },
     { word: "Miguel", boost: 4 },
     { word: "agentic enterprise", boost: 5 },
