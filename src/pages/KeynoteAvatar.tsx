@@ -51,6 +51,10 @@ const KeynoteAvatarMain = () => {
   const { setOnStartCallback } = useQuizOverlayStore();
   const { keynoteTitle, keynoteSubtitle, showProtoM, appMode } = appConfig;
   
+  // Fetch agent config from server (keywords, triggers, settings)
+  // Must be called BEFORE useScopedAvatarConversation to pass triggers
+  const { config: agentConfig } = useAgentConfig('keynote');
+  
   // Frank Keynote uses server's SALESFORCE_AGENT_ID (pass undefined)
   // Must be defined BEFORE useScopedAvatarConversation hook
   const defaultAgentId = (appMode === 'frank-keynote' || appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
@@ -69,6 +73,7 @@ const KeynoteAvatarMain = () => {
     defaultAgentId,
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: false,
+    videoTriggers: agentConfig.triggers,
   });
 
   const {
@@ -77,9 +82,6 @@ const KeynoteAvatarMain = () => {
     lastVoiceTranscript,
     streamingSentences,
   } = conversationState;
-
-  // Fetch agent config from server (keywords, triggers, settings)
-  const { config: agentConfig } = useAgentConfig('keynote');
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);

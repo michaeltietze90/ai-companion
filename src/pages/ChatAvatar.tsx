@@ -50,6 +50,10 @@ const ChatAvatarMain = () => {
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
   const conversationState = useChatConversationStore();
 
+  // Fetch agent config from server (keywords, triggers, settings)
+  // Must be called BEFORE useScopedAvatarConversation to pass triggers
+  const { config: agentConfig } = useAgentConfig('chat');
+
   const {
     isConnected,
     isConnecting,
@@ -64,6 +68,7 @@ const ChatAvatarMain = () => {
     defaultAgentId: DEFAULT_CHAT_AGENT_ID,
     availableAgents: CHAT_AGENTS,
     useJsonMode: true,
+    videoTriggers: agentConfig.triggers,
   });
 
   const {
@@ -76,9 +81,6 @@ const ChatAvatarMain = () => {
   const { activeVisuals } = useVisualOverlayStore();
   const { setOnStartCallback } = useQuizOverlayStore();
   const { isVisible: countdownActive } = useCountdownStore();
-
-  // Fetch agent config from server (keywords, triggers, settings)
-  const { config: agentConfig } = useAgentConfig('chat');
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Chat] Voice transcript:', transcript);

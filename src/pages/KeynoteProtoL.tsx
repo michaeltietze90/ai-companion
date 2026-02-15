@@ -31,6 +31,10 @@ const KeynoteProtoL = () => {
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
   const { activeVisuals } = useVisualOverlayStore();
   
+  // Fetch agent config from server (keywords, triggers, settings)
+  // Must be called BEFORE useScopedAvatarConversation to pass triggers
+  const { config: agentConfig } = useAgentConfig('keynote');
+  
   // Must be defined BEFORE useScopedAvatarConversation hook
   const defaultAgentId = (appConfig.appMode === 'frank-keynote' || appConfig.appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
@@ -47,10 +51,8 @@ const KeynoteProtoL = () => {
     defaultAgentId,
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: false,
+    videoTriggers: agentConfig.triggers,
   });
-
-  // Fetch agent config from server (keywords, triggers, settings)
-  const { config: agentConfig } = useAgentConfig('keynote');
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoL] Voice transcript:', transcript);

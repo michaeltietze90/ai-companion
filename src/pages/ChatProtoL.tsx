@@ -28,6 +28,10 @@ const ChatProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
+  
+  // Fetch agent config from server (keywords, triggers, settings)
+  // Must be called BEFORE useScopedAvatarConversation to pass triggers
+  const { config: agentConfig } = useAgentConfig('chat');
 
   const {
     isConnected,
@@ -42,14 +46,12 @@ const ChatProtoL = () => {
     defaultAgentId: DEFAULT_CHAT_AGENT_ID,
     availableAgents: CHAT_AGENTS,
     useJsonMode: true,
+    videoTriggers: agentConfig.triggers,
   });
 
   const { activeVisuals } = useVisualOverlayStore();
   const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
-
-  // Fetch agent config from server (keywords, triggers, settings)
-  const { config: agentConfig } = useAgentConfig('chat');
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[ChatProtoL] Voice transcript:', transcript);

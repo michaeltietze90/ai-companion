@@ -13,6 +13,7 @@ import { parseRichResponse, type ParsedResponse, type VisualCommand } from '@/li
 import { parseStructuredResponse } from '@/lib/structuredResponseParser';
 import { useStructuredActions } from '@/hooks/useStructuredActions';
 import { findHardcodedTrigger } from '@/lib/hardcodedTriggers';
+import { findVideoTrigger, type VideoTrigger } from '@/hooks/useAgentConfig';
 import { debugLog } from '@/stores/debugStore';
 import { toast } from 'sonner';
 import type { StoreApi, UseBoundStore } from 'zustand';
@@ -40,6 +41,8 @@ interface ScopedAvatarConversationOptions {
   availableAgents: { id: string; name: string }[];
   /** Whether to use JSON response mode by default */
   useJsonMode?: boolean;
+  /** Dynamic video triggers from server config */
+  videoTriggers?: VideoTrigger[];
 }
 
 /**
@@ -47,7 +50,7 @@ interface ScopedAvatarConversationOptions {
  * This enables running multiple independent conversations in parallel.
  */
 export function useScopedAvatarConversation(options: ScopedAvatarConversationOptions) {
-  const { store, voiceSettings, defaultAgentId, useJsonMode = true } = options;
+  const { store, voiceSettings, defaultAgentId, useJsonMode = true, videoTriggers = [] } = options;
   
   const avatarRef = useRef<StreamingAvatar | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -373,7 +376,12 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       // Check hardcoded triggers first
       console.log('[sendMessage] Checking triggers for text:', text);
       const hardcodedTrigger = findHardcodedTrigger(text);
-      console.log('[sendMessage] Trigger found:', hardcodedTrigger ? hardcodedTrigger.keywords[0] : 'none');
+      console.log('[sendMessage] Hardcoded trigger found:', hardcodedTrigger ? hardcodedTrigger.keywords[0] : 'none');
+      
+      // Also check dynamic triggers from server config
+      const dynamicTrigger = findVideoTrigger(text, videoTriggers);
+      console.log('[sendMessage] Dynamic trigger found:', dynamicTrigger ? dynamicTrigger.name : 'none');
+      
       if (hardcodedTrigger) {
         debugLog('trigger', 'Video', `🎬 Playing: ${hardcodedTrigger.keywords[0]}`);
         addMessage({ role: 'assistant', content: hardcodedTrigger.speech });
@@ -413,6 +421,36 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
           setSpeaking(true);
           try {
             await speakViaProxy(hardcodedTrigger.speech);
+          } finally {
+            setSpeaking(false);
+          }
+        }
+        
+        return;
+      }
+      
+      // Handle dynamic video triggers from server config
+      if (dynamicTrigger) {
+        debugLog('trigger', 'Video', `🎬 Playing dynamic: ${dynamicTrigger.name}`);
+        addMessage({ role: 'assistant', content: dynamicTrigger.speech || '' });
+        setLastAgentforceResponse(dynamicTrigger.speech || '');
+        
+        const triggerVisuals: VisualCommand[] = [{
+          id: `dynamic_trigger_video_${Date.now()}`,
+          type: 'video',
+          src: dynamicTrigger.videoUrl,
+          duration: dynamicTrigger.durationMs,
+          position: dynamicTrigger.position as any,
+          startOffset: 0,
+        }];
+        
+        startVisuals(triggerVisuals);
+        setThinking(false);
+        
+        if (dynamicTrigger.speech && dynamicTrigger.speech.trim()) {
+          setSpeaking(true);
+          try {
+            await speakViaProxy(dynamicTrigger.speech);
           } finally {
             setSpeaking(false);
           }
