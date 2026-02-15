@@ -55,14 +55,14 @@ function getConfig(): AppConfig {
     default:
       return {
         appMode: 'full',
-        title: 'Frank Hologram Platform',
+        title: 'Miguel Avatar Platform',
         keynoteOnly: false,
         chatOnly: false,
         showProtoM: true,
-        keynoteTitle: 'Frank Keynote',
+        keynoteTitle: 'Miguel Keynote Avatar',
         keynoteSubtitle: 'CKO Keynote Agent',
-        chatTitle: 'Frank Exec Experience',
-        chatSubtitle: 'Conversational chat with Frank',
+        chatTitle: 'Pitch Agent Script',
+        chatSubtitle: 'Scripted pitch conversation agent',
       };
   }
 }

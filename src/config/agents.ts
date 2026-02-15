@@ -19,11 +19,11 @@ export const KEYNOTE_AGENTS: AgentConfig[] = [
   },
 ];
 
-// Pitch Script Agent (Frank Exec Experience)
+// Pitch Script Agent
 export const PITCH_AGENTS: AgentConfig[] = [
   {
     id: '0XxKZ000000yfFr0AI',
-    name: 'Frank Exec Experience',
+    name: 'Pitch Agent Script',
     description: 'Scripted pitch conversation agent',
   },
 ];
