@@ -46,6 +46,14 @@ const KeynoteAvatarMain = () => {
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
   const conversationState = useKeynoteConversationStore();
 
+  const { activeVisuals } = useVisualOverlayStore();
+  const { setOnStartCallback } = useQuizOverlayStore();
+  const { keynoteTitle, keynoteSubtitle, showProtoM, appMode } = appConfig;
+  
+  // Frank Keynote uses server's SALESFORCE_AGENT_ID (pass undefined)
+  // Must be defined BEFORE useScopedAvatarConversation hook
+  const defaultAgentId = (appMode === 'frank-keynote' || appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
+
   const {
     isConnected,
     isConnecting,
@@ -68,12 +76,6 @@ const KeynoteAvatarMain = () => {
     lastVoiceTranscript,
     streamingSentences,
   } = conversationState;
-
-  const { activeVisuals } = useVisualOverlayStore();
-  const { setOnStartCallback } = useQuizOverlayStore();
-  const { keynoteTitle, keynoteSubtitle, showProtoM, appMode } = appConfig;
-  // Frank Keynote uses server's SALESFORCE_AGENT_ID (pass undefined)
-  const defaultAgentId = appMode === 'frank-keynote' ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);

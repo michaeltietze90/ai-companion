@@ -28,6 +28,10 @@ const KeynoteProtoL = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
+  const { activeVisuals } = useVisualOverlayStore();
+  
+  // Must be defined BEFORE useScopedAvatarConversation hook
+  const defaultAgentId = (appConfig.appMode === 'frank-keynote' || appConfig.appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
   const {
     isConnected,
@@ -43,9 +47,6 @@ const KeynoteProtoL = () => {
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: false,
   });
-
-  const { activeVisuals } = useVisualOverlayStore();
-  const defaultAgentId = appConfig.appMode === 'frank-keynote' ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoL] Voice transcript:', transcript);
