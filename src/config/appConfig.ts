@@ -34,7 +34,7 @@ function getConfig(): AppConfig {
         title: 'Frank Hologram Platform',
         keynoteOnly: false,
         chatOnly: false,
-        showProtoM: true,
+        showProtoM: false,
         keynoteTitle: 'Frank Keynote',
         keynoteSubtitle: 'Australia Frank Hologram',
         chatTitle: 'Frank Exec Experience',
