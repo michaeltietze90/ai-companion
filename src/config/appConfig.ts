@@ -4,7 +4,7 @@
  * Set VITE_APP_MODE at build time (Heroku config).
  */
 
-export type AppMode = 'full' | 'frank-keynote' | 'frank-chat';
+export type AppMode = 'full' | 'frank-full' | 'frank-keynote' | 'frank-chat';
 
 const appMode = (import.meta.env.VITE_APP_MODE as AppMode | undefined) || 'full';
 
@@ -28,6 +28,18 @@ export interface AppConfig {
 
 function getConfig(): AppConfig {
   switch (appMode) {
+    case 'frank-full':
+      return {
+        appMode: 'frank-full',
+        title: 'Frank Hologram Platform',
+        keynoteOnly: false,
+        chatOnly: false,
+        showProtoM: true,
+        keynoteTitle: 'Frank Keynote',
+        keynoteSubtitle: 'Australia Frank Hologram',
+        chatTitle: 'Frank Exec Experience',
+        chatSubtitle: 'Scripted conversation agent',
+      };
     case 'frank-keynote':
       return {
         appMode: 'frank-keynote',
