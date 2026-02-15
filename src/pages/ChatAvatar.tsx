@@ -9,6 +9,7 @@ import { ScoreOverlay } from "@/components/Overlay/ScoreOverlay";
 import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useCountdownStore } from "@/stores/countdownStore";
+import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
