@@ -66,6 +66,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const elevenLabsAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastElevenLabsToastAtRef = useRef<number>(0);
   const isProcessingMessageRef = useRef(false); // Guard against concurrent messages
+  const videoTriggersRef = useRef<VideoTrigger[]>(videoTriggers); // Keep latest triggers in ref
 
   // Use scoped store
   const {
@@ -100,6 +101,12 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   useEffect(() => {
     agentforceMessagesStreamUrlRef.current = messagesStreamUrl;
   }, [messagesStreamUrl]);
+  
+  // Keep video triggers ref in sync with latest value
+  useEffect(() => {
+    videoTriggersRef.current = videoTriggers;
+    console.log('[useScopedAvatarConversation] Video triggers updated:', videoTriggers.length, 'triggers');
+  }, [videoTriggers]);
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const { hideSlide } = useSlideOverlayStore();
@@ -378,9 +385,9 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
       const hardcodedTrigger = findHardcodedTrigger(text);
       console.log('[sendMessage] Hardcoded trigger found:', hardcodedTrigger ? hardcodedTrigger.keywords[0] : 'none');
       
-      // Also check dynamic triggers from server config
-      const dynamicTrigger = findVideoTrigger(text, videoTriggers);
-      console.log('[sendMessage] Dynamic trigger found:', dynamicTrigger ? dynamicTrigger.name : 'none');
+      // Also check dynamic triggers from server config (use ref to get latest)
+      const dynamicTrigger = findVideoTrigger(text, videoTriggersRef.current);
+      console.log('[sendMessage] Dynamic trigger found:', dynamicTrigger ? dynamicTrigger.name : 'none', '(checked', videoTriggersRef.current.length, 'triggers)');
       
       if (hardcodedTrigger) {
         debugLog('trigger', 'Video', `🎬 Playing: ${hardcodedTrigger.keywords[0]}`);
