@@ -18,6 +18,7 @@ import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { debugLog } from "@/stores/debugStore";
+import { useAgentConfig } from "@/hooks/useAgentConfig";
 
 /**
  * Chat to Frank Proto L Fullscreen Page
@@ -47,6 +48,9 @@ const ChatProtoL = () => {
   const { isVisible: countdownActive, setOnExpireCallback } = useCountdownStore();
   const { setOnStartCallback, setOnNameSubmitCallback } = useQuizOverlayStore();
 
+  // Fetch agent config from server (keywords, triggers, settings)
+  const { config: agentConfig } = useAgentConfig('chat');
+
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[ChatProtoL] Voice transcript:', transcript);
     debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
@@ -64,8 +68,9 @@ const ChatProtoL = () => {
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
-      utteranceEndMs: countdownActive ? 5000 : 1000,
+      utteranceEndMs: countdownActive ? 5000 : agentConfig.utteranceEndMs,
       endpointingMs: countdownActive ? 5000 : 500,
+      keywords: agentConfig.keywords.length > 0 ? agentConfig.keywords : undefined,
     }
   );
 

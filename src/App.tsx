@@ -18,6 +18,7 @@ import PitchProtoLAlwaysListening from "./pages/PitchProtoLAlwaysListening";
 import ChatProtoM from "./pages/ChatProtoM";
 import ChatProtoL from "./pages/ChatProtoL";
 import LogViewer from "./pages/LogViewer";
+import AdminSettings from "./pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,9 @@ const App = () => (
           
           {/* Log Viewer (mobile-optimized) */}
           <Route path="/logs" element={<LogViewer />} />
+          
+          {/* Admin Settings */}
+          <Route path="/admin" element={<AdminSettings />} />
           
           {/* Legacy redirects */}
           <Route path="/proto-m" element={<Navigate to="/keynote/proto-m" replace />} />

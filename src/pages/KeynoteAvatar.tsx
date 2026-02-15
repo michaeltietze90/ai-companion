@@ -20,6 +20,7 @@ import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
 import { appConfig } from "@/config/appConfig";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { debugLog } from "@/stores/debugStore";
+import { useAgentConfig } from "@/hooks/useAgentConfig";
 
 /**
  * Miguel Keynote Avatar - Main Page
@@ -77,6 +78,9 @@ const KeynoteAvatarMain = () => {
     streamingSentences,
   } = conversationState;
 
+  // Fetch agent config from server (keywords, triggers, settings)
+  const { config: agentConfig } = useAgentConfig('keynote');
+
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);
     debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
@@ -84,22 +88,8 @@ const KeynoteAvatarMain = () => {
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  // Keynote-specific keywords for the 4 expected phrases
-  const keynoteKeywords = [
-    { word: "UKI", boost: 5 },
-    { word: "Are you Miguel", boost: 5 },
-    { word: "Miguel", boost: 4 },
-    { word: "agentic enterprise", boost: 5 },
-    { word: "agentic", boost: 4 },
-    { word: "enterprise", boost: 3 },
-    { word: "net new AOV", boost: 5 },
-    { word: "net new", boost: 4 },
-    { word: "AOV", boost: 4 },
-    { word: "backflip", boost: 5 },
-    { word: "back flip", boost: 5 },
-  ];
-
   // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
+  // Uses keywords from server config
   const { 
     isListening, 
     isConnecting: sttConnecting, 
@@ -110,8 +100,8 @@ const KeynoteAvatarMain = () => {
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
-      utteranceEndMs: 1000,
-      keywords: keynoteKeywords,
+      utteranceEndMs: agentConfig.utteranceEndMs,
+      keywords: agentConfig.keywords,
     }
   );
 

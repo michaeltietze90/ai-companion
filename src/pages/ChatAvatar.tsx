@@ -23,6 +23,7 @@ import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
 import { appConfig } from "@/config/appConfig";
 import { debugLog } from "@/stores/debugStore";
+import { useAgentConfig } from "@/hooks/useAgentConfig";
 
 /**
  * Chat to Frank - Main Page
@@ -76,6 +77,9 @@ const ChatAvatarMain = () => {
   const { setOnStartCallback } = useQuizOverlayStore();
   const { isVisible: countdownActive } = useCountdownStore();
 
+  // Fetch agent config from server (keywords, triggers, settings)
+  const { config: agentConfig } = useAgentConfig('chat');
+
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Chat] Voice transcript:', transcript);
     debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
@@ -93,7 +97,8 @@ const ChatAvatarMain = () => {
     handleVoiceTranscript,
     { 
       disabled: isSpeaking,
-      utteranceEndMs: countdownActive ? 3000 : 1000,
+      utteranceEndMs: countdownActive ? 3000 : agentConfig.utteranceEndMs,
+      keywords: agentConfig.keywords.length > 0 ? agentConfig.keywords : undefined,
     }
   );
 

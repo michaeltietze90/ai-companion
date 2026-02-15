@@ -23,6 +23,10 @@ import deepgramTranscribeRouter from './routes/deepgram-transcribe.js';
 import deepgramKeyRouter from './routes/deepgram-key.js';
 import leaderboardRouter from './routes/leaderboard.js';
 import conversationLogRouter from './routes/conversation-log.js';
+import agentConfigRouter from './routes/agent-config.js';
+
+// Import database initialization
+import { initializeDatabase } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +50,7 @@ app.use('/api/deepgram-transcribe', deepgramTranscribeRouter);
 app.use('/api/deepgram-key', deepgramKeyRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/conversation-log', conversationLogRouter);
+app.use('/api/agent-config', agentConfigRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -114,8 +119,26 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`WebSocket available at /ws/logs`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Initialize database tables (only if DATABASE_URL is set)
+    if (process.env.DATABASE_URL) {
+      await initializeDatabase();
+      console.log('[Database] Connected and initialized');
+    } else {
+      console.log('[Database] No DATABASE_URL set, skipping database initialization');
+    }
+    
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`WebSocket available at /ws/logs`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('[Server] Failed to start:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
