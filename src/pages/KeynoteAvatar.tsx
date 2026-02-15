@@ -51,13 +51,17 @@ const KeynoteAvatarMain = () => {
   const { setOnStartCallback } = useQuizOverlayStore();
   const { keynoteTitle, keynoteSubtitle, showProtoM, appMode } = appConfig;
   
-  // Fetch agent config from server (keywords, triggers, settings)
+  // Fetch agent config from server (keywords, triggers, settings, agentId)
   // Must be called BEFORE useScopedAvatarConversation to pass triggers
   const { config: agentConfig } = useAgentConfig('keynote');
   
-  // Frank Keynote uses server's SALESFORCE_AGENT_ID (pass undefined)
-  // Must be defined BEFORE useScopedAvatarConversation hook
-  const defaultAgentId = (appMode === 'frank-keynote' || appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
+  // Use agent ID from server config if set, otherwise fall back to env var / hardcoded
+  // For Frank apps: agentConfig.agentId (from DB) > undefined (server default)
+  // For Miguel: agentConfig.agentId (from DB) > DEFAULT_KEYNOTE_AGENT_ID
+  const defaultAgentId = agentConfig.agentId 
+    || ((appMode === 'frank-keynote' || appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID);
+  
+  console.log('[KeynoteAvatar] Using agent ID:', defaultAgentId || '(server default)');
 
   const {
     isConnected,

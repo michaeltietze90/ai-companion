@@ -67,6 +67,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const lastElevenLabsToastAtRef = useRef<number>(0);
   const isProcessingMessageRef = useRef(false); // Guard against concurrent messages
   const videoTriggersRef = useRef<VideoTrigger[]>(videoTriggers); // Keep latest triggers in ref
+  const defaultAgentIdRef = useRef<string | undefined>(defaultAgentId); // Keep latest agent ID in ref
 
   // Use scoped store
   const {
@@ -107,6 +108,12 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     videoTriggersRef.current = videoTriggers;
     console.log('[useScopedAvatarConversation] Video triggers updated:', videoTriggers.length, 'triggers');
   }, [videoTriggers]);
+  
+  // Keep default agent ID ref in sync with latest value
+  useEffect(() => {
+    defaultAgentIdRef.current = defaultAgentId;
+    console.log('[useScopedAvatarConversation] Default agent ID updated:', defaultAgentId || '(undefined - will use server default)');
+  }, [defaultAgentId]);
 
   const { startVisuals, clearVisuals } = useVisualOverlayStore();
   const { hideSlide } = useSlideOverlayStore();
@@ -307,9 +314,10 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
     agentId?: string,
     heygenApiKeyName?: string
   ) => {
-    const targetAgentId = agentId || defaultAgentId;
+    // Use ref to get the latest defaultAgentId (may have been updated from API config)
+    const targetAgentId = agentId || defaultAgentIdRef.current;
     console.log('[startConversation] agentId param:', agentId);
-    console.log('[startConversation] defaultAgentId:', defaultAgentId);
+    console.log('[startConversation] defaultAgentIdRef.current:', defaultAgentIdRef.current);
     console.log('[startConversation] targetAgentId:', targetAgentId);
     debugLog('state-change', 'Conversation', 'Starting conversation', { agentId: targetAgentId });
     setConnecting(true);
@@ -442,11 +450,15 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
         addMessage({ role: 'assistant', content: dynamicTrigger.speech || '' });
         setLastAgentforceResponse(dynamicTrigger.speech || '');
         
+        // Duration: null means use full video length (we use a very large value so it plays completely)
+        // The video player will naturally end when the video finishes
+        const videoDuration = dynamicTrigger.durationMs ?? 999999; // null = let video play fully
+        
         const triggerVisuals: VisualCommand[] = [{
           id: `dynamic_trigger_video_${Date.now()}`,
           type: 'video',
           src: dynamicTrigger.videoUrl,
-          duration: dynamicTrigger.durationMs,
+          duration: videoDuration,
           position: dynamicTrigger.position as any,
           startOffset: 0,
         }];
@@ -575,7 +587,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
           toast.info('Session expired, reconnecting...');
 
           try {
-            const agentIdForRecovery = agentforceAgentIdRef.current ?? defaultAgentId;
+            const agentIdForRecovery = agentforceAgentIdRef.current ?? defaultAgentIdRef.current;
             const { sessionId: newSid, messagesStreamUrl: newUrl } = await startAgentSession(agentIdForRecovery);
             setSessionId(newSid);
             setMessagesStreamUrl(newUrl);

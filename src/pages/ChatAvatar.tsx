@@ -50,9 +50,12 @@ const ChatAvatarMain = () => {
   const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
   const conversationState = useChatConversationStore();
 
-  // Fetch agent config from server (keywords, triggers, settings)
+  // Fetch agent config from server (keywords, triggers, settings, agentId)
   // Must be called BEFORE useScopedAvatarConversation to pass triggers
   const { config: agentConfig } = useAgentConfig('chat');
+  
+  // Use agent ID from server config if set, otherwise fall back to env var / hardcoded
+  const defaultAgentId = agentConfig.agentId || DEFAULT_CHAT_AGENT_ID;
 
   const {
     isConnected,
@@ -65,7 +68,7 @@ const ChatAvatarMain = () => {
   } = useScopedAvatarConversation({
     store: useChatConversationStore,
     voiceSettings,
-    defaultAgentId: DEFAULT_CHAT_AGENT_ID,
+    defaultAgentId,
     availableAgents: CHAT_AGENTS,
     useJsonMode: true,
     videoTriggers: agentConfig.triggers,

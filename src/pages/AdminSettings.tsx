@@ -28,7 +28,7 @@ interface VideoTrigger {
   name: string;
   keywords: string[];
   videoUrl: string;
-  durationMs: number;
+  durationMs: number | null; // null = use full video length
   position: string;
   speech: string;
   enabled: boolean;
@@ -37,6 +37,7 @@ interface VideoTrigger {
 interface AgentConfig {
   agentType: string;
   utteranceEndMs: number;
+  agentId: string | null;
   keywords: KeywordBoost[];
   triggers: VideoTrigger[];
 }
@@ -63,6 +64,7 @@ const AdminSettings = () => {
   
   // Local state for editing
   const [utteranceEndMs, setUtteranceEndMs] = useState(1000);
+  const [agentId, setAgentId] = useState('');
   const [keywords, setKeywords] = useState<KeywordBoost[]>([]);
   const [triggers, setTriggers] = useState<VideoTrigger[]>([]);
   const [newKeyword, setNewKeyword] = useState({ word: '', boost: 5 });
@@ -79,6 +81,7 @@ const AdminSettings = () => {
       const data: AgentConfig = await res.json();
       setConfig(data);
       setUtteranceEndMs(data.utteranceEndMs);
+      setAgentId(data.agentId || '');
       setKeywords(data.keywords);
       setTriggers(data.triggers);
     } catch (error) {
@@ -140,11 +143,11 @@ const AdminSettings = () => {
     setSaveMessage(null);
     
     try {
-      // Save utterance settings
+      // Save settings (utteranceEndMs and agentId)
       await fetch(`/api/agent-config/${selectedAgent}/settings`, {
         method: 'PUT',
         headers: getAuthHeader(),
-        body: JSON.stringify({ utteranceEndMs }),
+        body: JSON.stringify({ utteranceEndMs, agentId: agentId || null }),
       });
       
       // Save keywords
@@ -238,7 +241,7 @@ const AdminSettings = () => {
         name: 'New Trigger',
         keywords: [],
         videoUrl: '',
-        durationMs: 5000,
+        durationMs: null, // Default to full video length
         position: 'avatar',
         speech: '',
         enabled: true,
@@ -364,7 +367,27 @@ const AdminSettings = () => {
 
             {/* Keywords & Voice Settings */}
             <TabsContent value="keywords" className="space-y-6">
-              {/* Utterance Settings */}
+              {/* Agent Settings */}
+              <div className="rounded-xl border border-border p-6">
+                <h2 className="text-lg font-semibold mb-4">Agent Settings</h2>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Salesforce Agent ID</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      The Agentforce Agent ID for this experience. Leave empty to use server default.
+                    </p>
+                    <Input
+                      type="text"
+                      value={agentId}
+                      onChange={(e) => setAgentId(e.target.value)}
+                      placeholder="e.g., 0XxHn000001LXbYKAW"
+                      className="w-full max-w-md font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Voice Settings */}
               <div className="rounded-xl border border-border p-6">
                 <h2 className="text-lg font-semibold mb-4">Voice Settings</h2>
                 <div className="space-y-4">
@@ -582,13 +605,27 @@ const TriggerCard = ({ trigger, onSave, onDelete, isSaving }: TriggerCardProps) 
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <Label>Duration</Label>
+          <div className="flex items-center gap-2 mt-1">
+            <Switch
+              checked={local.durationMs === null}
+              onCheckedChange={(checked) => setLocal({ ...local, durationMs: checked ? null : 5000 })}
+            />
+            <span className="text-sm text-muted-foreground">
+              {local.durationMs === null ? 'Full video' : 'Custom'}
+            </span>
+          </div>
+        </div>
         <div>
           <Label>Duration (ms)</Label>
           <Input
             type="number"
-            value={local.durationMs}
-            onChange={(e) => setLocal({ ...local, durationMs: parseInt(e.target.value) || 5000 })}
+            value={local.durationMs ?? ''}
+            onChange={(e) => setLocal({ ...local, durationMs: e.target.value ? parseInt(e.target.value) : null })}
+            placeholder="Auto"
+            disabled={local.durationMs === null}
           />
         </div>
         <div>

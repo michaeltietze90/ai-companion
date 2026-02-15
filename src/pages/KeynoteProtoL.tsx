@@ -31,12 +31,13 @@ const KeynoteProtoL = () => {
   const voiceSettings = useAppVoiceSettingsStore(state => state.keynote);
   const { activeVisuals } = useVisualOverlayStore();
   
-  // Fetch agent config from server (keywords, triggers, settings)
+  // Fetch agent config from server (keywords, triggers, settings, agentId)
   // Must be called BEFORE useScopedAvatarConversation to pass triggers
   const { config: agentConfig } = useAgentConfig('keynote');
   
-  // Must be defined BEFORE useScopedAvatarConversation hook
-  const defaultAgentId = (appConfig.appMode === 'frank-keynote' || appConfig.appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
+  // Use agent ID from server config if set, otherwise fall back to env var / hardcoded
+  const defaultAgentId = agentConfig.agentId 
+    || ((appConfig.appMode === 'frank-keynote' || appConfig.appMode === 'frank-full') ? undefined : DEFAULT_KEYNOTE_AGENT_ID);
 
   const {
     isConnected,

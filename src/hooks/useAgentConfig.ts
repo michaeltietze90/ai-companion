@@ -17,7 +17,7 @@ export interface VideoTrigger {
   name: string;
   keywords: string[];
   videoUrl: string;
-  durationMs: number;
+  durationMs: number | null; // null = use full video length
   position: string;
   speech: string;
   enabled: boolean;
@@ -26,6 +26,7 @@ export interface VideoTrigger {
 export interface AgentConfig {
   agentType: string;
   utteranceEndMs: number;
+  agentId: string | null;
   keywords: KeywordBoost[];
   triggers: VideoTrigger[];
 }
@@ -51,12 +52,14 @@ const DEFAULT_CONFIG: Record<string, AgentConfig> = {
   keynote: {
     agentType: 'keynote',
     utteranceEndMs: 1000,
+    agentId: null,
     keywords: DEFAULT_KEYNOTE_KEYWORDS,
     triggers: [],
   },
   chat: {
     agentType: 'chat',
     utteranceEndMs: 1000,
+    agentId: null,
     keywords: DEFAULT_CHAT_KEYWORDS,
     triggers: [],
   },

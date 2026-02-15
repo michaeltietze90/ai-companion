@@ -25,9 +25,21 @@ export async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         agent_type VARCHAR(50) NOT NULL UNIQUE,
         utterance_end_ms INTEGER DEFAULT 1000,
+        agent_id VARCHAR(255) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
+    `);
+    
+    // Add agent_id column if it doesn't exist (for existing deployments)
+    await client.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name='agent_settings' AND column_name='agent_id') THEN
+          ALTER TABLE agent_settings ADD COLUMN agent_id VARCHAR(255) DEFAULT NULL;
+        END IF;
+      END $$;
     `);
 
     // Create keyword_boosts table
@@ -87,16 +99,30 @@ export async function getAgentSettings(agentType) {
  * Update agent settings
  */
 export async function updateAgentSettings(agentType, settings) {
-  const { utteranceEndMs } = settings;
-  const result = await pool.query(
-    `INSERT INTO agent_settings (agent_type, utterance_end_ms, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (agent_type) 
-     DO UPDATE SET utterance_end_ms = $2, updated_at = NOW()
-     RETURNING *`,
-    [agentType, utteranceEndMs]
-  );
-  return result.rows[0];
+  const { utteranceEndMs, agentId } = settings;
+  
+  // Build dynamic query based on what's provided
+  if (agentId !== undefined) {
+    const result = await pool.query(
+      `INSERT INTO agent_settings (agent_type, utterance_end_ms, agent_id, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (agent_type) 
+       DO UPDATE SET utterance_end_ms = $2, agent_id = $3, updated_at = NOW()
+       RETURNING *`,
+      [agentType, utteranceEndMs, agentId || null]
+    );
+    return result.rows[0];
+  } else {
+    const result = await pool.query(
+      `INSERT INTO agent_settings (agent_type, utterance_end_ms, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (agent_type) 
+       DO UPDATE SET utterance_end_ms = $2, updated_at = NOW()
+       RETURNING *`,
+      [agentType, utteranceEndMs]
+    );
+    return result.rows[0];
+  }
 }
 
 /**
@@ -240,6 +266,7 @@ export async function getAllAgentConfig(agentType) {
   return {
     agentType,
     utteranceEndMs: settings?.utterance_end_ms || 1000,
+    agentId: settings?.agent_id || null,
     keywords,
     triggers,
   };

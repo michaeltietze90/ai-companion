@@ -63,12 +63,12 @@ router.get('/:agentType', async (req, res) => {
 
 /**
  * PUT /api/agent-config/:agentType/settings
- * Update agent settings (utteranceEndMs)
+ * Update agent settings (utteranceEndMs, agentId)
  */
 router.put('/:agentType/settings', requireAuth, async (req, res) => {
   try {
     const { agentType } = req.params;
-    const { utteranceEndMs } = req.body;
+    const { utteranceEndMs, agentId } = req.body;
     
     if (!validateAgentType(agentType)) {
       return res.status(400).json({ error: 'Invalid agent type' });
@@ -78,7 +78,11 @@ router.put('/:agentType/settings', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'utteranceEndMs must be between 100 and 10000' });
     }
     
-    const settings = await updateAgentSettings(agentType, { utteranceEndMs });
+    // agentId can be string or null/empty to clear it
+    const settings = await updateAgentSettings(agentType, { 
+      utteranceEndMs, 
+      agentId: agentId || null 
+    });
     res.json({ success: true, settings });
   } catch (error) {
     console.error('[AgentConfig] Error updating settings:', error);
