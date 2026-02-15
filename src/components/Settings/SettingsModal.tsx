@@ -21,8 +21,8 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onReconnectAvatar?: () => void;
-  /** Which app's settings to show: keynote or pitch */
-  appType?: 'keynote' | 'pitch';
+  /** Which app's settings to show: keynote, pitch, or chat */
+  appType?: 'keynote' | 'pitch' | 'chat';
 }
 
 export function SettingsModal({ 
@@ -36,11 +36,13 @@ export function SettingsModal({
   // Get the appropriate settings and updater based on appType
   const keynoteSettings = useAppVoiceSettingsStore(state => state.keynote);
   const pitchSettings = useAppVoiceSettingsStore(state => state.pitch);
+  const chatSettings = useAppVoiceSettingsStore(state => state.chat);
   const updateKeynoteSettings = useAppVoiceSettingsStore(state => state.updateKeynoteSettings);
   const updatePitchSettings = useAppVoiceSettingsStore(state => state.updatePitchSettings);
+  const updateChatSettings = useAppVoiceSettingsStore(state => state.updateChatSettings);
 
-  const settings = appType === 'keynote' ? keynoteSettings : pitchSettings;
-  const updateSettings = appType === 'keynote' ? updateKeynoteSettings : updatePitchSettings;
+  const settings = appType === 'keynote' ? keynoteSettings : appType === 'chat' ? chatSettings : pitchSettings;
+  const updateSettings = appType === 'keynote' ? updateKeynoteSettings : appType === 'chat' ? updateChatSettings : updatePitchSettings;
 
   const updateVoiceSetting = (key: keyof HeyGenVoiceSettings, value: number | boolean) => {
     updateSettings({
@@ -65,6 +67,7 @@ export function SettingsModal({
   const appLabels = {
     keynote: 'Keynote',
     pitch: 'Pitch',
+    chat: 'Chat',
   };
 
   return (

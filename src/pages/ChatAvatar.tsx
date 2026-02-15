@@ -10,44 +10,43 @@ import { SlideOverlay } from "@/components/Overlay/SlideOverlay";
 import { useVisualOverlayStore } from "@/stores/visualOverlayStore";
 import { useCountdownStore } from "@/stores/countdownStore";
 import { QuizOverlayManager } from "@/components/QuizOverlay/QuizOverlayManager";
-import { useQuizOverlayStore } from "@/stores/quizOverlayStore";
-import { TestMessageSender } from "@/components/TestPanel/TestMessageSender";
 import { Mic, MicOff, Volume2, VolumeX, Settings, X, Play, Loader2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { usePitchConversationStore } from "@/stores/pitchConversationStore";
+import { useChatConversationStore } from "@/stores/chatConversationStore";
 import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
-import { PITCH_AGENTS, DEFAULT_PITCH_AGENT_ID } from "@/config/agents";
+import { CHAT_AGENTS, DEFAULT_CHAT_AGENT_ID } from "@/config/agents";
+import { appConfig } from "@/config/appConfig";
 import { debugLog } from "@/stores/debugStore";
 
 /**
- * Pitch Agent Script - Main Page
- * Uses Script based Chat with Miguel Agent
+ * Chat to Frank - Main Page
+ * Conversational chat with Frank
  */
-const PitchAvatar = () => {
+const ChatAvatar = () => {
   const location = useLocation();
-  const isMainPage = location.pathname === '/pitch' || location.pathname === '/pitch/';
+  const isMainPage = location.pathname === '/chat' || location.pathname === '/chat/';
   
   if (!isMainPage) {
     return <Outlet />;
   }
 
-  return <PitchAvatarMain />;
+  return <ChatAvatarMain />;
 };
 
-const PitchAvatarMain = () => {
+const ChatAvatarMain = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [textInput, setTextInput] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { chatTitle, chatSubtitle, showProtoM } = appConfig;
 
-  // Use pitch-specific store and settings
-  const voiceSettings = useAppVoiceSettingsStore(state => state.pitch);
-  const conversationState = usePitchConversationStore();
+  const voiceSettings = useAppVoiceSettingsStore(state => state.chat);
+  const conversationState = useChatConversationStore();
 
   const {
     isConnected,
@@ -58,10 +57,10 @@ const PitchAvatarMain = () => {
     sendMessage,
     endConversation,
   } = useScopedAvatarConversation({
-    store: usePitchConversationStore,
+    store: useChatConversationStore,
     voiceSettings,
-    defaultAgentId: DEFAULT_PITCH_AGENT_ID,
-    availableAgents: PITCH_AGENTS,
+    defaultAgentId: DEFAULT_CHAT_AGENT_ID,
+    availableAgents: CHAT_AGENTS,
     useJsonMode: true,
   });
 
@@ -77,13 +76,12 @@ const PitchAvatarMain = () => {
   const { isVisible: countdownActive } = useCountdownStore();
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
-    console.log('[Pitch] Voice transcript:', transcript);
+    console.log('[Chat] Voice transcript:', transcript);
     debugLog('voice-transcript', 'User', `🎤 "${transcript}"`);
     conversationState.setLastVoiceTranscript(transcript);
     sendMessage(transcript);
   }, [conversationState, sendMessage]);
 
-  // Deepgram streaming with built-in VAD - no barge-in (don't interrupt avatar)
   const { 
     isListening, 
     isConnecting: sttConnecting,
@@ -98,37 +96,23 @@ const PitchAvatarMain = () => {
     }
   );
 
-  // Toggle listening function
   const toggleListening = useCallback(() => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
+    if (isListening) stopListening();
+    else startListening();
   }, [isListening, startListening, stopListening]);
 
-  // Track previous speaking state for auto-listen
   const wasSpeakingRef = useRef(false);
-
-  // Auto-listen when avatar finishes speaking
   useEffect(() => {
     if (isConnected && wasSpeakingRef.current && !isSpeaking) {
-      // Avatar just stopped speaking - auto-start listening
-      console.log('[PitchAvatar] Avatar stopped speaking, auto-starting listen');
       startListening();
     }
     wasSpeakingRef.current = isSpeaking;
   }, [isSpeaking, isConnected, startListening]);
 
-  const handleStart = useCallback(() => {
-    startConversation(videoRef.current);
-  }, [startConversation]);
-
+  const handleStart = useCallback(() => startConversation(videoRef.current), [startConversation]);
   const handleReconnectAvatar = useCallback(() => {
     endConversation();
-    setTimeout(() => {
-      startConversation(videoRef.current);
-    }, 500);
+    setTimeout(() => startConversation(videoRef.current), 500);
   }, [endConversation, startConversation]);
 
   useEffect(() => {
@@ -144,49 +128,41 @@ const PitchAvatarMain = () => {
     }
   };
 
-  // Preload trigger videos on mount for instant playback
-  useEffect(() => {
-    preloadTriggerVideos();
-  }, []);
+  useEffect(() => preloadTriggerVideos(), []);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-purple-950/20 via-background to-pink-950/20">
-      
-      {/* Visual Overlay Layer */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-cyan-950/20 via-background to-teal-950/20">
       <VisualOverlay visuals={activeVisuals} />
 
-      {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 md:p-5 flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-3">
           <motion.div
-            className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/20"
             whileHover={{ scale: 1.05 }}
           >
-            <span className="text-white font-bold text-base md:text-lg">P</span>
+            <span className="text-white font-bold text-base md:text-lg">F</span>
           </motion.div>
           <div className="hidden sm:block">
-            <span className="text-foreground font-semibold">{PITCH_AGENTS[0].name}</span>
-            <span className="text-muted-foreground text-sm block">Scripted Conversation Agent</span>
+            <span className="text-foreground font-semibold">{chatTitle}</span>
+            <span className="text-muted-foreground text-sm block">{chatSubtitle}</span>
           </div>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Fullscreen Links */}
-          <div className="hidden xl:flex items-center gap-1">
-            <Link to="/pitch/proto-m">
+          {showProtoM && (
+            <Link to="/chat/proto-m">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                 <Maximize2 className="w-3 h-3 mr-1" />
                 Proto M
               </Button>
             </Link>
-            <Link to="/pitch/proto-l">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
-                <Maximize2 className="w-3 h-3 mr-1" />
-                Proto L
-              </Button>
-            </Link>
-          </div>
-
+          )}
+          <Link to="/chat/proto-l">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+              <Maximize2 className="w-3 h-3 mr-1" />
+              Proto L
+            </Button>
+          </Link>
           <Button
             variant="ghost"
             size="icon"
@@ -198,7 +174,6 @@ const PitchAvatarMain = () => {
         </div>
       </header>
 
-      {/* Main content */}
       <main className="relative z-10 h-screen">
         <ProtoMDevice isActive={isConnected}>
           <HologramAvatar 
@@ -212,18 +187,14 @@ const PitchAvatarMain = () => {
           <ScoreOverlay />
           <SlideOverlay />
           
-          {/* Control buttons inside avatar - right side */}
           {isConnected && (
             <div className="absolute top-1/2 -translate-y-1/2 right-4 z-30 flex flex-col gap-3">
-              {/* Mic toggle */}
               <Button
                 size="lg"
                 className={`rounded-full w-12 h-12 ${
-                  sttProcessing
-                    ? 'bg-amber-500 hover:bg-amber-600'
-                    : isListening 
-                    ? 'bg-purple-500 hover:bg-purple-600' 
-                    : 'bg-secondary hover:bg-secondary/80'
+                  sttProcessing ? 'bg-amber-500 hover:bg-amber-600' :
+                  isListening ? 'bg-cyan-500 hover:bg-cyan-600' : 
+                  'bg-secondary hover:bg-secondary/80'
                 }`}
                 onClick={toggleListening}
                 disabled={sttConnecting || sttProcessing}
@@ -236,24 +207,10 @@ const PitchAvatarMain = () => {
                   <MicOff className="w-5 h-5" />
                 )}
               </Button>
-
-              {/* Mute toggle */}
-              <Button
-                size="lg"
-                variant="ghost"
-                className="rounded-full w-12 h-12 bg-secondary/50 hover:bg-secondary/80"
-                onClick={() => setIsMuted(!isMuted)}
-              >
+              <Button size="lg" variant="ghost" className="rounded-full w-12 h-12 bg-secondary/50 hover:bg-secondary/80" onClick={() => setIsMuted(!isMuted)}>
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </Button>
-
-              {/* End conversation */}
-              <Button
-                size="lg"
-                variant="destructive"
-                className="rounded-full w-12 h-12"
-                onClick={endConversation}
-              >
+              <Button size="lg" variant="destructive" className="rounded-full w-12 h-12" onClick={endConversation}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
@@ -261,38 +218,24 @@ const PitchAvatarMain = () => {
         </ProtoMDevice>
       </main>
 
-      {/* Status indicator */}
       <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20">
-        <motion.div
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 backdrop-blur-md border border-border"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 backdrop-blur-md border border-border" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <div className={`w-2 h-2 rounded-full ${
-            sttProcessing ? 'bg-amber-400' :
-            isListening ? 'bg-purple-400' :
-            isConnected ? 'bg-green-400' : 
-            isConnecting ? 'bg-amber-400' : 
-            'bg-purple-500'
+            sttProcessing ? 'bg-amber-400' : isListening ? 'bg-cyan-400' :
+            isConnected ? 'bg-green-400' : isConnecting ? 'bg-amber-400' : 'bg-cyan-500'
           } animate-pulse`} />
           <span className="text-sm text-muted-foreground">
-            {sttProcessing ? 'Processing...' :
-             isListening ? 'Listening...' :
-             isConnecting ? 'Connecting...' : 
-             isConnected ? 'Connected' : 
-             'Ready'}
+            {sttProcessing ? 'Processing...' : isListening ? 'Listening...' : isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Ready'}
           </span>
         </motion.div>
       </div>
 
-      {/* Debug panel */}
       {isConnected && (
         <div className="hidden lg:flex absolute top-20 right-4 bottom-24 w-72 z-20 flex-col gap-2 overflow-hidden">
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-shrink-0">
-            <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Agentforce</p>
+            <p className="text-xs text-muted-foreground font-medium mb-1">Voice → Frank</p>
             <p className="text-sm text-foreground line-clamp-3">{lastVoiceTranscript || '—'}</p>
           </div>
-          
           <div className="rounded-xl bg-secondary/70 backdrop-blur-md border border-border p-3 flex-1 overflow-hidden flex flex-col">
             <p className="text-xs text-muted-foreground font-medium mb-2">Streaming Sentences</p>
             <div className="flex-1 overflow-y-auto space-y-1.5">
@@ -300,10 +243,7 @@ const PitchAvatarMain = () => {
                 <p className="text-xs text-muted-foreground italic">Waiting for response...</p>
               ) : (
                 streamingSentences.map((sentence, idx) => (
-                  <div 
-                    key={idx} 
-                    className="text-xs text-foreground p-2 rounded-lg bg-purple-500/10 border-l-2 border-purple-500"
-                  >
+                  <div key={idx} className="text-xs text-foreground p-2 rounded-lg bg-cyan-500/10 border-l-2 border-cyan-500">
                     <span className="text-muted-foreground mr-1">{idx + 1}.</span>
                     {sentence}
                   </div>
@@ -314,32 +254,20 @@ const PitchAvatarMain = () => {
         </div>
       )}
 
-      {/* Thinking indicator */}
       <AnimatePresence>
         {isThinking && (
-          <motion.div
-            className="absolute top-32 left-1/2 -translate-x-1/2 z-20"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-          >
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 backdrop-blur-md border border-purple-500/30">
-              <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
-              <span className="text-sm text-purple-500">{thinkingMessage || 'Thinking...'}</span>
+          <motion.div className="absolute top-32 left-1/2 -translate-x-1/2 z-20" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 backdrop-blur-md border border-cyan-500/30">
+              <Loader2 className="w-4 h-4 text-cyan-500 animate-spin" />
+              <span className="text-sm text-cyan-500">{thinkingMessage || 'Thinking...'}</span>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Error display */}
       <AnimatePresence>
         {error && (
-          <motion.div
-            className="absolute top-32 left-1/2 -translate-x-1/2 z-20"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
+          <motion.div className="absolute top-32 left-1/2 -translate-x-1/2 z-20" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <div className="px-4 py-2 rounded-xl bg-destructive/20 border border-destructive/30">
               <span className="text-sm text-destructive">{error}</span>
             </div>
@@ -347,71 +275,45 @@ const PitchAvatarMain = () => {
         )}
       </AnimatePresence>
 
-      {/* Controls - Left side text input */}
       {isConnected && (
         <div className="absolute bottom-1/2 translate-y-1/2 left-4 md:left-6 z-20">
           <form onSubmit={handleSendText} className="flex flex-col gap-2">
             <Input
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Chat with Miguel..."
+              placeholder="Chat with Frank..."
               className="w-48 md:w-64 bg-secondary/80 backdrop-blur-md border-border text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
               disabled={isThinking}
             />
-            <Button 
-              type="submit" 
-              disabled={isThinking || !textInput.trim()}
-              className="bg-purple-500 hover:bg-purple-600 text-white rounded-xl"
-            >
+            <Button type="submit" disabled={isThinking || !textInput.trim()} className="bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl">
               Send
             </Button>
           </form>
         </div>
       )}
 
-      {/* Start button (centered at bottom when not connected) */}
       {!isConnected && (
         <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6">
-          <motion.div
-            className="max-w-md mx-auto flex items-center justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
+          <motion.div className="max-w-md mx-auto flex items-center justify-center" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <Button
               size="lg"
-              className="px-10 py-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/30 rounded-xl"
+              className="px-10 py-6 bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-semibold shadow-lg shadow-cyan-500/30 rounded-xl"
               onClick={handleStart}
               disabled={isConnecting}
             >
               {isConnecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
-                </>
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Connecting...</>
               ) : (
-                <>
-                  <Play className="w-5 h-5 mr-2" />
-                  Chat with Miguel
-                </>
+                <><Play className="w-5 h-5 mr-2" />Chat with Frank</>
               )}
             </Button>
           </motion.div>
         </footer>
       )}
 
-      {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
-        onReconnectAvatar={handleReconnectAvatar}
-        appType="pitch"
-      />
-      
-      {/* Test Message Sender Panel */}
-      <TestMessageSender />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} onReconnectAvatar={handleReconnectAvatar} appType="chat" />
     </div>
   );
 };
 
-export default PitchAvatar;
+export default ChatAvatar;

@@ -17,6 +17,7 @@ import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
+import { appConfig } from "@/config/appConfig";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { debugLog } from "@/stores/debugStore";
 
@@ -56,7 +57,7 @@ const KeynoteAvatarMain = () => {
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
-    defaultAgentId: DEFAULT_KEYNOTE_AGENT_ID,
+    defaultAgentId,
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: false,
   });
@@ -70,6 +71,9 @@ const KeynoteAvatarMain = () => {
 
   const { activeVisuals } = useVisualOverlayStore();
   const { setOnStartCallback } = useQuizOverlayStore();
+  const { keynoteTitle, keynoteSubtitle, showProtoM, appMode } = appConfig;
+  // Frank Keynote uses server's SALESFORCE_AGENT_ID (pass undefined)
+  const defaultAgentId = appMode === 'frank-keynote' ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[Keynote] Voice transcript:', transcript);
@@ -175,20 +179,22 @@ const KeynoteAvatarMain = () => {
             <span className="text-white font-bold text-base md:text-lg">K</span>
           </motion.div>
           <div className="hidden sm:block">
-            <span className="text-foreground font-semibold">Miguel Keynote Avatar</span>
-            <span className="text-muted-foreground text-sm block">CKO Keynote Agent</span>
+            <span className="text-foreground font-semibold">{keynoteTitle}</span>
+            <span className="text-muted-foreground text-sm block">{keynoteSubtitle}</span>
           </div>
         </div>
         
         <div className="flex items-center gap-2 md:gap-3">
           {/* Fullscreen Links */}
           <div className="hidden xl:flex items-center gap-1">
-            <Link to="/keynote/proto-m">
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
-                <Maximize2 className="w-3 h-3 mr-1" />
-                Proto M
-              </Button>
-            </Link>
+            {showProtoM && (
+              <Link to="/keynote/proto-m">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                  <Maximize2 className="w-3 h-3 mr-1" />
+                  Proto M
+                </Button>
+              </Link>
+            )}
             <Link to="/keynote/proto-l">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                 <Maximize2 className="w-3 h-3 mr-1" />
@@ -401,7 +407,7 @@ const KeynoteAvatarMain = () => {
               ) : (
                 <>
                   <Play className="w-5 h-5 mr-2" />
-                  Start Keynote
+                  Start {keynoteTitle}
                 </>
               )}
             </Button>

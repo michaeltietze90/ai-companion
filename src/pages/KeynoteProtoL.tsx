@@ -10,6 +10,7 @@ import { useAppVoiceSettingsStore } from "@/stores/appVoiceSettingsStore";
 import { useScopedAvatarConversation } from "@/hooks/useScopedAvatarConversation";
 import { useDeepgramStreaming } from "@/hooks/useDeepgramStreaming";
 import { KEYNOTE_AGENTS, DEFAULT_KEYNOTE_AGENT_ID } from "@/config/agents";
+import { appConfig } from "@/config/appConfig";
 import { preloadTriggerVideos } from "@/lib/hardcodedTriggers";
 import { debugLog } from "@/stores/debugStore";
 
@@ -38,12 +39,13 @@ const KeynoteProtoL = () => {
   } = useScopedAvatarConversation({
     store: useKeynoteConversationStore,
     voiceSettings,
-    defaultAgentId: DEFAULT_KEYNOTE_AGENT_ID,
+    defaultAgentId,
     availableAgents: KEYNOTE_AGENTS,
     useJsonMode: false,
   });
 
   const { activeVisuals } = useVisualOverlayStore();
+  const defaultAgentId = appConfig.appMode === 'frank-keynote' ? undefined : DEFAULT_KEYNOTE_AGENT_ID;
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     console.log('[KeynoteProtoL] Voice transcript:', transcript);
@@ -180,7 +182,7 @@ const KeynoteProtoL = () => {
           >
             <div className={`w-6 h-6 rounded-full ${isConnectingAny ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
             <span className="text-2xl text-muted-foreground">
-              {isConnectingAny ? 'Connecting...' : 'Keynote Ready'}
+              {isConnectingAny ? 'Connecting...' : `${appConfig.keynoteTitle} Ready`}
             </span>
           </motion.div>
         </div>
@@ -208,7 +210,7 @@ const KeynoteProtoL = () => {
               ) : (
                 <>
                   <Play className="w-10 h-10 mr-6" />
-                  Start Keynote
+                  Start {appConfig.keynoteTitle}
                 </>
               )}
             </Button>
