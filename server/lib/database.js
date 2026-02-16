@@ -71,10 +71,28 @@ export async function initializeDatabase() {
       )
     `);
 
-    // Insert default agent settings if not exists
+    // Create visual_assets table for images/slides
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS visual_assets (
+        id SERIAL PRIMARY KEY,
+        agent_type VARCHAR(50) NOT NULL DEFAULT 'all',
+        name VARCHAR(255) NOT NULL,
+        asset_type VARCHAR(50) NOT NULL,
+        url TEXT NOT NULL,
+        position_x INTEGER DEFAULT 50,
+        position_y INTEGER DEFAULT 50,
+        width INTEGER DEFAULT 50,
+        height INTEGER DEFAULT NULL,
+        reference_key VARCHAR(100) UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Insert default agent settings if not exists (including 'all' for shared settings)
     await client.query(`
       INSERT INTO agent_settings (agent_type, utterance_end_ms)
-      VALUES ('keynote', 1000), ('chat', 1000)
+      VALUES ('keynote', 1000), ('chat', 1000), ('all', 1000)
       ON CONFLICT (agent_type) DO NOTHING
     `);
 
@@ -254,22 +272,217 @@ export async function deleteVideoTrigger(id) {
 }
 
 /**
- * Get all settings for an agent (combined)
+ * Get all settings for an agent (combined with 'all' settings)
+ * @param {string} agentType - 'keynote', 'chat', or 'all'
+ * @param {boolean} includeAll - whether to merge 'all' settings (default: true for keynote/chat, false for 'all')
  */
-export async function getAllAgentConfig(agentType) {
-  const [settings, keywords, triggers] = await Promise.all([
+export async function getAllAgentConfig(agentType, includeAll = true) {
+  // If fetching 'all' directly, don't merge (would cause infinite loop)
+  if (agentType === 'all' || !includeAll) {
+    const [settings, keywords, triggers] = await Promise.all([
+      getAgentSettings(agentType),
+      getKeywordBoosts(agentType),
+      getVideoTriggers(agentType),
+    ]);
+    
+    return {
+      agentType,
+      utteranceEndMs: settings?.utterance_end_ms || 1000,
+      agentId: settings?.agent_id || null,
+      keywords,
+      triggers,
+    };
+  }
+  
+  // Fetch both agent-specific and 'all' configs in parallel
+  const [settings, agentKeywords, agentTriggers, allKeywords, allTriggers] = await Promise.all([
     getAgentSettings(agentType),
     getKeywordBoosts(agentType),
     getVideoTriggers(agentType),
+    getKeywordBoosts('all'),
+    getVideoTriggers('all'),
   ]);
+  
+  // Merge keywords: agent-specific boost wins for duplicates
+  const keywordMap = new Map();
+  for (const kw of allKeywords) {
+    keywordMap.set(kw.word.toLowerCase(), kw);
+  }
+  for (const kw of agentKeywords) {
+    keywordMap.set(kw.word.toLowerCase(), kw); // Overwrites 'all' if exists
+  }
+  const mergedKeywords = Array.from(keywordMap.values());
+  
+  // Merge triggers: simply combine both sets
+  const mergedTriggers = [...allTriggers, ...agentTriggers];
   
   return {
     agentType,
     utteranceEndMs: settings?.utterance_end_ms || 1000,
     agentId: settings?.agent_id || null,
-    keywords,
-    triggers,
+    keywords: mergedKeywords,
+    triggers: mergedTriggers,
   };
+}
+
+/**
+ * Get raw config for an agent without merging (for admin UI)
+ */
+export async function getRawAgentConfig(agentType) {
+  return getAllAgentConfig(agentType, false);
+}
+
+// ==================== Visual Assets ====================
+
+/**
+ * Get all visual assets for an agent (or 'all')
+ */
+export async function getVisualAssets(agentType) {
+  const result = await pool.query(
+    `SELECT id, agent_type, name, asset_type, url, position_x, position_y, width, height, reference_key
+     FROM visual_assets 
+     WHERE agent_type = $1 
+     ORDER BY name`,
+    [agentType]
+  );
+  return result.rows.map(row => ({
+    id: row.id,
+    agentType: row.agent_type,
+    name: row.name,
+    assetType: row.asset_type,
+    url: row.url,
+    positionX: row.position_x,
+    positionY: row.position_y,
+    width: row.width,
+    height: row.height,
+    referenceKey: row.reference_key,
+  }));
+}
+
+/**
+ * Get merged visual assets (agent + 'all')
+ */
+export async function getMergedVisualAssets(agentType) {
+  if (agentType === 'all') {
+    return getVisualAssets('all');
+  }
+  
+  const [agentAssets, allAssets] = await Promise.all([
+    getVisualAssets(agentType),
+    getVisualAssets('all'),
+  ]);
+  
+  // Merge: agent-specific wins for same reference_key
+  const assetMap = new Map();
+  for (const asset of allAssets) {
+    if (asset.referenceKey) {
+      assetMap.set(asset.referenceKey, asset);
+    }
+  }
+  for (const asset of agentAssets) {
+    if (asset.referenceKey) {
+      assetMap.set(asset.referenceKey, asset);
+    }
+  }
+  
+  // Return merged + any assets without reference keys
+  const mergedByKey = Array.from(assetMap.values());
+  const agentWithoutKey = agentAssets.filter(a => !a.referenceKey);
+  const allWithoutKey = allAssets.filter(a => !a.referenceKey);
+  
+  return [...mergedByKey, ...agentWithoutKey, ...allWithoutKey];
+}
+
+/**
+ * Get a visual asset by reference key
+ */
+export async function getVisualAssetByKey(referenceKey) {
+  const result = await pool.query(
+    `SELECT id, agent_type, name, asset_type, url, position_x, position_y, width, height, reference_key
+     FROM visual_assets 
+     WHERE reference_key = $1`,
+    [referenceKey]
+  );
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    agentType: row.agent_type,
+    name: row.name,
+    assetType: row.asset_type,
+    url: row.url,
+    positionX: row.position_x,
+    positionY: row.position_y,
+    width: row.width,
+    height: row.height,
+    referenceKey: row.reference_key,
+  };
+}
+
+/**
+ * Create a visual asset
+ */
+export async function createVisualAsset(asset) {
+  const { agentType, name, assetType, url, positionX, positionY, width, height, referenceKey } = asset;
+  const result = await pool.query(
+    `INSERT INTO visual_assets (agent_type, name, asset_type, url, position_x, position_y, width, height, reference_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING *`,
+    [agentType || 'all', name, assetType, url, positionX ?? 50, positionY ?? 50, width ?? 50, height, referenceKey || null]
+  );
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    agentType: row.agent_type,
+    name: row.name,
+    assetType: row.asset_type,
+    url: row.url,
+    positionX: row.position_x,
+    positionY: row.position_y,
+    width: row.width,
+    height: row.height,
+    referenceKey: row.reference_key,
+  };
+}
+
+/**
+ * Update a visual asset
+ */
+export async function updateVisualAsset(id, asset) {
+  const { agentType, name, assetType, url, positionX, positionY, width, height, referenceKey } = asset;
+  const result = await pool.query(
+    `UPDATE visual_assets 
+     SET agent_type = $2, name = $3, asset_type = $4, url = $5, position_x = $6, position_y = $7, 
+         width = $8, height = $9, reference_key = $10, updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [id, agentType, name, assetType, url, positionX, positionY, width, height, referenceKey || null]
+  );
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    agentType: row.agent_type,
+    name: row.name,
+    assetType: row.asset_type,
+    url: row.url,
+    positionX: row.position_x,
+    positionY: row.position_y,
+    width: row.width,
+    height: row.height,
+    referenceKey: row.reference_key,
+  };
+}
+
+/**
+ * Delete a visual asset
+ */
+export async function deleteVisualAsset(id) {
+  const result = await pool.query(
+    'DELETE FROM visual_assets WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rows.length > 0;
 }
 
 export { pool };

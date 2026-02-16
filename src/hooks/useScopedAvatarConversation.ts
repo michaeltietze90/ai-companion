@@ -527,6 +527,18 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
         if (fullResponse) {
           // Log the response for remote debug viewer
           debugLog('agentforce-response', 'Miguel', `💬 ${fullResponse}`);
+          
+          // Detect JSON vs text mode based on response content
+          const looksLikeJson = fullResponse.trim().startsWith('{') || fullResponse.trim().startsWith('[');
+          const modeDescription = useJsonMode 
+            ? (looksLikeJson ? 'JSON mode (valid JSON detected)' : 'JSON mode (non-JSON response, parsing as text)')
+            : 'Text streaming mode';
+          
+          console.log('[Response Mode]', modeDescription);
+          console.log('[Response Mode] useJsonMode setting:', useJsonMode);
+          console.log('[Response Mode] Response starts with JSON chars:', looksLikeJson);
+          debugLog('response-mode', 'Parser', `📄 ${modeDescription}`);
+          
           if (useJsonMode) {
             const structured = parseStructuredResponse(fullResponse);
             addStreamingSentence(structured.speechText);

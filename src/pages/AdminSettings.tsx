@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Settings, Save, Plus, Trash2, Eye, EyeOff, Lock, 
-  Video, Mic, AlertCircle, Check, ArrowLeft, Loader2 
+  Video, Mic, AlertCircle, Check, ArrowLeft, Loader2,
+  HelpCircle, Play, Download, Upload
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import HelpDocumentation from "@/components/admin/HelpDocumentation";
+import AssetLibrary from "@/components/admin/AssetLibrary";
 
 interface KeywordBoost {
   word: string;
@@ -57,7 +60,7 @@ const AdminSettings = () => {
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const [selectedAgent, setSelectedAgent] = useState<'keynote' | 'chat'>('keynote');
+  const [selectedAgent, setSelectedAgent] = useState<'keynote' | 'chat' | 'all'>('keynote');
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -75,7 +78,8 @@ const AdminSettings = () => {
     
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/agent-config/${selectedAgent}`);
+      // Use raw=true to get only this agent's settings (not merged with 'all')
+      const res = await fetch(`/api/agent-config/${selectedAgent}?raw=true`);
       if (!res.ok) throw new Error('Failed to fetch config');
       
       const data: AgentConfig = await res.json();
@@ -312,13 +316,14 @@ const AdminSettings = () => {
           </div>
           
           <div className="flex items-center gap-3">
-            <Select value={selectedAgent} onValueChange={(v) => setSelectedAgent(v as 'keynote' | 'chat')}>
-              <SelectTrigger className="w-40">
+            <Select value={selectedAgent} onValueChange={(v) => setSelectedAgent(v as 'keynote' | 'chat' | 'all')}>
+              <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="keynote">Keynote</SelectItem>
-                <SelectItem value="chat">Exec Experience</SelectItem>
+                <SelectItem value="keynote">Keynote Only</SelectItem>
+                <SelectItem value="chat">Exec Experience Only</SelectItem>
+                <SelectItem value="all">All Agents (Shared)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -354,14 +359,22 @@ const AdminSettings = () => {
           </div>
         ) : (
           <Tabs defaultValue="keywords" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="keywords" className="flex items-center gap-2">
                 <Mic className="w-4 h-4" />
-                Keywords & Voice
+                Keywords
               </TabsTrigger>
               <TabsTrigger value="triggers" className="flex items-center gap-2">
                 <Video className="w-4 h-4" />
-                Video Triggers
+                Triggers
+              </TabsTrigger>
+              <TabsTrigger value="assets" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Assets
+              </TabsTrigger>
+              <TabsTrigger value="help" className="flex items-center gap-2">
+                <HelpCircle className="w-4 h-4" />
+                Help
               </TabsTrigger>
             </TabsList>
 
@@ -417,6 +430,88 @@ const AdminSettings = () => {
                     <p className="text-sm text-muted-foreground">
                       Boost recognition accuracy for specific words/phrases (1-10)
                     </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      id="keyword-import"
+                      accept=".json"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const data = JSON.parse(event.target?.result as string);
+                              if (data.keywords && Array.isArray(data.keywords)) {
+                                setKeywords(data.keywords);
+                                setSaveMessage({ type: 'success', text: `Imported ${data.keywords.length} keywords` });
+                                setTimeout(() => setSaveMessage(null), 3000);
+                              } else {
+                                throw new Error('Invalid format');
+                              }
+                            } catch (err) {
+                              setSaveMessage({ type: 'error', text: 'Invalid JSON format. Expected { keywords: [...] }' });
+                            }
+                          };
+                          reader.readAsText(file);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('keyword-import')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-1" />
+                      Import
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const data = { keywords };
+                        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `keywords-${selectedAgent}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Export
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const template = {
+                          keywords: [
+                            { word: "Agentforce", boost: 5 },
+                            { word: "Salesforce", boost: 4 },
+                            { word: "Einstein", boost: 3 }
+                          ]
+                        };
+                        const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'keywords-template.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      title="Download template JSON"
+                    >
+                      Template
+                    </Button>
                   </div>
                 </div>
 
@@ -521,6 +616,23 @@ const AdminSettings = () => {
                 </div>
               )}
             </TabsContent>
+
+            {/* Visual Assets */}
+            <TabsContent value="assets">
+              <AssetLibrary 
+                agentType={selectedAgent} 
+                password={password}
+                onMessage={(msg) => {
+                  setSaveMessage(msg);
+                  setTimeout(() => setSaveMessage(null), 3000);
+                }}
+              />
+            </TabsContent>
+
+            {/* Help & Documentation */}
+            <TabsContent value="help">
+              <HelpDocumentation />
+            </TabsContent>
           </Tabs>
         )}
       </main>
@@ -540,6 +652,7 @@ const TriggerCard = ({ trigger, onSave, onDelete, isSaving }: TriggerCardProps) 
   const [isEditing, setIsEditing] = useState(!trigger.id);
   const [local, setLocal] = useState(trigger);
   const [keywordsText, setKeywordsText] = useState(trigger.keywords.join(', '));
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSave = () => {
     const keywords = keywordsText.split(',').map(k => k.trim()).filter(k => k);
@@ -561,6 +674,11 @@ const TriggerCard = ({ trigger, onSave, onDelete, isSaving }: TriggerCardProps) 
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {local.videoUrl && (
+              <Button variant="ghost" size="sm" onClick={() => setShowPreview(true)}>
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
               Edit
             </Button>
@@ -571,6 +689,52 @@ const TriggerCard = ({ trigger, onSave, onDelete, isSaving }: TriggerCardProps) 
             )}
           </div>
         </div>
+        
+        {/* Video Preview Modal (collapsed view) */}
+        <AnimatePresence>
+          {showPreview && local.videoUrl && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPreview(false)}
+            >
+              <motion.div
+                className="relative bg-background rounded-xl overflow-hidden shadow-2xl max-w-lg w-full mx-4"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                  <span className="text-sm font-medium">Preview: {local.name}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowPreview(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <div className="relative bg-black" style={{ aspectRatio: '9/16', maxHeight: '70vh' }}>
+                  <video
+                    src={local.videoUrl}
+                    controls
+                    autoPlay
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                </div>
+                <div className="p-3 border-t border-border text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Preview in 9:16 hologram aspect ratio (2160×3840 scaled)
+                  </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -588,13 +752,79 @@ const TriggerCard = ({ trigger, onSave, onDelete, isSaving }: TriggerCardProps) 
         </div>
         <div>
           <Label>Video URL</Label>
-          <Input
-            value={local.videoUrl}
-            onChange={(e) => setLocal({ ...local, videoUrl: e.target.value })}
-            placeholder="https://example.com/video.mp4"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={local.videoUrl}
+              onChange={(e) => setLocal({ ...local, videoUrl: e.target.value })}
+              placeholder="https://example.com/video.mp4"
+              className="flex-1"
+            />
+            {local.videoUrl && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowPreview(true)}
+                className="shrink-0"
+              >
+                <Play className="w-4 h-4 mr-1" />
+                Preview
+              </Button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Video Preview Modal */}
+      <AnimatePresence>
+        {showPreview && local.videoUrl && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowPreview(false)}
+          >
+            <motion.div
+              className="relative bg-background rounded-xl overflow-hidden shadow-2xl max-w-lg w-full mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 border-b border-border flex items-center justify-between">
+                <span className="text-sm font-medium">Preview: {local.name}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowPreview(false)}
+                  className="h-6 w-6 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
+              {/* 9:16 aspect ratio container for hologram preview */}
+              <div className="relative bg-black" style={{ aspectRatio: '9/16', maxHeight: '70vh' }}>
+                <video
+                  src={local.videoUrl}
+                  controls
+                  autoPlay
+                  className="absolute inset-0 w-full h-full object-contain"
+                  onError={() => {
+                    setSaveMessage?.({ type: 'error', text: 'Failed to load video preview' });
+                    setShowPreview(false);
+                  }}
+                />
+              </div>
+              <div className="p-3 border-t border-border text-center">
+                <p className="text-xs text-muted-foreground">
+                  Preview in 9:16 hologram aspect ratio (2160×3840 scaled)
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div>
         <Label>Keywords (comma separated)</Label>

@@ -8,12 +8,19 @@
 import express from 'express';
 import {
   getAllAgentConfig,
+  getRawAgentConfig,
   updateAgentSettings,
   setKeywordBoosts,
   getVideoTriggers,
   createVideoTrigger,
   updateVideoTrigger,
   deleteVideoTrigger,
+  getVisualAssets,
+  getMergedVisualAssets,
+  getVisualAssetByKey,
+  createVisualAsset,
+  updateVisualAsset,
+  deleteVisualAsset,
 } from '../lib/database.js';
 
 const router = express.Router();
@@ -36,24 +43,29 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// Validate agent type
+// Validate agent type (includes 'all' for shared settings)
 function validateAgentType(agentType) {
-  return ['keynote', 'chat'].includes(agentType);
+  return ['keynote', 'chat', 'all'].includes(agentType);
 }
 
 /**
  * GET /api/agent-config/:agentType
  * Get all configuration for an agent (public - used by frontend)
+ * Query param: ?raw=true to get only agent-specific settings (no merge with 'all')
  */
 router.get('/:agentType', async (req, res) => {
   try {
     const { agentType } = req.params;
+    const { raw } = req.query;
     
     if (!validateAgentType(agentType)) {
-      return res.status(400).json({ error: 'Invalid agent type. Must be "keynote" or "chat"' });
+      return res.status(400).json({ error: 'Invalid agent type. Must be "keynote", "chat", or "all"' });
     }
     
-    const config = await getAllAgentConfig(agentType);
+    // If raw=true or agentType is 'all', don't merge with 'all' settings
+    const config = raw === 'true' || agentType === 'all' 
+      ? await getRawAgentConfig(agentType)
+      : await getAllAgentConfig(agentType);
     res.json(config);
   } catch (error) {
     console.error('[AgentConfig] Error fetching config:', error);
@@ -249,6 +261,158 @@ router.post('/auth', (req, res) => {
     res.json({ success: true });
   } else {
     res.status(403).json({ error: 'Invalid password' });
+  }
+});
+
+// ==================== Visual Assets ====================
+
+/**
+ * GET /api/agent-config/:agentType/assets
+ * Get all visual assets for an agent
+ * Query param: ?merged=true to include 'all' assets
+ */
+router.get('/:agentType/assets', async (req, res) => {
+  try {
+    const { agentType } = req.params;
+    const { merged } = req.query;
+    
+    if (!validateAgentType(agentType)) {
+      return res.status(400).json({ error: 'Invalid agent type' });
+    }
+    
+    const assets = merged === 'true' 
+      ? await getMergedVisualAssets(agentType)
+      : await getVisualAssets(agentType);
+    res.json({ assets });
+  } catch (error) {
+    console.error('[AgentConfig] Error fetching assets:', error);
+    res.status(500).json({ error: 'Failed to fetch assets' });
+  }
+});
+
+/**
+ * GET /api/agent-config/asset/:referenceKey
+ * Get a visual asset by reference key
+ */
+router.get('/asset/:referenceKey', async (req, res) => {
+  try {
+    const { referenceKey } = req.params;
+    const asset = await getVisualAssetByKey(referenceKey);
+    
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    
+    res.json(asset);
+  } catch (error) {
+    console.error('[AgentConfig] Error fetching asset:', error);
+    res.status(500).json({ error: 'Failed to fetch asset' });
+  }
+});
+
+/**
+ * POST /api/agent-config/:agentType/assets
+ * Create a new visual asset
+ */
+router.post('/:agentType/assets', requireAuth, async (req, res) => {
+  try {
+    const { agentType } = req.params;
+    const { name, assetType, url, positionX, positionY, width, height, referenceKey } = req.body;
+    
+    if (!validateAgentType(agentType)) {
+      return res.status(400).json({ error: 'Invalid agent type' });
+    }
+    
+    if (!name || !assetType || !url) {
+      return res.status(400).json({ error: 'name, assetType, and url are required' });
+    }
+    
+    const validAssetTypes = ['slide', 'logo', 'image', 'video'];
+    if (!validAssetTypes.includes(assetType)) {
+      return res.status(400).json({ error: `assetType must be one of: ${validAssetTypes.join(', ')}` });
+    }
+    
+    const asset = await createVisualAsset({
+      agentType,
+      name,
+      assetType,
+      url,
+      positionX,
+      positionY,
+      width,
+      height,
+      referenceKey,
+    });
+    
+    res.status(201).json(asset);
+  } catch (error) {
+    console.error('[AgentConfig] Error creating asset:', error);
+    // Check for unique constraint violation on reference_key
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Reference key already exists' });
+    }
+    res.status(500).json({ error: 'Failed to create asset' });
+  }
+});
+
+/**
+ * PUT /api/agent-config/:agentType/assets/:id
+ * Update a visual asset
+ */
+router.put('/:agentType/assets/:id', requireAuth, async (req, res) => {
+  try {
+    const { agentType } = req.params;
+    const { id } = req.params;
+    const { name, assetType, url, positionX, positionY, width, height, referenceKey } = req.body;
+    
+    if (!name || !assetType || !url) {
+      return res.status(400).json({ error: 'name, assetType, and url are required' });
+    }
+    
+    const asset = await updateVisualAsset(parseInt(id), {
+      agentType,
+      name,
+      assetType,
+      url,
+      positionX,
+      positionY,
+      width,
+      height,
+      referenceKey,
+    });
+    
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    
+    res.json(asset);
+  } catch (error) {
+    console.error('[AgentConfig] Error updating asset:', error);
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Reference key already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update asset' });
+  }
+});
+
+/**
+ * DELETE /api/agent-config/:agentType/assets/:id
+ * Delete a visual asset
+ */
+router.delete('/:agentType/assets/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deleted = await deleteVisualAsset(parseInt(id));
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[AgentConfig] Error deleting asset:', error);
+    res.status(500).json({ error: 'Failed to delete asset' });
   }
 });
 

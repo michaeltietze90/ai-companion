@@ -87,6 +87,8 @@ export function parseStructuredResponse(rawResponse: string): ParsedStructuredRe
   
   // Quick check - does it look like JSON?
   if (!trimmed.startsWith('{')) {
+    console.log('[structuredResponseParser] Response does not start with "{", treating as plain text');
+    console.log('[structuredResponseParser] First 100 chars:', trimmed.substring(0, 100));
     return {
       isStructured: false,
       speechText: trimmed,
@@ -97,10 +99,12 @@ export function parseStructuredResponse(rawResponse: string): ParsedStructuredRe
   }
 
   try {
+    console.log('[structuredResponseParser] Attempting to parse as JSON...');
     const parsed = JSON.parse(trimmed) as StructuredResponse;
     
     // Validate minimum structure
     if (typeof parsed.response !== 'string') {
+      console.log('[structuredResponseParser] JSON parsed but missing "response" field');
       return {
         isStructured: false,
         speechText: trimmed,
@@ -109,6 +113,15 @@ export function parseStructuredResponse(rawResponse: string): ParsedStructuredRe
         rawResponse: rawResponse,
         parseError: 'Missing "response" field in JSON',
       };
+    }
+
+    console.log('[structuredResponseParser] ✅ Valid structured JSON response');
+    console.log('[structuredResponseParser] Speech text:', parsed.response.substring(0, 100) + '...');
+    console.log('[structuredResponseParser] Actions count:', parsed.actions?.length || 0);
+    console.log('[structuredResponseParser] Has data:', !!parsed.data);
+    
+    if (parsed.actions?.length) {
+      console.log('[structuredResponseParser] Action types:', parsed.actions.map(a => a.type).join(', '));
     }
 
     return {
@@ -120,6 +133,8 @@ export function parseStructuredResponse(rawResponse: string): ParsedStructuredRe
     };
   } catch (error) {
     // Not valid JSON - treat as plain text
+    console.log('[structuredResponseParser] ❌ JSON parse failed:', error instanceof Error ? error.message : 'Unknown error');
+    console.log('[structuredResponseParser] Treating as plain text. First 100 chars:', trimmed.substring(0, 100));
     return {
       isStructured: false,
       speechText: trimmed,
