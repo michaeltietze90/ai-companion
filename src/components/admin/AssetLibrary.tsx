@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Image, FileImage, Video, Tag, Plus, Trash2, Save, 
-  Loader2, ExternalLink, Copy, Check, X
+  Loader2, ExternalLink, Copy, Check, X, Code, ChevronDown, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,12 +49,29 @@ const ASSET_TYPES = [
   { value: 'video', label: 'Video', icon: Video },
 ];
 
+// Generate JSON example for an asset
+const generateJsonExample = (asset: VisualAsset): string => {
+  const example = {
+    response: `Here's the ${asset.name}.`,
+    actions: [
+      {
+        type: "showAsset",
+        ref: asset.referenceKey || "your_reference_key",
+        // Duration is optional - if omitted, asset stays until next message
+      }
+    ]
+  };
+  return JSON.stringify(example, null, 2);
+};
+
 const AssetLibrary = ({ agentType, password, onMessage }: AssetLibraryProps) => {
   const [assets, setAssets] = useState<VisualAsset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingAsset, setEditingAsset] = useState<VisualAsset | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [expandedJsonAsset, setExpandedJsonAsset] = useState<number | null>(null);
+  const [copiedJson, setCopiedJson] = useState<number | null>(null);
 
   const getAuthHeader = () => ({
     'Content-Type': 'application/json',
@@ -248,6 +265,16 @@ const AssetLibrary = ({ agentType, password, onMessage }: AssetLibraryProps) => 
                   
                   {/* Actions */}
                   <div className="flex items-center gap-2">
+                    {asset.referenceKey && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setExpandedJsonAsset(expandedJsonAsset === asset.id ? null : asset.id!)}
+                        title="Show JSON example"
+                      >
+                        <Code className="w-4 h-4" />
+                      </Button>
+                    )}
                     {asset.url && (
                       <Button
                         variant="ghost"
@@ -274,6 +301,47 @@ const AssetLibrary = ({ agentType, password, onMessage }: AssetLibraryProps) => 
                     </Button>
                   </div>
                 </div>
+                
+                {/* Expandable JSON Example */}
+                {expandedJsonAsset === asset.id && asset.referenceKey && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Agentforce JSON Example
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generateJsonExample(asset));
+                          setCopiedJson(asset.id!);
+                          setTimeout(() => setCopiedJson(null), 2000);
+                          onMessage({ type: 'success', text: 'JSON copied to clipboard' });
+                        }}
+                      >
+                        {copiedJson === asset.id ? (
+                          <>
+                            <Check className="w-3 h-3 mr-1 text-green-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy JSON
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <pre className="bg-secondary p-3 rounded-lg text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                      {generateJsonExample(asset)}
+                    </pre>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      <strong>Note:</strong> Duration is optional. If omitted, the asset will stay visible 
+                      until the next message that doesn't reference it.
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -406,20 +474,27 @@ const AssetLibrary = ({ agentType, password, onMessage }: AssetLibraryProps) => 
       <div className="rounded-xl border border-border p-4 bg-secondary/30">
         <h3 className="text-sm font-medium mb-2">How to use in Agentforce</h3>
         <p className="text-xs text-muted-foreground mb-2">
-          Configure your agent to respond with JSON that references assets by their key:
+          Configure your agent to respond with JSON that references assets by their key.
+          Click the <Code className="w-3 h-3 inline" /> button on any asset above to see its specific JSON example.
         </p>
         <pre className="bg-secondary p-3 rounded-lg text-xs font-mono overflow-x-auto">
 {`{
-  "text": "Here's our company logo.",
+  "response": "Here's our company logo.",
   "actions": [
     {
       "type": "showAsset",
-      "ref": "logo_salesforce",
-      "duration": 5000
+      "ref": "logo_salesforce"
     }
   ]
 }`}
         </pre>
+        <div className="mt-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            <strong>Duration is optional!</strong> If you don't specify a duration, the asset will stay 
+            visible until the next message that doesn't reference it. This allows natural conversation 
+            flow where visuals persist until the topic changes.
+          </p>
+        </div>
       </div>
     </div>
   );

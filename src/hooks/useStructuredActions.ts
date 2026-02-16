@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQuizOverlayStore, type LeaderboardEntry } from '@/stores/quizOverlayStore';
 import { useVisualOverlayStore } from '@/stores/visualOverlayStore';
 import { useCountdownStore } from '@/stores/countdownStore';
@@ -6,6 +6,9 @@ import { useScoreOverlayStore } from '@/stores/scoreOverlayStore';
 import { useSlideOverlayStore } from '@/stores/slideOverlayStore';
 import type { StructuredAction, StructuredData } from '@/lib/structuredResponseParser';
 import type { VisualCommand, VisualPosition, VisualType } from '@/lib/richResponseParser';
+
+// Track currently active asset references for auto-hide behavior
+let currentAssetRefs: Set<string> = new Set();
 
 /**
  * Hook to handle structured actions from Agentforce JSON responses.
@@ -97,6 +100,52 @@ export function useStructuredActions() {
             alt: data.alt,
           };
           startVisuals([visual]);
+        }
+        break;
+      }
+      
+      case 'showAsset': {
+        // Show asset by reference key - fetch from API
+        const data = action.data as {
+          ref?: string;
+          duration?: number;  // Optional - if not provided, stays until next message
+        } | undefined;
+        
+        const ref = data?.ref || (action as any).ref; // Support both action.data.ref and action.ref
+        
+        if (ref) {
+          console.log('[StructuredActions] showAsset - ref:', ref, 'duration:', data?.duration || 'until next message');
+          
+          // Track this asset reference
+          currentAssetRefs.add(ref);
+          
+          // Fetch asset info from API
+          fetch(`/api/agent-config/asset/${ref}`)
+            .then(res => {
+              if (!res.ok) throw new Error('Asset not found');
+              return res.json();
+            })
+            .then(asset => {
+              console.log('[StructuredActions] Loaded asset:', asset.name, asset.url);
+              
+              // Duration: if not specified, use a very long duration (effectively "until dismissed")
+              // The auto-hide logic in conversation hook will clear it when not referenced
+              const duration = data?.duration ?? 999999;
+              
+              const visual: VisualCommand = {
+                id: `asset_${ref}_${Date.now()}`,
+                type: asset.assetType === 'video' ? 'video' : 'image',
+                src: asset.url,
+                duration: duration,
+                position: 'center', // Position is stored in asset but we show centered for overlays
+                startOffset: 0,
+                alt: asset.name,
+              };
+              startVisuals([visual]);
+            })
+            .catch(err => {
+              console.error('[StructuredActions] Failed to load asset:', ref, err);
+            });
         }
         break;
       }
@@ -211,9 +260,43 @@ export function useStructuredActions() {
     });
   }, [setPrefillData]);
 
+  /**
+   * Get current asset references being shown
+   */
+  const getCurrentAssetRefs = useCallback(() => {
+    return new Set(currentAssetRefs);
+  }, []);
+
+  /**
+   * Clear asset refs that are not in the new set
+   * Called when a new message comes in - clears assets not referenced in new message
+   */
+  const clearUnreferencedAssets = useCallback((newRefs: Set<string>) => {
+    const toRemove = Array.from(currentAssetRefs).filter(ref => !newRefs.has(ref));
+    if (toRemove.length > 0) {
+      console.log('[StructuredActions] Clearing unreferenced assets:', toRemove);
+      // Clear visuals if we had assets that are no longer referenced
+      // The startVisuals with empty array or clearVisuals would hide them
+      currentAssetRefs = newRefs;
+    } else {
+      currentAssetRefs = newRefs;
+    }
+  }, []);
+
+  /**
+   * Clear all tracked asset refs
+   */
+  const clearAllAssetRefs = useCallback(() => {
+    console.log('[StructuredActions] Clearing all asset refs');
+    currentAssetRefs.clear();
+  }, []);
+
   return {
     executeAction,
     executeActions,
     applyData,
+    getCurrentAssetRefs,
+    clearUnreferencedAssets,
+    clearAllAssetRefs,
   };
 }

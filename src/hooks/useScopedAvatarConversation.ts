@@ -119,7 +119,7 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
   const { hideSlide } = useSlideOverlayStore();
   const { hideScore } = useScoreOverlayStore();
   const { stopCountdown } = useCountdownStore();
-  const { executeActions, applyData } = useStructuredActions();
+  const { executeActions, applyData, clearUnreferencedAssets, clearAllAssetRefs } = useStructuredActions();
 
   const maybeToastElevenLabsError = useCallback((err: unknown) => {
     const now = Date.now();
@@ -555,6 +555,25 @@ export function useScopedAvatarConversation(options: ScopedAvatarConversationOpt
             }
             if (!actionTypes.has('countdown')) {
               stopCountdown();
+            }
+            
+            // Handle showAsset auto-hide: clear visuals if no showAsset or showVisual in this message
+            // This ensures assets without duration automatically hide when not referenced
+            if (!actionTypes.has('showAsset') && !actionTypes.has('showVisual')) {
+              // No asset actions - clear any displayed assets
+              clearVisuals();
+              clearAllAssetRefs();
+            } else {
+              // Track which asset refs are in this message
+              const newAssetRefs = new Set<string>();
+              for (const action of structured.actions) {
+                if (action.type === 'showAsset') {
+                  const ref = (action.data as any)?.ref || (action as any).ref;
+                  if (ref) newAssetRefs.add(ref);
+                }
+              }
+              // Clear assets not referenced in this message
+              clearUnreferencedAssets(newAssetRefs);
             }
             
             if (structured.actions.length > 0) {

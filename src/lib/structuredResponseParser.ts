@@ -31,6 +31,7 @@ export type ActionType =
   | 'showLeaderboard' 
   | 'hideOverlay'
   | 'showVisual'
+  | 'showAsset'  // Show asset by reference key
   | 'prefillData'
   | 'setScore'
   | 'setLeaderboardData'
